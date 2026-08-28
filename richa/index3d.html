@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PROJECT SHIVODAYA :: RICHA 3D DEEP SPACE MESH VISUALIZER</title>
-    <!-- Three.js 3D Library -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+    <title>PROJECT SHIVODAYA :: RICHA 3D DEEP SPACE DTN MESH COMMAND CENTER</title>
+    <!-- Three.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         :root {
             --bg-base: #020408;
-            --bg-panel: #0a0f1d;
-            --border-panel: #1a263e;
+            --bg-panel: rgba(10, 15, 29, 0.85);
+            --border-panel: rgba(0, 240, 255, 0.2);
             --accent-cyan: #00f0ff;
             --accent-green: #00ff66;
             --accent-red: #ff0055;
@@ -21,7 +21,6 @@
             --nasa-color: #00bfff;
             --esa-color: #00ff66;
             --jaxa-color: #eab308;
-            --comm-color: #a855f7;
 
             --text-heading: #f8fafc;
             --text-body: #94a3b8;
@@ -33,34 +32,53 @@
             margin: 0;
             padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            user-select: none;
         }
 
         body {
             background-color: var(--bg-base);
             color: var(--text-heading);
-            padding: 16px;
             overflow: hidden;
+            width: 100vw;
             height: 100vh;
         }
 
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* Top Header Overlay */
         header {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            right: 16px;
+            z-index: 10;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding-bottom: 12px;
-            border-bottom: 1px solid var(--border-panel);
-            margin-bottom: 12px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border-panel);
+            backdrop-filter: blur(12px);
+            padding: 12px 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
         }
 
-        .header-title-box {
+        .header-title {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 14px;
         }
 
-        .header-title-box h1 {
+        .header-title h1 {
             font-size: 1.3rem;
-            font-weight: 800;
+            font-weight: 900;
             letter-spacing: 2px;
             text-transform: uppercase;
             background: linear-gradient(90deg, #ffffff, var(--accent-cyan));
@@ -69,20 +87,21 @@
         }
 
         .badge-pill {
-            background: rgba(0, 240, 255, 0.08);
+            background: rgba(0, 240, 255, 0.1);
             border: 1px solid var(--accent-cyan);
             color: var(--accent-cyan);
-            padding: 4px 10px;
+            padding: 4px 12px;
             border-radius: 20px;
-            font-size: 0.7rem;
+            font-size: 0.72rem;
             font-weight: 700;
+            letter-spacing: 1px;
             text-transform: uppercase;
         }
 
-        .legend-strip {
+        .agency-legend {
             display: flex;
-            gap: 16px;
-            font-size: 0.78rem;
+            gap: 18px;
+            font-size: 0.8rem;
         }
 
         .legend-item {
@@ -95,141 +114,154 @@
             width: 10px;
             height: 10px;
             border-radius: 50%;
+            box-shadow: 0 0 8px currentColor;
         }
 
-        .layout-main {
-            display: grid;
-            grid-template-columns: 2.4fr 1fr;
-            gap: 16px;
-            height: calc(100vh - 80px);
-        }
-
-        .canvas-container {
-            background: #000205;
-            border: 1px solid var(--border-panel);
-            border-radius: 10px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        canvas {
-            width: 100%;
-            height: 100%;
-            display: block;
-        }
-
-        .hud-overlay {
+        /* HUD Status Bar */
+        .hud-status-box {
             position: absolute;
-            top: 16px;
+            top: 80px;
             left: 16px;
-            background: rgba(10, 15, 29, 0.85);
+            z-index: 10;
+            background: var(--bg-panel);
             border: 1px solid var(--border-panel);
-            backdrop-filter: blur(8px);
-            padding: 12px 16px;
-            border-radius: 8px;
-            font-size: 0.78rem;
+            backdrop-filter: blur(12px);
+            padding: 14px 18px;
+            border-radius: 10px;
             display: flex;
             flex-direction: column;
-            gap: 8px;
-            pointer-events: none;
+            gap: 10px;
+            font-size: 0.8rem;
+            width: 320px;
         }
 
-        .hud-item {
+        .hud-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .hud-val {
+            font-weight: 700;
+            font-family: 'SF Mono', Consolas, monospace;
+        }
+
+        /* Interactive Action Dock */
+        .action-dock {
+            position: absolute;
+            bottom: 20px;
+            left: 16px;
+            z-index: 10;
+            display: flex;
+            gap: 12px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border-panel);
+            backdrop-filter: blur(12px);
+            padding: 12px;
+            border-radius: 12px;
+        }
+
+        .btn-action {
+            background: rgba(0, 240, 255, 0.1);
+            border: 1px solid var(--accent-cyan);
+            color: var(--accent-cyan);
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
-        .hud-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--accent-green);
-            box-shadow: 0 0 10px var(--accent-green);
-        }
-
-        .controls-overlay {
-            position: absolute;
-            bottom: 16px;
-            left: 16px;
-            display: flex;
-            gap: 10px;
-        }
-
-        .btn-action {
-            background: rgba(0, 240, 255, 0.15);
-            border: 1px solid var(--accent-cyan);
-            color: var(--accent-cyan);
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 0.8rem;
-            font-weight: 700;
-            cursor: pointer;
-            backdrop-filter: blur(8px);
-            transition: all 0.2s;
-        }
-
         .btn-action:hover {
             background: var(--accent-cyan);
             color: #000;
-            box-shadow: 0 0 15px var(--accent-cyan);
+            box-shadow: 0 0 20px var(--accent-cyan);
+            transform: translateY(-2px);
         }
 
-        .btn-earth-blackout {
-            background: rgba(255, 0, 85, 0.15);
+        .btn-blackout {
+            background: rgba(255, 0, 85, 0.1);
             border: 1px solid var(--accent-red);
             color: var(--accent-red);
         }
 
-        .btn-earth-blackout:hover {
+        .btn-blackout:hover {
             background: var(--accent-red);
             color: #fff;
-            box-shadow: 0 0 15px var(--accent-red);
+            box-shadow: 0 0 20px var(--accent-red);
         }
 
-        .sidebar {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            height: 100%;
+        .btn-cam {
+            background: rgba(168, 85, 247, 0.1);
+            border: 1px solid var(--accent-purple);
+            color: var(--accent-purple);
         }
 
-        .panel-card {
+        .btn-cam:hover {
+            background: var(--accent-purple);
+            color: #fff;
+            box-shadow: 0 0 20px var(--accent-purple);
+        }
+
+        /* Console Sidebar */
+        .sidebar-console {
+            position: absolute;
+            top: 80px;
+            right: 16px;
+            bottom: 20px;
+            width: 380px;
+            z-index: 10;
             background: var(--bg-panel);
             border: 1px solid var(--border-panel);
-            border-radius: 10px;
-            padding: 14px;
+            backdrop-filter: blur(12px);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
         }
 
-        .panel-header {
-            font-size: 0.8rem;
-            font-weight: 700;
+        .console-header {
+            font-size: 0.85rem;
+            font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 1px;
             color: var(--accent-cyan);
-            margin-bottom: 10px;
-            padding-bottom: 6px;
-            border-bottom: 1px solid var(--border-panel);
             display: flex;
             justify-content: space-between;
+            align-items: center;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-panel);
         }
 
-        .console-box {
-            background: #04060a;
+        .console-body {
+            background: rgba(2, 4, 8, 0.9);
             border: 1px solid var(--border-panel);
-            border-radius: 6px;
-            padding: 10px;
+            border-radius: 8px;
+            flex: 1;
+            padding: 12px;
             font-family: 'SF Mono', Consolas, 'Courier New', monospace;
             font-size: 0.72rem;
-            flex: 1;
             overflow-y: auto;
-            line-height: 1.5;
+            line-height: 1.6;
         }
 
-        .log-line {
-            margin-bottom: 4px;
+        .log-entry {
+            margin-bottom: 6px;
             white-space: pre-wrap;
             word-break: break-all;
+            opacity: 0;
+            animation: fadeIn 0.3s forwards;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
         }
 
         .log-cgr { color: var(--accent-green); }
@@ -240,247 +272,349 @@
 </head>
 <body>
 
+    <div id="canvas-container"></div>
+
     <header>
-        <div class="header-title-box">
+        <div class="header-title">
             <h1>Project Shivodaya</h1>
-            <span class="badge-pill">3D Interplanetary Mesh :: Mars Bypassing Architecture</span>
+            <span class="badge-pill">Richa Module :: 3D Interplanetary DTN Mesh</span>
         </div>
-        <div class="legend-strip">
-            <div class="legend-item"><div class="legend-dot" style="background:#ffcc00;"></div><span>Sun (Solar Probes)</span></div>
-            <div class="legend-item"><div class="legend-dot" style="background:#ff9933;"></div><span>ISRO (Aditya-L1 / Mangalyaan)</span></div>
-            <div class="legend-item"><div class="legend-dot" style="background:#00bfff;"></div><span>NASA (Parker / MAVEN)</span></div>
-            <div class="legend-item"><div class="legend-dot" style="background:#00ff66;"></div><span>ESA (Trace Gas / Solar Orbiter)</span></div>
-            <div class="legend-item"><div class="legend-dot" style="background:#ff3300;"></div><span>Mars Orbit Node</span></div>
-            <div class="legend-item"><div class="legend-dot" style="background:#3388ff;"></div><span>Earth (Target Marker)</span></div>
+        <div class="agency-legend">
+            <div class="legend-item"><div class="legend-dot" style="background:#ffcc00; color:#ffcc00;"></div><span>Sun (Solar Probes)</span></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#ff9933; color:#ff9933;"></div><span>ISRO (Bhaarat)</span></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#00bfff; color:#00bfff;"></div><span>NASA</span></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#00ff66; color:#00ff66;"></div><span>ESA</span></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#eab308; color:#eab308;"></div><span>JAXA</span></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#ff3300; color:#ff3300;"></div><span>Mars Mesh</span></div>
         </div>
     </header>
 
-    <div class="layout-main">
-        <div class="canvas-container" id="canvasContainer">
-            <div class="hud-overlay">
-                <div class="hud-item"><div class="hud-dot"></div><span>CGR 3D Graph Routing: <b>ACTIVE</b></span></div>
-                <div class="hud-item"><span>Earth Alignment: <b id="earthStatus" style="color:#00ff66;">NOMINAL (Line of Sight)</b></span></div>
-                <div class="hud-item"><span>Active Trajectory: <b id="trajStatus" style="color:#00f0ff;">Solar Probe -> Mars Relay -> Earth</b></span></div>
-            </div>
-
-            <div class="controls-overlay">
-                <button class="btn-action" onclick="dispatch3DBundle()">DISPATCH SOLAR RADIATION ALERT</button>
-                <button class="btn-action btn-earth-blackout" onclick="toggleEarthBlackout()">SIMULATE EARTH PLANETARY OCCULTATION</button>
-                <button class="btn-action" onclick="reset3DCamera()">RESET CAMERA</button>
-            </div>
+    <div class="hud-status-box">
+        <div class="hud-row">
+            <span>DTN Routing Engine</span>
+            <span class="hud-val" style="color:var(--accent-green);">RFC 9171 CGR Active</span>
         </div>
+        <div class="hud-row">
+            <span>Earth Alignment</span>
+            <span class="hud-val" id="earthAlignText" style="color:var(--accent-green);">NOMINAL (Line of Sight)</span>
+        </div>
+        <div class="hud-row">
+            <span>Active Trajectory Mode</span>
+            <span class="hud-val" id="routeModeText" style="color:var(--accent-cyan);">Direct CGR Dijkstra</span>
+        </div>
+        <div class="hud-row">
+            <span>Total Dispatched Bundles</span>
+            <span class="hud-val" id="totalDispatchesText">0</span>
+        </div>
+    </div>
 
-        <div class="sidebar">
-            <div class="panel-card" style="flex:1; display:flex; flex-direction:column;">
-                <div class="panel-header">
-                    <span>3D DTN Custody Transfer Console</span>
-                    <span style="color:#00ff66;">RFC 9171 BPv7</span>
-                </div>
-                <div class="console-box" id="consoleBox">
-                    <div class="log-line log-sys">[SYS_INIT] 3D Deep Space Solar System Mesh Loaded.</div>
-                    <div class="log-line log-sys">[NODES] Solar Probes @ Sun-L1 | Mars Orbiter Nodes @ 1.52 AU | Earth Station @ 1.0 AU</div>
-                    <div class="log-line log-sys">[CGR] Interplanetary Contact Graph Routing Ready.</div>
-                    <div class="log-line log-sys">--------------------------------------------------------------------------------</div>
-                </div>
-            </div>
+    <div class="action-dock">
+        <button class="btn-action" onclick="dispatchRadiationAlert()">
+            <span>⚡ DISPATCH BPv7 ALERT</span>
+        </button>
+        <button class="btn-action btn-blackout" onclick="toggleEarthOccultation()">
+            <span>🔴 TOGGLE EARTH OCCULTATION</span>
+        </button>
+        <button class="btn-action" id="autoStreamBtn" onclick="toggleAutoStream()">
+            <span>🔄 AUTO-STREAM (OFF)</span>
+        </button>
+        <button class="btn-action btn-cam" onclick="cycleCameraPreset()">
+            <span>🎥 CAMERA PRESET</span>
+        </button>
+    </div>
+
+    <div class="sidebar-console">
+        <div class="console-header">
+            <span>DTN Custody Transfer Console</span>
+            <span style="color:var(--accent-green);">100% RELIABLE</span>
+        </div>
+        <div class="console-body" id="consoleBody">
+            <div class="log-entry log-sys">[SYS_INIT] 3D Deep Space Solar System Mesh Command Center Loaded.</div>
+            <div class="log-entry log-sys">[NODES] Solar Probes @ Sun Orbit | Mars Orbiter Relays @ 1.52 AU | Bhaarat Earth Station @ 1.0 AU</div>
+            <div class="log-entry log-sys">[CGR] Contact Graph Routing Ready. Mouse Drag to Orbit 3D Space.</div>
+            <div class="log-entry log-sys">--------------------------------------------------------------------------------</div>
         </div>
     </div>
 
     <script>
-        const container = document.getElementById('canvasContainer');
-        const consoleBox = document.getElementById('consoleBox');
+        // 1. Scene, Camera, Renderer Setup
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x020408, 0.0008);
 
-        let scene, camera, renderer, animationFrameId;
-        let sunMesh, earthMesh, marsMesh;
-        let isEarthOcculted = false;
-        let active3DPackets = [];
-        let dispatchCount = 0;
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 3000);
+        camera.position.set(0, 220, 520);
 
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
+
+        // 2. Custom Smooth Orbit Drag Controls
+        let isMouseDown = false;
+        let mouseX = 0, mouseY = 0;
+        let targetRotationX = 0.3;
+        let targetRotationY = 0.0;
+
+        window.addEventListener('mousedown', (e) => {
+            if (e.target.tagName === 'CANVAS') {
+                isMouseDown = true;
+                mouseX = e.clientX;
+                mouseY = e.clientY;
+            }
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (isMouseDown) {
+                const deltaX = e.clientX - mouseX;
+                const deltaY = e.clientY - mouseY;
+                targetRotationY += deltaX * 0.005;
+                targetRotationX += deltaY * 0.005;
+                targetRotationX = Math.max(-1.2, Math.min(1.2, targetRotationX));
+                mouseX = e.clientX;
+                mouseY = e.clientY;
+            }
+        });
+
+        window.addEventListener('mouseup', () => { isMouseDown = false; });
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // 3. Deep Space Background Starfield
+        function createStarfield() {
+            const starsGeo = new THREE.BufferGeometry();
+            const count = 3000;
+            const positions = new Float32Array(count * 3);
+            for (let i = 0; i < count * 3; i += 3) {
+                positions[i] = (Math.random() - 0.5) * 2000;
+                positions[i+1] = (Math.random() - 0.5) * 2000;
+                positions[i+2] = (Math.random() - 0.5) * 2000;
+            }
+            starsGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const starsMat = new THREE.PointsMaterial({ color: 0xffffff, size: 1.2, transparent: true, opacity: 0.8 });
+            const starfield = new THREE.Points(starsGeo, starsMat);
+            scene.add(starfield);
+        }
+        createStarfield();
+
+        // 4. Solar System Celestial Bodies & Interplanetary Nodes
         const spaceNodes = [
-            { id: 0, name: 'Aditya-L1 (ISRO)', agency: 'ISRO', pos: new THREE.Vector3(-120, 20, 0), color: 0xff9933 },
-            { id: 1, name: 'Parker Solar Probe (NASA)', agency: 'NASA', pos: new THREE.Vector3(-110, -30, 20), color: 0x00bfff },
-            { id: 2, name: 'Solar Orbiter (ESA)', agency: 'ESA', pos: new THREE.Vector3(-100, 40, -30), color: 0x00ff66 },
-            
-            // Interplanetary Relay Nodes
-            { id: 10, name: 'Deep Space Relay 1', agency: 'Commercial', pos: new THREE.Vector3(-40, 60, 40), color: 0xa855f7 },
-            { id: 11, name: 'Cis-Lunar Gateway', agency: 'NASA', pos: new THREE.Vector3(80, 50, -20), color: 0x00bfff },
-            
-            // Mars Orbiters (Direct Solar-to-Mars Relay)
-            { id: 20, name: 'Mangalyaan-2 (ISRO Mars)', agency: 'ISRO', pos: new THREE.Vector3(100, -80, 80), color: 0xff3300 },
-            { id: 21, name: 'MAVEN Relay (NASA Mars)', agency: 'NASA', pos: new THREE.Vector3(120, -70, 60), color: 0xff3300 },
-            { id: 22, name: 'ExoMars TGO (ESA Mars)', agency: 'ESA', pos: new THREE.Vector3(110, -90, 100), color: 0xff3300 },
+            // Solar Probes (Sun Region)
+            { id: 0, name: 'Aditya-L1 (ISRO)', agency: 'ISRO', pos: new THREE.Vector3(-220, 20, 0), color: 0xff9933 },
+            { id: 1, name: 'Parker Solar Probe (NASA)', agency: 'NASA', pos: new THREE.Vector3(-210, -35, 30), color: 0x00bfff },
+            { id: 2, name: 'Solar Orbiter (ESA)', agency: 'ESA', pos: new THREE.Vector3(-200, 45, -40), color: 0x00ff66 },
 
-            // Earth Station
-            { id: 99, name: 'Bhaarat Earth Station (ISRO)', agency: 'ISRO', pos: new THREE.Vector3(140, 10, 0), color: 0x3388ff }
+            // Interplanetary Relay Mesh Nodes
+            { id: 10, name: 'Deep Space Relay 1', agency: 'Commercial', pos: new THREE.Vector3(-100, 70, 50), color: 0xa855f7 },
+            { id: 11, name: 'Deep Space Relay 2', agency: 'NASA', pos: new THREE.Vector3(-30, -50, -60), color: 0x00bfff },
+            { id: 12, name: 'Cis-Lunar Gateway', agency: 'NASA', pos: new THREE.Vector3(60, 60, -30), color: 0x00bfff },
+
+            // Mars Orbiters Mesh
+            { id: 20, name: 'Mangalyaan-2 (ISRO Mars)', agency: 'ISRO', pos: new THREE.Vector3(180, -70, 110), color: 0xff3300 },
+            { id: 21, name: 'MAVEN Relay (NASA Mars)', agency: 'NASA', pos: new THREE.Vector3(195, -60, 90), color: 0xff3300 },
+            { id: 22, name: 'ExoMars TGO (ESA Mars)', agency: 'ESA', pos: new THREE.Vector3(170, -85, 130), color: 0xff3300 },
+            { id: 23, name: 'MMX Phobos Relay (JAXA Mars)', agency: 'JAXA', pos: new THREE.Vector3(205, -75, 120), color: 0xeab308 },
+
+            // Earth Target Station
+            { id: 99, name: 'Bhaarat Earth Ground Station', agency: 'ISRO', pos: new THREE.Vector3(140, 15, -20), color: 0x3388ff }
         ];
 
-        function init3D() {
-            scene = new THREE.Scene();
-            scene.fog = new THREE.FogExp2(0x000205, 0.001);
+        // Celestial Geometry
+        // Sun
+        const sunGeo = new THREE.SphereGeometry(35, 32, 32);
+        const sunMat = new THREE.MeshBasicMaterial({ color: 0xffcc00, wireframe: true });
+        const sunMesh = new THREE.Mesh(sunGeo, sunMat);
+        sunMesh.position.set(-260, 0, 0);
+        scene.add(sunMesh);
 
-            camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 1, 2000);
-            camera.position.set(0, 150, 400);
-            camera.lookAt(0, 0, 0);
+        // Earth
+        const earthGeo = new THREE.SphereGeometry(18, 32, 32);
+        const earthMat = new THREE.MeshBasicMaterial({ color: 0x3388ff, wireframe: true });
+        const earthMesh = new THREE.Mesh(earthGeo, earthMat);
+        earthMesh.position.copy(spaceNodes.find(n => n.id === 99).pos);
+        scene.add(earthMesh);
 
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(container.clientWidth, container.clientHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
-            container.appendChild(renderer.domElement);
+        // Earth Occultation Cone Mesh
+        const shadowGeo = new THREE.SphereGeometry(24, 32, 32);
+        const shadowMat = new THREE.MeshBasicMaterial({ color: 0xff0055, transparent: true, opacity: 0, wireframe: true });
+        const shadowMesh = new THREE.Mesh(shadowGeo, shadowMat);
+        shadowMesh.position.copy(earthMesh.position);
+        scene.add(shadowMesh);
 
-            // Lighting
-            const ambientLight = new THREE.AmbientLight(0x333333);
-            scene.add(ambientLight);
+        // Mars
+        const marsGeo = new THREE.SphereGeometry(14, 32, 32);
+        const marsMat = new THREE.MeshBasicMaterial({ color: 0xff3300, wireframe: true });
+        const marsMesh = new THREE.Mesh(marsGeo, marsMat);
+        marsMesh.position.set(185, -72, 110);
+        scene.add(marsMesh);
 
-            const sunLight = new THREE.PointLight(0xffcc00, 3, 1000);
-            sunLight.position.set(-180, 0, 0);
-            scene.add(sunLight);
+        // Render Space Mesh Nodes & Constellation Beams
+        spaceNodes.forEach(node => {
+            const nGeo = new THREE.SphereGeometry(4.5, 16, 16);
+            const nMat = new THREE.MeshBasicMaterial({ color: node.color });
+            const nMesh = new THREE.Mesh(nGeo, nMat);
+            nMesh.position.copy(node.pos);
+            scene.add(nMesh);
+        });
 
-            // 1. Sun Mesh
-            const sunGeo = new THREE.SphereGeometry(30, 32, 32);
-            const sunMat = new THREE.MeshBasicMaterial({ color: 0xffcc00, wireframe: true });
-            sunMesh = new THREE.Mesh(sunGeo, sunMat);
-            sunMesh.position.set(-180, 0, 0);
-            scene.add(sunMesh);
-
-            // 2. Earth Mesh
-            const earthGeo = new THREE.SphereGeometry(15, 32, 32);
-            const earthMat = new THREE.MeshPhongMaterial({ color: 0x3388ff, emissive: 0x112244 });
-            earthMesh = new THREE.Mesh(earthGeo, earthMat);
-            earthMesh.position.copy(spaceNodes.find(n => n.id === 99).pos);
-            scene.add(earthMesh);
-
-            // 3. Mars Mesh
-            const marsGeo = new THREE.SphereGeometry(12, 32, 32);
-            const marsMat = new THREE.MeshPhongMaterial({ color: 0xff3300, emissive: 0x331100 });
-            marsMesh = new THREE.Mesh(marsGeo, marsMat);
-            marsMesh.position.set(110, -80, 80);
-            scene.add(marsMesh);
-
-            // Add Node Points & Labels
-            spaceNodes.forEach(node => {
-                const nodeGeo = new THREE.SphereGeometry(4, 16, 16);
-                const nodeMat = new THREE.MeshBasicMaterial({ color: node.color });
-                const nodeMesh = new THREE.Mesh(nodeGeo, nodeMat);
-                nodeMesh.position.copy(node.pos);
-                scene.add(nodeMesh);
-            });
-
-            // Draw Constellation Mesh Edges
-            for (let i = 0; i < spaceNodes.length; i++) {
-                for (let j = i + 1; j < spaceNodes.length; j++) {
-                    const dist = spaceNodes[i].pos.distanceTo(spaceNodes[j].pos);
-                    if (dist < 180) {
-                        const lineMat = new THREE.LineBasicMaterial({ color: 0x1a263e, transparent: true, opacity: 0.4 });
-                        const points = [spaceNodes[i].pos, spaceNodes[j].pos];
-                        const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
-                        const line = new THREE.Line(lineGeo, lineMat);
-                        scene.add(line);
-                    }
+        // Draw Constellation Inter-Link Beams
+        for (let i = 0; i < spaceNodes.length; i++) {
+            for (let j = i + 1; j < spaceNodes.length; j++) {
+                const dist = spaceNodes[i].pos.distanceTo(spaceNodes[j].pos);
+                if (dist < 210) {
+                    const lMat = new THREE.LineBasicMaterial({ color: 0x1a263e, transparent: true, opacity: 0.3 });
+                    const points = [spaceNodes[i].pos, spaceNodes[j].pos];
+                    const lGeo = new THREE.BufferGeometry().setFromPoints(points);
+                    scene.add(new THREE.Line(lGeo, lMat));
                 }
             }
-
-            animate3D();
         }
 
-        function animate3D() {
-            animationFrameId = requestAnimationFrame(animate3D);
+        // 5. Packet Trajectory Animation Engine
+        const activePackets = [];
+        let isEarthOcculted = false;
+        let isAutoStreaming = false;
+        let autoStreamTimer = null;
+        let totalDispatches = 0;
+        let cameraPresetIdx = 0;
 
-            sunMesh.rotation.y += 0.005;
-            earthMesh.rotation.y += 0.01;
-            marsMesh.rotation.y += 0.008;
+        function animate() {
+            requestAnimationFrame(animate);
 
-            // Move packets along path
-            active3DPackets.forEach((p, idx) => {
-                p.progress += 0.015;
+            // Orbit Camera rotation
+            const radius = 560;
+            camera.position.x = radius * Math.sin(targetRotationY) * Math.cos(targetRotationX);
+            camera.position.z = radius * Math.cos(targetRotationY) * Math.cos(targetRotationX);
+            camera.position.y = radius * Math.sin(targetRotationX);
+            camera.lookAt(0, 0, 0);
+
+            sunMesh.rotation.y += 0.004;
+            earthMesh.rotation.y += 0.008;
+            marsMesh.rotation.y += 0.006;
+
+            // Animate Packet Bundles
+            activePackets.forEach((p, idx) => {
+                p.progress += 0.02;
                 if (p.progress >= 1) {
                     p.currentHop++;
                     p.progress = 0;
                 }
 
                 if (p.currentHop < p.path.length - 1) {
-                    const startPos = spaceNodes.find(n => n.id === p.path[p.currentHop]).pos;
-                    const endPos = spaceNodes.find(n => n.id === p.path[p.currentHop + 1]).pos;
-                    
-                    p.mesh.position.lerpVectors(startPos, endPos, p.progress);
+                    const startNode = spaceNodes.find(n => n.id === p.path[p.currentHop]);
+                    const endNode = spaceNodes.find(n => n.id === p.path[p.currentHop + 1]);
+
+                    p.mesh.position.lerpVectors(startNode.pos, endNode.pos, p.progress);
                 } else {
                     scene.remove(p.mesh);
-                    active3DPackets.splice(idx, 1);
+                    activePackets.splice(idx, 1);
                 }
             });
 
             renderer.render(scene, camera);
         }
+        animate();
 
+        // 6. UI Handlers & Logic
         function logConsole(msg, cssClass = 'log-sys') {
+            const consoleBody = document.getElementById('consoleBody');
             const div = document.createElement('div');
-            div.className = `log-line ${cssClass}`;
+            div.className = `log-entry ${cssClass}`;
             div.innerText = msg;
-            consoleBox.appendChild(div);
-            consoleBox.scrollTop = consoleBox.scrollHeight;
+            consoleBody.appendChild(div);
+            consoleBody.scrollTop = consoleBody.scrollHeight;
         }
 
-        function toggleEarthBlackout() {
-            isEarthOcculted = !isEarthOcculted;
-            const statusEl = document.getElementById('earthStatus');
-            const trajEl = document.getElementById('trajStatus');
+        function dispatchRadiationAlert() {
+            totalDispatches++;
+            document.getElementById('totalDispatchesText').innerText = totalDispatches;
+
+            let path = [0, 10, 12, 99]; // Direct Earth Path
+            let pathText = 'Aditya-L1 -> Relay 1 -> Gateway -> Bhaarat Earth Station';
 
             if (isEarthOcculted) {
-                statusEl.innerText = 'OCCULTED (Planetary Alignment Blackout)';
-                statusEl.style.color = '#ff0055';
-                trajEl.innerText = 'Bypassing Earth -> Routing Directly to Mars Mission Mesh';
-                trajEl.style.color = '#ff7300';
-                logConsole('[OCCULTATION DETECTED] Solar Flare / Earth Occultation! Earth Ground Station Line-of-Sight Blocked.', 'log-blackout');
-                logConsole('[RICHA DTN] Executing BFS Evasion -> Directing Trajectories to Mars Orbiters (Mangalyaan-2 & MAVEN)', 'log-mars');
-            } else {
-                statusEl.innerText = 'NOMINAL (Line of Sight)';
-                statusEl.style.color = '#00ff66';
-                trajEl.innerText = 'Solar Probe -> Mars Relay -> Earth';
-                trajEl.style.color = '#00f0ff';
-                logConsole('[SYSTEM RESTORED] Earth Line-of-Sight Restored. CGR Dijkstra Direct Path Active.', 'log-sys');
-            }
-        }
-
-        function dispatch3DBundle() {
-            dispatchCount++;
-
-            let path = [0, 2, 10, 11, 99]; // Nominal Earth Path
-            let pathName = 'Aditya-L1 -> Solar Orbiter -> Deep Space Relay -> Gateway -> Bhaarat Earth Station';
-
-            if (isEarthOcculted) {
-                path = [0, 1, 10, 21, 20]; // Mars Bypassing Path
-                pathName = 'Aditya-L1 -> Parker Probe -> Deep Space Relay -> MAVEN -> Mangalyaan-2 (Mars Relay)';
+                path = [0, 1, 10, 21, 20]; // Earth-Bypassing Mars Mesh Path
+                pathText = 'Aditya-L1 -> Parker Probe -> Relay 1 -> MAVEN -> Mangalyaan-2 (Mars Relay)';
             }
 
-            logConsole(`[DISPATCH #${dispatchCount}] BPv7 Radiation Alert Dispatched:\n  Route: ${pathName}`, isEarthOcculted ? 'log-mars' : 'log-cgr');
+            logConsole(`[DISPATCH #${totalDispatches}] BPv7 Radiation Alert Dispatched:\n  Route: ${pathText}`, isEarthOcculted ? 'log-mars' : 'log-cgr');
 
-            // Create animated 3D packet mesh
-            const packetGeo = new THREE.SphereGeometry(3, 16, 16);
-            const packetMat = new THREE.MeshBasicMaterial({ color: isEarthOcculted ? 0xff7300 : 0x00ff66 });
-            const packetMesh = new THREE.Mesh(packetGeo, packetMat);
-            scene.add(packetMesh);
+            // Glowing Packet Mesh
+            const pGeo = new THREE.SphereGeometry(5, 16, 16);
+            const pMat = new THREE.MeshBasicMaterial({ color: isEarthOcculted ? 0xff7300 : 0x00ff66 });
+            const pMesh = new THREE.Mesh(pGeo, pMat);
+            scene.add(pMesh);
 
-            active3DPackets.push({
+            activePackets.push({
                 path: path,
                 currentHop: 0,
                 progress: 0,
-                mesh: packetMesh
+                mesh: pMesh
             });
         }
 
-        function reset3DCamera() {
-            camera.position.set(0, 150, 400);
-            camera.lookAt(0, 0, 0);
+        function toggleEarthOccultation() {
+            isEarthOcculted = !isEarthOcculted;
+            const alignEl = document.getElementById('earthAlignText');
+            const routeEl = document.getElementById('routeModeText');
+
+            if (isEarthOcculted) {
+                alignEl.innerText = 'OCCULTED (Blackout)';
+                alignEl.style.color = '#ff0055';
+                routeEl.innerText = 'BFS Earth-Bypassing Mars Mesh';
+                routeEl.style.color = '#ff7300';
+                shadowMat.opacity = 0.6;
+                logConsole('[BLACKOUT DETECTED] Earth Line-of-Sight Occulted! Ground Link Inaccessible.', 'log-blackout');
+                logConsole('[RICHA DTN] Rerouting Bundles Directly to Mars Orbiters (Mangalyaan-2 / MAVEN)', 'log-mars');
+            } else {
+                alignEl.innerText = 'NOMINAL (Line of Sight)';
+                alignEl.style.color = '#00ff66';
+                routeEl.innerText = 'Direct CGR Dijkstra';
+                routeEl.style.color = '#00f0ff';
+                shadowMat.opacity = 0;
+                logConsole('[RESTORED] Earth Contact Line-of-Sight Restored. CGR Direct Route Re-activated.', 'log-sys');
+            }
         }
 
-        window.onload = () => {
-            init3D();
-        };
+        function toggleAutoStream() {
+            isAutoStreaming = !isAutoStreaming;
+            const btn = document.getElementById('autoStreamBtn');
+            if (isAutoStreaming) {
+                btn.innerHTML = '<span>🔄 AUTO-STREAM (ON)</span>';
+                btn.style.borderColor = '#00ff66';
+                btn.style.color = '#00ff66';
+                autoStreamTimer = setInterval(dispatchRadiationAlert, 1400);
+            } else {
+                btn.innerHTML = '<span>🔄 AUTO-STREAM (OFF)</span>';
+                btn.style.borderColor = '#00f0ff';
+                btn.style.color = '#00f0ff';
+                clearInterval(autoStreamTimer);
+            }
+        }
 
-        window.addEventListener('resize', () => {
-            camera.aspect = container.clientWidth / container.clientHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(container.clientWidth, container.clientHeight);
-        });
+        function cycleCameraPreset() {
+            cameraPresetIdx = (cameraPresetIdx + 1) % 4;
+            if (cameraPresetIdx === 0) {
+                // Overview
+                targetRotationX = 0.3;
+                targetRotationY = 0.0;
+            } else if (cameraPresetIdx === 1) {
+                // Solar Probes
+                targetRotationX = 0.1;
+                targetRotationY = -1.1;
+            } else if (cameraPresetIdx === 2) {
+                // Mars Mesh Focus
+                targetRotationX = -0.3;
+                targetRotationY = 1.0;
+            } else if (cameraPresetIdx === 3) {
+                // Earth Focus
+                targetRotationX = 0.0;
+                targetRotationY = 0.7;
+            }
+        }
     </script>
 </body>
 </html>
