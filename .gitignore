@@ -1,0 +1,4 @@
+# Ignore large generated data and binary dispatches
+warning_dispatch.txt
+prakash
+*.o
