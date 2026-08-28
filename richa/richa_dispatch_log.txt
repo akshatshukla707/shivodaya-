@@ -1,0 +1,264 @@
+========================================================================
+ PROJECT SHIVODAYA :: RICHA DTN INTER-AGENCY TRANSPORT DISPATCH LOG     
+========================================================================
+
+[DISPATCH #1] Bundle ID: BPv7-BUNDLE-1
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 00 04 00 | TYPE: CME         | P1: 2370.20   | P2: 360.00    | dPhi/dt: 1997.00 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 51 (ESA) -> Node 52 (ESA) -> Node 54 (ESA) -> Node 56 (ESA) -> Node 58 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #2] Bundle ID: BPv7-BUNDLE-2
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 00 07 00 | TYPE: CME         | P1: 2833.80   | P2: 360.00    | dPhi/dt: 2590.30 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 51 (ESA) -> Node 52 (ESA) -> Node 54 (ESA) -> Node 56 (ESA) -> Node 58 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #3] Bundle ID: BPv7-BUNDLE-3
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 00 08 00 | TYPE: CME         | P1: 1444.70   | P2: 360.00    | dPhi/dt: -1389.10
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 51 (ESA) -> Node 52 (ESA) -> Node 54 (ESA) -> Node 56 (ESA) -> Node 58 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #4] Bundle ID: BPv7-BUNDLE-4
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 00 09 00 | TYPE: CME         | P1: 2014.20   | P2: 360.00    | dPhi/dt: 569.50  
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 51 (ESA) -> Node 52 (ESA) -> Node 54 (ESA) -> Node 56 (ESA) -> Node 58 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[BLACKOUT DETECTED] Link (51 -> 52) Occulted! Executing BFS Blackout Evasion Reroute...
+[DISPATCH #5] Bundle ID: BPv7-BUNDLE-5
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 00 14 00 | TYPE: CME         | P1: 2443.90   | P2: 360.00    | dPhi/dt: 2144.50 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 20 (NASA) -> Node 12 (ISRO (Bhaarat)) -> Node 14 (ISRO (Bhaarat)) -> Node 26 (NASA) -> Node 38 (NASA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #6] Bundle ID: BPv7-BUNDLE-6
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 00 15 00 | TYPE: CME         | P1: 2295.10   | P2: 360.00    | dPhi/dt: -148.80 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 51 (ESA) -> Node 53 (ESA) -> Node 54 (ESA) -> Node 56 (ESA) -> Node 58 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #7] Bundle ID: BPv7-BUNDLE-7
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 00 17 00 | TYPE: CME         | P1: 2592.40   | P2: 360.00    | dPhi/dt: 2287.40 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 51 (ESA) -> Node 53 (ESA) -> Node 54 (ESA) -> Node 56 (ESA) -> Node 58 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #8] Bundle ID: BPv7-BUNDLE-8
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 00 29 00 | TYPE: CME         | P1: 2895.10   | P2: 360.00    | dPhi/dt: 2543.60 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 51 (ESA) -> Node 53 (ESA) -> Node 54 (ESA) -> Node 56 (ESA) -> Node 58 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #9] Bundle ID: BPv7-BUNDLE-9
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 00 32 00 | TYPE: CME         | P1: 1440.20   | P2: 360.00    | dPhi/dt: 1082.10 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 51 (ESA) -> Node 53 (ESA) -> Node 54 (ESA) -> Node 56 (ESA) -> Node 58 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[BLACKOUT DETECTED] Link (51 -> 53) Occulted! Executing BFS Blackout Evasion Reroute...
+[DISPATCH #10] Bundle ID: BPv7-BUNDLE-10
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 00 38 00 | TYPE: CME         | P1: 2751.30   | P2: 360.00    | dPhi/dt: 2410.00 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 20 (NASA) -> Node 12 (ISRO (Bhaarat)) -> Node 14 (ISRO (Bhaarat)) -> Node 26 (NASA) -> Node 38 (NASA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #11] Bundle ID: BPv7-BUNDLE-11
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 00 41 00 | TYPE: CME         | P1: 1891.80   | P2: 360.00    | dPhi/dt: 1653.80 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 41 (ESA) -> Node 42 (ESA) -> Node 44 (ESA) -> Node 46 (ESA) -> Node 48 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #12] Bundle ID: BPv7-BUNDLE-12
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 00 44 00 | TYPE: CME         | P1: 2569.50   | P2: 360.00    | dPhi/dt: 2312.60 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 41 (ESA) -> Node 42 (ESA) -> Node 44 (ESA) -> Node 46 (ESA) -> Node 48 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #13] Bundle ID: BPv7-BUNDLE-13
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 00 46 00 | TYPE: CME         | P1: 1325.50   | P2: 360.00    | dPhi/dt: 1013.40 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 41 (ESA) -> Node 42 (ESA) -> Node 44 (ESA) -> Node 46 (ESA) -> Node 48 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #14] Bundle ID: BPv7-BUNDLE-14
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 00 55 00 | TYPE: CME         | P1: 2091.80   | P2: 360.00    | dPhi/dt: 1725.00 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 41 (ESA) -> Node 42 (ESA) -> Node 44 (ESA) -> Node 46 (ESA) -> Node 48 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[BLACKOUT DETECTED] Link (41 -> 42) Occulted! Executing BFS Blackout Evasion Reroute...
+[DISPATCH #15] Bundle ID: BPv7-BUNDLE-15
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 00 56 00 | TYPE: CME         | P1: 2817.30   | P2: 360.00    | dPhi/dt: 725.50  
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 20 (NASA) -> Node 12 (ISRO (Bhaarat)) -> Node 14 (ISRO (Bhaarat)) -> Node 26 (NASA) -> Node 38 (NASA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #16] Bundle ID: BPv7-BUNDLE-16
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 00 58 00 | TYPE: CME         | P1: 2853.50   | P2: 360.00    | dPhi/dt: 2621.50 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 41 (ESA) -> Node 43 (ESA) -> Node 44 (ESA) -> Node 46 (ESA) -> Node 48 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #17] Bundle ID: BPv7-BUNDLE-17
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 01 03 00 | TYPE: CME         | P1: 2461.40   | P2: 360.00    | dPhi/dt: 2176.40 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 41 (ESA) -> Node 43 (ESA) -> Node 44 (ESA) -> Node 46 (ESA) -> Node 48 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #18] Bundle ID: BPv7-BUNDLE-18
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 01 05 00 | TYPE: CME         | P1: 2009.60   | P2: 360.00    | dPhi/dt: 1763.20 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 41 (ESA) -> Node 43 (ESA) -> Node 44 (ESA) -> Node 46 (ESA) -> Node 48 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #19] Bundle ID: BPv7-BUNDLE-19
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 01 09 00 | TYPE: CME         | P1: 2066.20   | P2: 360.00    | dPhi/dt: 1720.70 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 41 (ESA) -> Node 43 (ESA) -> Node 44 (ESA) -> Node 46 (ESA) -> Node 48 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[BLACKOUT DETECTED] Link (41 -> 43) Occulted! Executing BFS Blackout Evasion Reroute...
+[DISPATCH #20] Bundle ID: BPv7-BUNDLE-20
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 01 13 00 | TYPE: CME         | P1: 2175.00   | P2: 360.00    | dPhi/dt: 1902.70 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 20 (NASA) -> Node 12 (ISRO (Bhaarat)) -> Node 14 (ISRO (Bhaarat)) -> Node 26 (NASA) -> Node 38 (NASA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #21] Bundle ID: BPv7-BUNDLE-21
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 01 16 00 | TYPE: CME         | P1: 1660.50   | P2: 360.00    | dPhi/dt: 1338.80 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 50 (ESA) -> Node 52 (ESA) -> Node 54 (ESA) -> Node 56 (ESA) -> Node 58 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #22] Bundle ID: BPv7-BUNDLE-22
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 01 20 00 | TYPE: CME         | P1: 2252.20   | P2: 360.00    | dPhi/dt: 1939.50 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 50 (ESA) -> Node 52 (ESA) -> Node 54 (ESA) -> Node 56 (ESA) -> Node 58 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #23] Bundle ID: BPv7-BUNDLE-23
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 01 21 00 | TYPE: CME         | P1: 2617.90   | P2: 360.00    | dPhi/dt: 365.70  
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 50 (ESA) -> Node 52 (ESA) -> Node 54 (ESA) -> Node 56 (ESA) -> Node 58 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #24] Bundle ID: BPv7-BUNDLE-24
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 01 22 00 | TYPE: CME         | P1: 1629.10   | P2: 360.00    | dPhi/dt: -988.80 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 50 (ESA) -> Node 52 (ESA) -> Node 54 (ESA) -> Node 56 (ESA) -> Node 58 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[BLACKOUT DETECTED] Link (50 -> 52) Occulted! Executing BFS Blackout Evasion Reroute...
+[DISPATCH #25] Bundle ID: BPv7-BUNDLE-25
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 01 24 00 | TYPE: CME         | P1: 1432.80   | P2: 360.00    | dPhi/dt: 1105.70 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 20 (NASA) -> Node 12 (ISRO (Bhaarat)) -> Node 14 (ISRO (Bhaarat)) -> Node 26 (NASA) -> Node 38 (NASA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #26] Bundle ID: BPv7-BUNDLE-26
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 01 29 00 | TYPE: CME         | P1: 1377.70   | P2: 360.00    | dPhi/dt: 1067.10 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 51 (ESA) -> Node 43 (ESA) -> Node 44 (ESA) -> Node 46 (ESA) -> Node 48 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #27] Bundle ID: BPv7-BUNDLE-27
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 01 36 00 | TYPE: CME         | P1: 1904.60   | P2: 360.00    | dPhi/dt: 1521.30 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 51 (ESA) -> Node 43 (ESA) -> Node 44 (ESA) -> Node 46 (ESA) -> Node 48 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #28] Bundle ID: BPv7-BUNDLE-28
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 01 37 00 | TYPE: CME         | P1: 2275.90   | P2: 360.00    | dPhi/dt: 371.30  
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 51 (ESA) -> Node 43 (ESA) -> Node 44 (ESA) -> Node 46 (ESA) -> Node 48 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #29] Bundle ID: BPv7-BUNDLE-29
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 01 41 00 | TYPE: CME         | P1: 1303.20   | P2: 360.00    | dPhi/dt: 1007.20 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 51 (ESA) -> Node 43 (ESA) -> Node 44 (ESA) -> Node 46 (ESA) -> Node 48 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[BLACKOUT DETECTED] Link (51 -> 43) Occulted! Executing BFS Blackout Evasion Reroute...
+[DISPATCH #30] Bundle ID: BPv7-BUNDLE-30
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 01 48 00 | TYPE: CME         | P1: 2769.60   | P2: 360.00    | dPhi/dt: 2418.30 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 20 (NASA) -> Node 12 (ISRO (Bhaarat)) -> Node 14 (ISRO (Bhaarat)) -> Node 26 (NASA) -> Node 38 (NASA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #31] Bundle ID: BPv7-BUNDLE-31
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 01 49 00 | TYPE: CME         | P1: 2510.00   | P2: 360.00    | dPhi/dt: -259.60 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 41 (ESA) -> Node 53 (ESA) -> Node 54 (ESA) -> Node 56 (ESA) -> Node 58 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #32] Bundle ID: BPv7-BUNDLE-32
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 01 55 00 | TYPE: CME         | P1: 2013.20   | P2: 360.00    | dPhi/dt: 1641.60 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 41 (ESA) -> Node 53 (ESA) -> Node 54 (ESA) -> Node 56 (ESA) -> Node 58 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #33] Bundle ID: BPv7-BUNDLE-33
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 02 05 00 | TYPE: CME         | P1: 2537.80   | P2: 360.00    | dPhi/dt: 2303.10 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 41 (ESA) -> Node 53 (ESA) -> Node 54 (ESA) -> Node 56 (ESA) -> Node 58 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #34] Bundle ID: BPv7-BUNDLE-34
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 02 08 00 | TYPE: CME         | P1: 2548.70   | P2: 360.00    | dPhi/dt: 2249.80 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 41 (ESA) -> Node 53 (ESA) -> Node 54 (ESA) -> Node 56 (ESA) -> Node 58 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[BLACKOUT DETECTED] Link (41 -> 53) Occulted! Executing BFS Blackout Evasion Reroute...
+[DISPATCH #35] Bundle ID: BPv7-BUNDLE-35
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 02 11 00 | TYPE: CME         | P1: 1761.00   | P2: 360.00    | dPhi/dt: 1509.80 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 20 (NASA) -> Node 12 (ISRO (Bhaarat)) -> Node 14 (ISRO (Bhaarat)) -> Node 26 (NASA) -> Node 38 (NASA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #36] Bundle ID: BPv7-BUNDLE-36
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 02 14 00 | TYPE: CME         | P1: 2605.90   | P2: 360.00    | dPhi/dt: 2355.70 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 40 (NASA) -> Node 42 (ESA) -> Node 44 (ESA) -> Node 46 (ESA) -> Node 48 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #37] Bundle ID: BPv7-BUNDLE-37
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 02 20 00 | TYPE: CME         | P1: 1570.30   | P2: 360.00    | dPhi/dt: 1274.40 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 40 (NASA) -> Node 42 (ESA) -> Node 44 (ESA) -> Node 46 (ESA) -> Node 48 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #38] Bundle ID: BPv7-BUNDLE-38
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 02 21 00 | TYPE: CME         | P1: 2775.80   | P2: 360.00    | dPhi/dt: 1205.50 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 40 (NASA) -> Node 42 (ESA) -> Node 44 (ESA) -> Node 46 (ESA) -> Node 48 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #39] Bundle ID: BPv7-BUNDLE-39
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 02 22 00 | TYPE: CME         | P1: 2424.00   | P2: 360.00    | dPhi/dt: -351.80 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 40 (NASA) -> Node 42 (ESA) -> Node 44 (ESA) -> Node 46 (ESA) -> Node 48 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[BLACKOUT DETECTED] Link (40 -> 42) Occulted! Executing BFS Blackout Evasion Reroute...
+[DISPATCH #40] Bundle ID: BPv7-BUNDLE-40
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 02 24 00 | TYPE: CME         | P1: 1716.80   | P2: 360.00    | dPhi/dt: 1320.50 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 20 (NASA) -> Node 12 (ISRO (Bhaarat)) -> Node 14 (ISRO (Bhaarat)) -> Node 26 (NASA) -> Node 38 (NASA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #41] Bundle ID: BPv7-BUNDLE-41
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 02 26 00 | TYPE: CME         | P1: 1986.50   | P2: 360.00    | dPhi/dt: 1699.60 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 51 (ESA) -> Node 42 (ESA) -> Node 44 (ESA) -> Node 46 (ESA) -> Node 48 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #42] Bundle ID: BPv7-BUNDLE-42
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 02 27 00 | TYPE: CME         | P1: 2973.50   | P2: 360.00    | dPhi/dt: 987.00  
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 51 (ESA) -> Node 42 (ESA) -> Node 44 (ESA) -> Node 46 (ESA) -> Node 48 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #43] Bundle ID: BPv7-BUNDLE-43
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 02 28 00 | TYPE: CME         | P1: 1375.20   | P2: 360.00    | dPhi/dt: -1598.30
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 51 (ESA) -> Node 42 (ESA) -> Node 44 (ESA) -> Node 46 (ESA) -> Node 48 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #44] Bundle ID: BPv7-BUNDLE-44
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 02 29 00 | TYPE: CME         | P1: 2531.20   | P2: 360.00    | dPhi/dt: 1156.00 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 51 (ESA) -> Node 42 (ESA) -> Node 44 (ESA) -> Node 46 (ESA) -> Node 48 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[BLACKOUT DETECTED] Link (51 -> 42) Occulted! Executing BFS Blackout Evasion Reroute...
+[DISPATCH #45] Bundle ID: BPv7-BUNDLE-45
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 02 31 00 | TYPE: CME         | P1: 1866.90   | P2: 360.00    | dPhi/dt: 1511.30 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 20 (NASA) -> Node 12 (ISRO (Bhaarat)) -> Node 14 (ISRO (Bhaarat)) -> Node 26 (NASA) -> Node 38 (NASA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #46] Bundle ID: BPv7-BUNDLE-46
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 02 32 00 | TYPE: CME         | P1: 2781.80   | P2: 360.00    | dPhi/dt: 914.90  
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 51 (ESA) -> Node 63 (JAXA) -> Node 64 (JAXA) -> Node 66 (JAXA) -> Node 58 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #47] Bundle ID: BPv7-BUNDLE-47
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 02 33 00 | TYPE: CME         | P1: 1642.50   | P2: 360.00    | dPhi/dt: -1139.30
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 51 (ESA) -> Node 63 (JAXA) -> Node 64 (JAXA) -> Node 66 (JAXA) -> Node 58 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #48] Bundle ID: BPv7-BUNDLE-48
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 02 34 00 | TYPE: CME         | P1: 2576.60   | P2: 360.00    | dPhi/dt: 934.10  
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 51 (ESA) -> Node 63 (JAXA) -> Node 64 (JAXA) -> Node 66 (JAXA) -> Node 58 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[DISPATCH #49] Bundle ID: BPv7-BUNDLE-49
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 02 35 00 | TYPE: CME         | P1: 2714.30   | P2: 360.00    | dPhi/dt: 137.70  
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 51 (ESA) -> Node 63 (JAXA) -> Node 64 (JAXA) -> Node 66 (JAXA) -> Node 58 (ESA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+
+[BLACKOUT DETECTED] Link (51 -> 63) Occulted! Executing BFS Blackout Evasion Reroute...
+[DISPATCH #50] Bundle ID: BPv7-BUNDLE-50
+  - Payload: [BPv7 ALERT] TS: 2026 08 28 02 40 00 | TYPE: CME         | P1: 2870.50   | P2: 360.00    | dPhi/dt: 2615.70 
+  - Calculated DTN Trajectory (7 Hops): Node 0 (ISRO (Bhaarat)) -> Node 20 (NASA) -> Node 12 (ISRO (Bhaarat)) -> Node 14 (ISRO (Bhaarat)) -> Node 26 (NASA) -> Node 38 (NASA) -> Node 99 (ISRO (Bhaarat))
+  - DTN Custody Transfer Status: SUCCESSFUL DELIVERY TO TARGET
+

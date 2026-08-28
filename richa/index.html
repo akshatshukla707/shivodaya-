@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PROJECT SHIVODAYA :: RICHA 100-NODE INTER-AGENCY MESH GRAPH</title>
+    <style>
+        :root {
+            --bg-base: #06080e;
+            --bg-panel: #0d121d;
+            --border-panel: #1b2538;
+            --accent-cyan: #00f0ff;
+            --accent-green: #00ff66;
+            --accent-red: #ff0055;
+            --accent-orange: #ff7300;
+            --accent-purple: #a855f7;
+
+            --isro-color: #ff9933;
+            --nasa-color: #00bfff;
+            --esa-color: #00ff66;
+            --jaxa-color: #eab308;
+            --comm-color: #a855f7;
+
+            --text-heading: #f8fafc;
+            --text-body: #94a3b8;
+            --text-muted: #64748b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-heading);
+            padding: 16px;
+            overflow-x: hidden;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-panel);
+            margin-bottom: 16px;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-title h1 {
+            font-size: 1.3rem;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            background: linear-gradient(90deg, #ffffff, var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .badge-pill {
+            background: rgba(0, 240, 255, 0.08);
+            border: 1px solid var(--accent-cyan);
+            color: var(--accent-cyan);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .agency-legend {
+            display: flex;
+            gap: 16px;
+            font-size: 0.78rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .controls-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-panel);
+            border: 1px solid var(--border-panel);
+            padding: 10px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .btn-ctrl {
+            background: rgba(0, 240, 255, 0.1);
+            border: 1px solid var(--accent-cyan);
+            color: var(--accent-cyan);
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-ctrl:hover {
+            background: var(--accent-cyan);
+            color: #000;
+        }
+
+        .btn-danger {
+            background: rgba(255, 0, 85, 0.1);
+            border: 1px solid var(--accent-red);
+            color: var(--accent-red);
+        }
+
+        .btn-danger:hover {
+            background: var(--accent-red);
+            color: #fff;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 2.3fr 1fr;
+            gap: 16px;
+        }
+
+        .canvas-container {
+            background: #030509;
+            border: 1px solid var(--border-panel);
+            border-radius: 10px;
+            position: relative;
+            height: 600px;
+            box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.8);
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .side-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .panel-box {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-panel);
+            border-radius: 10px;
+            padding: 14px;
+        }
+
+        .panel-header {
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--accent-cyan);
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--border-panel);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .console-box {
+            background: #04060a;
+            border: 1px solid var(--border-panel);
+            border-radius: 6px;
+            padding: 10px;
+            font-family: 'SF Mono', Consolas, 'Courier New', monospace;
+            font-size: 0.72rem;
+            height: 380px;
+            overflow-y: auto;
+            line-height: 1.5;
+        }
+
+        .log-entry {
+            margin-bottom: 4px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .log-cgr { color: #00ff66; }
+        .log-blackout { color: #ff0055; }
+        .log-bfs { color: #a855f7; }
+        .log-sys { color: #00f0ff; }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .stat-card {
+            background: #060912;
+            border: 1px solid var(--border-panel);
+            padding: 10px;
+            border-radius: 6px;
+        }
+
+        .stat-val {
+            font-size: 1.2rem;
+            font-weight: 800;
+            font-family: monospace;
+            color: var(--text-heading);
+        }
+
+        .stat-lbl {
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-title">
+            <h1>Project Shivodaya</h1>
+            <span class="badge-pill">Richa Module :: 100-Node Inter-Agency Mesh</span>
+        </div>
+        <div class="agency-legend">
+            <div class="legend-item"><div class="legend-dot" style="background:#ff9933;"></div><span>ISRO (Bhaarat)</span></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#00bfff;"></div><span>NASA</span></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#00ff66;"></div><span>ESA</span></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#eab308;"></div><span>JAXA</span></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#a855f7;"></div><span>Commercial</span></div>
+        </div>
+    </header>
+
+    <div class="controls-bar">
+        <div style="display:flex; gap:10px; align-items:center;">
+            <button class="btn-ctrl" onclick="dispatchBundle()">DISPATCH BPv7 BUNDLE</button>
+            <button class="btn-ctrl btn-danger" onclick="triggerBlackout()">SIMULATE PLANETARY OCCULTATION (BLACKOUT)</button>
+            <button class="btn-ctrl" onclick="resetMesh()">CLEAR BLACKOUTS</button>
+        </div>
+        <div style="font-size:0.8rem; font-family:monospace; color:var(--text-body);">
+            DTN Routing: <b style="color:#00ff66;">CGR Dijkstra</b> | Failover: <b style="color:#a855f7;">BFS Evasion</b>
+        </div>
+    </div>
+
+    <div class="main-grid">
+        <div class="canvas-container">
+            <canvas id="meshCanvas"></canvas>
+        </div>
+
+        <div class="side-panel">
+            <div class="panel-box">
+                <div class="panel-header">
+                    <span>Mesh Network Health</span>
+                </div>
+                <div class="stat-grid">
+                    <div class="stat-card">
+                        <div class="stat-val" id="activeNodes">100 / 100</div>
+                        <div class="stat-lbl">Active Space Nodes</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-val" id="activeLinks">348</div>
+                        <div class="stat-lbl">Active Inter-Agency Links</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-val" id="dispatchedCount">0</div>
+                        <div class="stat-lbl">BPv7 Dispatches</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-val" id="blackoutCount" style="color:#ff0055;">0</div>
+                        <div class="stat-lbl">Blackout Edge Links</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-box" style="flex:1; display:flex; flex-direction:column;">
+                <div class="panel-header">
+                    <span>DTN Custody Transfer Console</span>
+                    <span style="color:#00ff66;">RFC 9171</span>
+                </div>
+                <div class="console-box" id="consoleBox">
+                    <div class="log-entry log-sys">[SYS_INIT] Richa 100-Node Inter-Agency Space Mesh Initialized.</div>
+                    <div class="log-entry log-sys">[NODES] Nodes 0-15: ISRO | 16-40: NASA | 41-60: ESA | 61-75: JAXA | 76-99: Commercial</div>
+                    <div class="log-entry log-sys">[CGR] Contact Graph Routing Active. Standing by for Prakash radiation alert dispatches...</div>
+                    <div class="log-entry log-sys">--------------------------------------------------------------------------------</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('meshCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        const agencyColors = {
+            ISRO: '#ff9933',
+            NASA: '#00bfff',
+            ESA: '#00ff66',
+            JAXA: '#eab308',
+            COMMERCIAL: '#a855f7'
+        };
+
+        const nodes = [];
+        const edges = [];
+        let blackouts = new Set();
+        let activePackets = [];
+        let dispatchCounter = 0;
+
+        function initNodes() {
+            resizeCanvas();
+            nodes.length = 0;
+            edges.length = 0;
+
+            // Node 0: Prakash Probe (Aditya L1)
+            nodes.push({ id: 0, name: 'Prakash-Aditya-L1', agency: 'ISRO', x: 80, y: canvas.height / 2 });
+            // Node 99: Bhaarat Station
+            nodes.push({ id: 99, name: 'Bhaarat-Earth-Station', agency: 'ISRO', x: canvas.width - 80, y: canvas.height / 2 });
+
+            for (let i = 1; i < 99; i++) {
+                let agency = 'COMMERCIAL';
+                if (i <= 15) agency = 'ISRO';
+                else if (i <= 40) agency = 'NASA';
+                else if (i <= 60) agency = 'ESA';
+                else if (i <= 75) agency = 'JAXA';
+
+                const col = (i % 10);
+                const row = Math.floor(i / 10);
+                const x = 180 + col * ((canvas.width - 360) / 9) + (Math.random() * 20 - 10);
+                const y = 60 + row * ((canvas.height - 120) / 9) + (Math.random() * 20 - 10);
+
+                nodes.push({ id: i, name: `Node-${i}`, agency: agency, x: x, y: y });
+            }
+
+            // Build edges
+            for (let i = 0; i < nodes.length; i++) {
+                for (let j = i + 1; j < nodes.length; j++) {
+                    const dx = nodes[i].x - nodes[j].x;
+                    const dy = nodes[i].y - nodes[j].y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 160) {
+                        edges.push({ u: i, v: j, key: `${Math.min(i,j)}-${Math.max(i,j)}` });
+                    }
+                }
+            }
+
+            document.getElementById('activeLinks').innerText = edges.length;
+        }
+
+        function drawMesh() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Edges
+            edges.forEach(e => {
+                const u = nodes[e.u];
+                const v = nodes[e.v];
+                const isBlackout = blackouts.has(e.key);
+
+                ctx.beginPath();
+                ctx.moveTo(u.x, u.y);
+                ctx.lineTo(v.x, v.y);
+                if (isBlackout) {
+                    ctx.strokeStyle = '#ff005566';
+                    ctx.setLineDash([4, 4]);
+                    ctx.lineWidth = 1;
+                } else {
+                    ctx.strokeStyle = '#1e2d4a';
+                    ctx.setLineDash([]);
+                    ctx.lineWidth = 1;
+                }
+                ctx.stroke();
+                ctx.setLineDash([]);
+            });
+
+            // Draw Nodes
+            nodes.forEach(n => {
+                ctx.beginPath();
+                ctx.arc(n.x, n.y, (n.id === 0 || n.id === 99) ? 10 : 5, 0, Math.PI * 2);
+                ctx.fillStyle = agencyColors[n.agency];
+                ctx.shadowColor = agencyColors[n.agency];
+                ctx.shadowBlur = (n.id === 0 || n.id === 99) ? 15 : 5;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                if (n.id === 0 || n.id === 99) {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 11px sans-serif';
+                    ctx.fillText(n.name, n.x - 40, n.y + 20);
+                }
+            });
+
+            // Draw Active Packets
+            activePackets.forEach((p, idx) => {
+                p.progress += 0.02;
+                if (p.progress >= 1) {
+                    p.currentHop++;
+                    p.progress = 0;
+                }
+
+                if (p.currentHop < p.path.length - 1) {
+                    const u = nodes[p.path[p.currentHop]];
+                    const v = nodes[p.path[p.currentHop + 1]];
+                    const curX = u.x + (v.x - u.x) * p.progress;
+                    const curY = u.y + (v.y - u.y) * p.progress;
+
+                    ctx.beginPath();
+                    ctx.arc(curX, curY, 6, 0, Math.PI * 2);
+                    ctx.fillStyle = p.isEvasion ? '#a855f7' : '#00ff66';
+                    ctx.shadowColor = p.isEvasion ? '#a855f7' : '#00ff66';
+                    ctx.shadowBlur = 12;
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                } else {
+                    activePackets.splice(idx, 1);
+                }
+            });
+
+            requestAnimationFrame(drawMesh);
+        }
+
+        function findPathDijkstra(start, target) {
+            const dist = Array(100).fill(Infinity);
+            const parent = Array(100).fill(-1);
+            const visited = Array(100).fill(false);
+
+            dist[start] = 0;
+
+            for (let i = 0; i < 100; i++) {
+                let u = -1;
+                for (let j = 0; j < 100; j++) {
+                    if (!visited[j] && (u === -1 || dist[j] < dist[u])) u = j;
+                }
+
+                if (dist[u] === Infinity || u === target) break;
+                visited[u] = true;
+
+                edges.forEach(e => {
+                    if (e.u === u || e.v === u) {
+                        if (blackouts.has(e.key)) return;
+                        const v = (e.u === u) ? e.v : e.u;
+                        if (dist[u] + 1 < dist[v]) {
+                            dist[v] = dist[u] + 1;
+                            parent[v] = u;
+                        }
+                    }
+                });
+            }
+
+            if (dist[target] === Infinity) return [];
+
+            const path = [];
+            for (let at = target; at !== -1; at = parent[at]) path.push(at);
+            return path.reverse();
+        }
+
+        function logConsole(msg, cssClass = 'log-sys') {
+            const consoleBox = document.getElementById('consoleBox');
+            const div = document.createElement('div');
+            div.className = `log-entry ${cssClass}`;
+            div.innerText = msg;
+            consoleBox.appendChild(div);
+            consoleBox.scrollTop = consoleBox.scrollHeight;
+        }
+
+        function dispatchBundle() {
+            dispatchCounter++;
+            document.getElementById('dispatchedCount').innerText = dispatchCounter;
+
+            let path = findPathDijkstra(0, 99);
+            let isEvasion = false;
+
+            if (path.length === 0) {
+                logConsole(`[FAIL] Bundle #${dispatchCounter} Blocked! All routes to Bhaarat Station occulted. Stored in Local Custody Memory.`, 'log-blackout');
+                return;
+            }
+
+            if (blackouts.size > 0) isEvasion = true;
+
+            const pathStr = path.map(id => `Node ${id} (${nodes[id].agency})`).join(' -> ');
+            if (isEvasion) {
+                logConsole(`[DISPATCH #${dispatchCounter}] BPv7 Radiation Alert Dispatched via BFS Evasion Path (${path.length} Hops):\n  Trajectory: ${pathStr}`, 'log-bfs');
+            } else {
+                logConsole(`[DISPATCH #${dispatchCounter}] BPv7 Radiation Alert Dispatched via CGR Dijkstra Path (${path.length} Hops):\n  Trajectory: ${pathStr}`, 'log-cgr');
+            }
+
+            activePackets.push({
+                path: path,
+                currentHop: 0,
+                progress: 0,
+                isEvasion: isEvasion
+            });
+        }
+
+        function triggerBlackout() {
+            if (edges.length === 0) return;
+            const randEdge = edges[Math.floor(Math.random() * edges.length)];
+            blackouts.add(randEdge.key);
+            document.getElementById('blackoutCount').innerText = blackouts.size;
+            logConsole(`[BLACKOUT OCCULTATION] Link (${randEdge.u} <-> ${randEdge.v}) Entered Planetary Occultation State! Edge Weight set to INFINITY.`, 'log-blackout');
+        }
+
+        function resetMesh() {
+            blackouts.clear();
+            document.getElementById('blackoutCount').innerText = 0;
+            logConsole(`[SYSTEM] Planetary Occultation Cleared. All Mesh Edges Restored.`, 'log-sys');
+        }
+
+        window.onload = () => {
+            initNodes();
+            drawMesh();
+        };
+    </script>
+</body>
+</html>
