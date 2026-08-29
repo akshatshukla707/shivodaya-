@@ -9,6 +9,7 @@ bin/
 __pycache__/
 richa/ion_dtn_demo/ion_dtn_engine
 richa/richa
+richa/richa_live_cli
 prakash/prakash
 warning_dispatch.txt
 session-*.md
