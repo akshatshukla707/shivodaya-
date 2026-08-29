@@ -606,12 +606,23 @@
         marsMesh.position.copy(spaceNodes.find(n => n.id === 99).pos);
         scene.add(marsMesh);
 
-        // CME Solar Storm Disturbance Mesh (Cube Shape Plasma Zone)
-        const disturbanceGeo = new THREE.BoxGeometry(65, 65, 65);
-        const disturbanceMat = new THREE.MeshBasicMaterial({ color: 0xff0055, transparent: true, opacity: 0, wireframe: true });
+        // CME Solar Storm Disturbance Mesh (High-Visibility Opaque Cube Plasma Zone)
+        const disturbanceGroup = new THREE.Group();
+
+        // Inner solid glowing cube
+        const disturbanceGeo = new THREE.BoxGeometry(60, 60, 60);
+        const disturbanceMat = new THREE.MeshBasicMaterial({ color: 0xff0055, transparent: true, opacity: 0 });
         const disturbanceMesh = new THREE.Mesh(disturbanceGeo, disturbanceMat);
-        disturbanceMesh.position.set(-120, 85, 60); // Placed directly over SpaceX Relay 1 (Node 10)
-        scene.add(disturbanceMesh);
+        disturbanceGroup.add(disturbanceMesh);
+
+        // Outer dense wireframe box shell
+        const wireGeo = new THREE.BoxGeometry(65, 65, 65);
+        const wireMat = new THREE.MeshBasicMaterial({ color: 0xff2266, wireframe: true, transparent: true, opacity: 0 });
+        const wireMesh = new THREE.Mesh(wireGeo, wireMat);
+        disturbanceGroup.add(wireMesh);
+
+        disturbanceGroup.position.set(-120, 85, 60); // Placed directly over SpaceX Relay 1 (Node 10)
+        scene.add(disturbanceGroup);
 
         // Orbit Rings for Satellites & Nodes
         spaceNodes.forEach(node => {
@@ -675,6 +686,8 @@
             if (isDisturbanceActive) {
                 disturbanceMesh.rotation.y += 0.02;
                 disturbanceMesh.rotation.z += 0.01;
+                wireMesh.rotation.y -= 0.015;
+                wireMesh.rotation.x += 0.01;
             }
 
             // Animate Sun Radiation Sprinkler Particles
@@ -828,7 +841,8 @@
                 linkEl.style.color = '#ff0055';
                 blackoutBtn.style.background = '#ff0055';
                 blackoutBtn.style.color = '#fff';
-                disturbanceMat.opacity = 0.65;
+                disturbanceMat.opacity = 0.88; // Highly visible semi-opaque solid core
+                wireMat.opacity = 1.0; // Fully opaque sharp wireframe shell
                 logConsole('[DISTURBANCE DETECTED] Solar CME Flare Plasma Interference along Normal Path (Relay 1 / Cis-Lunar Gateway)!', 'log-blackout');
                 logConsole('[LINK DROP] Normal path links experiencing infinite latency. Press "EXECUTE CGR REROUTE" or "START CUSTODY RELAY".', 'log-sys');
             } else {
@@ -840,6 +854,7 @@
                 blackoutBtn.style.background = 'rgba(255, 0, 85, 0.1)';
                 blackoutBtn.style.color = 'var(--accent-red)';
                 disturbanceMat.opacity = 0;
+                wireMat.opacity = 0;
                 logConsole('[RESTORED] Solar CME Flare Cleared. Deep space primary relay channels re-established.', 'log-sys');
             }
         }
