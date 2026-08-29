@@ -8,6 +8,8 @@ bin/
 .opencode
 __pycache__/
 richa/ion_dtn_demo/ion_dtn_engine
+prakash/prakash
+warning_dispatch.txt
 session-*.md
 *.pyc
 

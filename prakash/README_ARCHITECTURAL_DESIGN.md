@@ -29,9 +29,9 @@ To guarantee nanosecond-level execution latency and maximum I/O throughput under
 * **Implementation**: Direct memory pointer traversal (`const char *ptr`). Skipping whitespace and double quotes by incrementing raw addresses, extracting floating-point numbers without allocating temporary buffers.
 * **Technical Rationale**: `strtok()` modifies memory in-place by inserting null terminators (`\0`), which violates read-only memory mappings (`PROT_READ`). `strtok_r()` performs redundant memory scans and string copies. Direct pointer arithmetic moves directly along byte boundaries in memory-mapped address space without intermediate allocations or memory mutations.
 
-### 5. Consumer Routing & UDP Telemetry Dispatch
-* **Requirement**: Read danger breaches from atomic ring buffer, log to `warning_dispatch.txt` via low-level system call `write()` with `O_APPEND`, and dispatch serialization bundles over a local UDP socket on port `8080`.
-* **Implementation**: The consumer thread polls the lock-free ring buffer, formats breached telemetry events into binary/structured bundles, appends them to disk using `write(fd, ...)` (low-level kernel I/O), and immediately transmits the telemetry payload over non-blocking UDP (`sendto()`) to `127.0.0.1:8080`.
+### 5. Consumer Routing & Visual Telemetry Dispatch
+* **Requirement**: Read danger breaches from atomic ring buffer, log to `warning_dispatch.txt` via low-level system call `write()` with `O_APPEND`, stream high-visibility color-coded terminal alerts, and dispatch serialization bundles over a local UDP socket on port `8080`.
+* **Implementation**: The consumer thread polls the lock-free ring buffer, formats breached telemetry events into binary/structured bundles, streams color-coded alerts to stdout with 5ms presentation pacing (`nanosleep`), appends them to disk using `write(fd, ...)` (low-level kernel I/O), and transmits the telemetry payload over non-blocking UDP (`sendto()`) to `127.0.0.1:8080`.
 * **Technical Rationale**: Standard library `fprintf()` buffers data in user space and lacks atomic append guarantees across non-synchronized calls. Low-level `write()` with `O_APPEND` provides kernel-level atomic file appends without mutex locks. UDP provides lightweight, connectionless transmission with zero handshaking or TCP congestion control delays, perfectly suited for real-time sensor telemetries.
 
 ---
