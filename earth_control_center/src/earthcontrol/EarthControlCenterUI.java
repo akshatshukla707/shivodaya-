@@ -49,6 +49,7 @@ public class EarthControlCenterUI extends JFrame {
         tabbedPane.addTab("  ⚠️ RADIATION ALERTS LOG (pbtalert)  ", createAlertPanel());
         tabbedPane.addTab("  👨‍🚀 ASTRONAUT MANAGEMENT (pbtastronaut)  ", createAstronautPanel());
         tabbedPane.addTab("  🛰️ TRAJECTORY COMPARISON (pbttrajectory)  ", createTrajectoryPanel());
+        tabbedPane.addTab("  📋 AUDIT & SYSTEM LOGS (pbtlogtable)  ", createAuditLogPanel());
 
         mainPanel.add(tabbedPane, BorderLayout.CENTER);
 
@@ -692,6 +693,49 @@ public class EarthControlCenterUI extends JFrame {
                         rs.getInt("mid"), rs.getString("date"), rs.getString("time"),
                         rs.getString("rateles"), rs.getString("decteles"), rs.getString("deltadis"),
                         rs.getString("deldotsun"), rs.getString("deldotmission"), rs.getString("alertid"), eval
+                });
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // =========================================================================
+    // TAB 6: AUDIT & SYSTEM LOGS (pbtlogtable)
+    // =========================================================================
+    private JPanel createAuditLogPanel() {
+        JPanel panel = new JPanel(new BorderLayout(12, 12));
+        panel.setBackground(ModernTheme.PANEL_BG);
+        panel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+
+        DefaultTableModel model = new DefaultTableModel(new String[]{
+                "Operator Login ID", "Login Date/Time", "Switch Date/Time", "Switch Login ID",
+                "Comment", "System Note", "Working Hours", "Warning Status", "Execution Time"
+        }, 0);
+
+        JTable table = createStyledTable(model);
+        refreshAuditLogTable(model);
+
+        panel.add(new JScrollPane(table), BorderLayout.CENTER);
+        return panel;
+    }
+
+    private void refreshAuditLogTable(DefaultTableModel model) {
+        model.setRowCount(0);
+        try (Connection conn = dbManager.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT loginid, logintimeanddate, userswitchtimeanddate, switchloginid, comment, note, workinghrs, ewarning, etime FROM pbtlogtable")) {
+            while (rs.next()) {
+                model.addRow(new Object[]{
+                        rs.getString("loginid"),
+                        rs.getString("logintimeanddate"),
+                        rs.getString("userswitchtimeanddate"),
+                        rs.getString("switchloginid"),
+                        rs.getString("comment"),
+                        rs.getString("note"),
+                        rs.getString("workinghrs"),
+                        rs.getString("ewarning"),
+                        rs.getString("etime")
                 });
             }
         } catch (SQLException e) {

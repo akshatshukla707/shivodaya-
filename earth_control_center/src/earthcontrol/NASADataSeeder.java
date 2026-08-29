@@ -59,6 +59,16 @@ public class NASADataSeeder {
                     "('TRAJ-104', 'DYN-MARS-04', 'FIX-L1-01', 5, '2026-08-28', '00:15:00', 'RA: 16h10m', 'DEC: -08.4 deg', '0.025 AU', '1.05 AU', '0.001 AU', 'ALT-2026-004'), " +
                     "('TRAJ-105', 'DYN-LUNAR-05', 'FIX-L1-01', 6, '2026-08-28', '00:22:00', 'RA: 11h05m', 'DEC: +18.2 deg', '0.008 AU', '0.98 AU', '0.0003 AU', 'ALT-2026-005')";
             stmt.executeUpdate(seedTraj);
+
+            // 6. REPOPULATE pbtlogtable (Audit & System Operations Log)
+            stmt.executeUpdate("DELETE FROM pbtlogtable");
+            String seedLogs = "INSERT INTO pbtlogtable (loginid, logintimeanddate, userswitchtimeanddate, switchloginid, comment, note, workinghrs, ewarning, etime) VALUES " +
+                    "('ISRO_GROUND_CMD', '2026-08-28 00:00:01', '2026-08-28 00:00:05', 'OPERATOR_BHAARAT', 'System initialization', 'Shivodaya Mesh Node Online', '8.0', 'NOMINAL', '00:00:01'), " +
+                    "('ADITYA_L1_PROBE', '2026-08-28 00:02:00', '2026-08-28 00:02:05', 'ENCODER_C11', 'CME Severe Alert Dispatch', 'JSCC Vector 32-float encoded with Bhaarat marker', '24.0', 'CRITICAL_CME', '00:02:00'), " +
+                    "('CISLUNAR_GATEWAY', '2026-08-28 00:05:00', '2026-08-28 00:05:02', 'RICHA_NEURAL_ROUTER', 'Perceptron Dijkstra CGR reroute', 'Multi-hop BFS path activated around solar blackout', '12.0', 'WARNING_SEP', '00:05:00'), " +
+                    "('MARS_BASE_3_1', '2026-08-28 00:10:00', '2026-08-28 00:10:04', 'AKASHDEEP_DECODER', 'Reverse MLP semantic vector decoded', 'Reconstructed CME velocity 1800 km/s - SAFE ZONE DIRECTIVE ISSUED', '18.0', 'CRITICAL_FLARE', '00:10:00'), " +
+                    "('NASA_JPL_DSN', '2026-08-28 00:15:00', '2026-08-28 00:15:01', 'OPERATOR_NASA', 'Telemetry synchronization', 'Inter-agency DTN custody exchange verified', '10.0', 'NOMINAL', '00:15:00')";
+            stmt.executeUpdate(seedLogs);
         }
     }
 }
