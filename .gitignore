@@ -1,12 +1,4 @@
-# Ignore large generated output dispatches and compiled binaries
-warning_dispatch.txt
-richa_dispatch_log.txt
-prakash/prakash
-richa/richa
-richa/richa_cli
-richa/ion_dtn_demo/ion_dtn_engine
-*.o
-*.store
+build/
+*.db
+*.log
 *.fifo
-__pycache__/
-*.pyc
