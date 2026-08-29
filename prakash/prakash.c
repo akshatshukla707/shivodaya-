@@ -408,6 +408,11 @@ static void *consumer_thread(void *arg) {
 
             printf("%s[DISPATCH FILTERED] TS: %s | STREAM: %-11s | P1: %-8.1f | P2: %-8.1f | dPhi/dt: %-7.1f -> WRITTEN TO DISPATCH\033[0m\n",
                    color, alert.timestamp, stream_names[alert.stream_type], alert.param1, alert.param2, alert.delta_rate);
+            fflush(stdout);
+            struct timespec ts;
+            ts.tv_sec = 0;
+            ts.tv_nsec = 5 * 1000 * 1000; // 5 milliseconds pacing per dispatch
+            nanosleep(&ts, NULL);
 
             if (sockfd >= 0) {
                 sendto(sockfd, &alert, sizeof(AlertBundle), 0, (const struct sockaddr *)&servaddr, sizeof(servaddr));
