@@ -41,9 +41,11 @@ target_link_libraries(richa_neural_router PRIVATE sqlite3_static pthread m)
 add_executable(akashdeep_decoder akashdeep/akashdeep_decoder.cpp)
 target_link_libraries(akashdeep_decoder PRIVATE sqlite3_static pthread m)
 
-# Module 3: Akashdeep NASA ION Backend (C++17 - BP Ingress & SQLite Logger)
-add_executable(akashdeep_ion_backend akashdeep/akashdeep_ion_backend.cpp)
-target_link_libraries(akashdeep_ion_backend PRIVATE sqlite3_static pthread m)
+# Module 3: Akashdeep NASA ION Backend (C++17 - BP Ingress & SQLite Logger, optional if ION headers are present)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/third_party/ION-DTN" OR EXISTS "/home/akshat/ION-DTN")
+    add_executable(akashdeep_ion_backend akashdeep/akashdeep_ion_backend.cpp)
+    target_link_libraries(akashdeep_ion_backend PRIVATE sqlite3_static pthread m)
+endif()
 
 # Module 4: Earth Monitoring Center & Visualization Bridge
 add_executable(earth_monitor earth_monitor/earth_monitor.cpp)
