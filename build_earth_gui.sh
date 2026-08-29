@@ -30,6 +30,8 @@ fi
 
 # Compile Java sources
 javac -cp "$CP" -d "$BIN_DIR" -sourcepath "$SRC_DIR" \
+    "${SRC_DIR}/earthcontrol/ModernTheme.java" \
+    "${SRC_DIR}/earthcontrol/NASADataSeeder.java" \
     "${SRC_DIR}/earthcontrol/DatabaseManager.java" \
     "${SRC_DIR}/earthcontrol/EarthControlCenterUI.java"
 

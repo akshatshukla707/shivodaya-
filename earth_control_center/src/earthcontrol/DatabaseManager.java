@@ -64,7 +64,7 @@ public class DatabaseManager {
                     "pathid TEXT PRIMARY KEY, dynamictid TEXT, fixedtid TEXT, mid INTEGER, date TEXT, time TEXT, " +
                     "rateles TEXT, decteles TEXT, deltadis TEXT, deldotsun TEXT, deldotmission TEXT, alertid TEXT)");
 
-            seedInitialData(conn);
+            NASADataSeeder.populateNASAData(conn);
         } catch (SQLException e) {
             e.printStackTrace();
         }
