@@ -1,4 +1,4 @@
-# Project Shivodaya: Deep Space Mesh Radiation Alert & Store-and-Forward Architecture
+# Project Shivodaya: System Architecture & Execution Flowchart
 
 ## Executive Overview
 **Project Shivodaya** is a high-performance deep-space mesh network architecture designed for real-time solar radiation telemetry acquisition, space weather alert routing, and delay-tolerant store-and-forward communications.
@@ -11,79 +11,134 @@ The system is composed of four primary sub-modules:
 
 ---
 
-## 1. Prakash Module: Sensor Telemetry Acquisition Architecture
+## Complete End-to-End System Flowchart & File Dependencies
 
-### Core Technical Principles
-- **Zero-Copy Memory-Mapped File I/O (`mmap()`)**: Avoids double-buffering by mapping telemetry streams directly into memory address space with `madvise(..., MADV_SEQUENTIAL)`.
-- **Lock-Free SPCM/MPMC Ring Buffer (`stdatomic.h`)**: Operates without POSIX mutexes or kernel lock contention, enabling nanosecond lock-free synchronization.
-- **Power-of-2 Indexing**: Replaces modulo division with 1-cycle CPU bitwise logic (`(index + 1) & 4095`).
-- **L1 Cache Line Alignment (`alignas(64)`)**: Eliminates CPU false sharing by isolating atomic read/write pointers onto separate 64-byte hardware cache lines.
-- **Fast Zero-Allocation ASCII-to-Float Parser (`fast_atof`)**: Direct memory pointer arithmetic parsing without `sscanf()` overhead, cutting processing time for 500,000 records down to ~330 ms.
-- **Derivative Spike Detection ($\frac{d\Phi}{dt}$)**: Real-time detection of radiation acceleration prior to absolute limit breaches.
-- **Joint Source-Channel Coding (JSCC)**: Compresses raw telemetry features into 32-float semantic vectors embedded with the security marker `'Bhaarat'`.
+```mermaid
+flowchart TD
+    subgraph DataInputs ["1. Raw Telemetry Input Files"]
+        CME["prakash/cme_sim.txt"]
+        SEP["prakash/sep_sim.txt"]
+        SW["prakash/solar_wind_sim.txt"]
+        PF["prakash/proton_flux_sim.txt"]
+        XRAY["prakash/xray_flux_sim.txt"]
+    end
 
-### Data Stream Thresholds & Derivative Rules
-| Telemetry Stream | Physical Quantity | Danger Ceiling | Derivative Warning ($\frac{d\Phi}{dt}$) |
+    subgraph PrakashModule ["2. PRAKASH Module (Aditya-L1 - ipn:1.1)"]
+        PE_C["prakash/prakash_encoder.c<br/>(C11, POSIX mmap, Ring Buffer)"]
+        WD_TXT["prakash/warning_dispatch.txt<br/>(Semantic Vectors + Bhaarat Marker)"]
+        PE_BIN["build/prakash_encoder"]
+    end
+
+    subgraph RichaModule ["3. RICHA Module (Cis-Lunar Mesh - ipn:2.1)"]
+        R_CPP["richa/richa_neural_router.cpp<br/>(C++17, Perceptron CGR, Dijkstra)"]
+        RD_LOG["richa/richa_dispatch_log.txt<br/>(Trajectory Dispatches)"]
+        RL_DB["build/richa_routing_log.db<br/>(Async SQLite WAL Logger)"]
+        R_BIN["build/richa_neural_router"]
+        
+        ION_CPP["richa/ion_dtn_demo/ion_dtn_engine.cpp<br/>(BPv7 Custody Transfer & Blackout Store)"]
+        ION_BIN["build/ion_dtn_engine"]
+    end
+
+    subgraph AkashdeepModule ["4. AKASHDEEP Module (Mars Base - ipn:3.1)"]
+        AD_CPP["akashdeep/akashdeep_decoder.cpp<br/>(C++17, Reverse Matrix Projection)"]
+        MC_LOG["build/akashdeep_mission_control.log<br/>(Mission Log)"]
+        AD_BIN["build/akashdeep_decoder"]
+
+        subgraph JavaGUI ["Akashdeep Mission Control Java GUI"]
+            J_MAIN["akashdeep/java_gui/Main.java"]
+            J_DASH["akashdeep/java_gui/CME_Dashboard.java"]
+            J_DB["akashdeep/java_gui/org/sqlite/JDBC.java<br/>(Embedded SQLite Driver)"]
+            J_DATA["akashdeep/java_gui/CME_dataset_1000_harmful.txt"]
+            AT_DB["build/akashdeep_telemetry.db"]
+        end
+    end
+
+    subgraph EarthModule ["5. EARTH OPERATIONS CENTER"]
+        EM_CPP["earth_monitor/earth_monitor.cpp<br/>(C++17, Query Bridge)"]
+        EM_BIN["build/earth_monitor"]
+        HTML_DASH["earth_monitor/index_earth_dashboard.html<br/>(HTML5 / WebGL 3D Dashboard)"]
+        THREE_3D["richa/index3d.html<br/>(Three.js Mesh Visualizer)"]
+    end
+
+    %% Dependencies and Flow
+    CME & SEP & SW & PF & XRAY -->|mmap Stream Ingest| PE_C
+    PE_C -->|Compiles to| PE_BIN
+    PE_BIN -->|Outputs| WD_TXT
+    PE_BIN -->|IPC FIFO Pipe /tmp/shivodaya_richa_ingress.fifo| R_BIN
+
+    WD_TXT -->|Reads Dispatches| R_CPP
+    R_CPP -->|Compiles to| R_BIN
+    R_BIN -->|Outputs| RD_LOG
+    R_BIN -->|Async Log| RL_DB
+    R_BIN -->|IPC FIFO Pipe /tmp/shivodaya_akashdeep_ingress.fifo| AD_BIN
+
+    R_BIN -->|Optional ION BPv7 Engine| ION_CPP
+    ION_CPP -->|Compiles to| ION_BIN
+
+    AD_CPP -->|Compiles to| AD_BIN
+    AD_BIN -->|Writes Logs| MC_LOG
+
+    J_DATA & J_DB -->|Ingested by| J_MAIN & J_DASH
+    J_MAIN -->|Auto-Populates| AT_DB
+    
+    RL_DB & AT_DB -->|Queries DB| EM_CPP
+    EM_CPP -->|Compiles to| EM_BIN
+    
+    RL_DB -->|Streams Telemetry| HTML_DASH
+    RL_DB -->|Renders Mesh Node Graph| THREE_3D
+```
+
+---
+
+## File-by-File Dependency & Execution Matrix
+
+### 1. Prakash Module (Telemetry Acquisition & Semantic Encoding)
+| File | Language / Type | External & Internal Dependencies | What It Does / How to Run |
 | :--- | :--- | :--- | :--- |
-| `cme_sim.txt` | Coronal Mass Ejection | Velocity $> 1000.0\text{ km/s}$ & Width $= 360^\circ$ | Acceleration $> 800.0\text{ km/s/min}$ |
-| `sep_sim.txt` | Solar Energetic Particle | Intensity $> 50.0$ | Spike Rate $> 500.0\text{ /min}$ |
-| `solar_wind_sim.txt` | Solar Wind | Speed $> 800.0\text{ km/s}$ | Acceleration $> 300.0\text{ km/s/min}$ |
-| `proton_flux_sim.txt` | Proton Flux | Flux $> 100.0\text{ p/cm}^2/\text{s/sr}$ | Surge Rate $> 200.0\text{ p/cm}^2/\text{s/sr/min}$ |
-| `xray_flux_sim.txt` | X-Ray Flux | Flux $> 0.5\text{ W/m}^2$ | Surge Rate $> 0.1\text{ W/m}^2/\text{min}$ |
+| `prakash/prakash_encoder.c` | C11 | `pthread`, `math`, `third_party/sqlite3` | Zero-copy mmap telemetry parser. Compiles to `build/prakash_encoder`. |
+| `prakash/*_sim.txt` | Input Data | None | 5 simulation streams (`cme`, `sep`, `solar_wind`, `proton_flux`, `xray_flux`). |
+| `prakash/prakash.c` | C11 | `pthread`, `stdatomic.h` | Standalone CLI encoder generating `prakash/warning_dispatch.txt`. Run via `./prakash/run_cmd_demo.sh`. |
+
+### 2. Richa Module (Interplanetary Neural DTN Router)
+| File | Language / Type | External & Internal Dependencies | What It Does / How to Run |
+| :--- | :--- | :--- | :--- |
+| `richa/richa_neural_router.cpp` | C++17 | `pthread`, `sqlite3_static` (`third_party/sqlite3`) | 100-node Perceptron Dijkstra CGR router. Compiles to `build/richa_neural_router`. |
+| `richa/richa.cpp` | C++17 | `prakash/warning_dispatch.txt` | Offline batch router script. Run via `./richa/run_richa_demo.sh`. |
+| `richa/ion_dtn_demo/ion_dtn_engine.cpp` | C++17 | `pthread`, `math` | Standalone BPv7 store-and-forward custody engine with delayed receiver simulation. Tested via `python3 richa/ion_dtn_demo/test_ion_dtn_engine.py`. |
+| `richa/index3d.html` | HTML5 / JS | Three.js (via CDN), `build/richa_routing_log.db` | Interactive 3D Deep Space network mesh visualizer. Open directly in browser. |
+
+### 3. Akashdeep Module (Mars Target Semantic Decoder & Mission Control)
+| File | Language / Type | External & Internal Dependencies | What It Does / How to Run |
+| :--- | :--- | :--- | :--- |
+| `akashdeep/akashdeep_decoder.cpp` | C++17 | `pthread`, `sqlite3_static` | Inverse matrix projection decoder writing to `build/akashdeep_mission_control.log`. |
+| `akashdeep/java_gui/Main.java` | Java (JDK 17+) | Java Swing, `org/sqlite/JDBC.java` | Launcher for 3D Celestial Trajectory Engine & Control Center. Run via `./build_java.sh` then `cd akashdeep/java_gui && java -cp "bin" Main`. |
+| `akashdeep/java_gui/CME_Dashboard.java` | Java (JDK 17+) | `CME_dataset_1000_harmful.txt`, `org/sqlite/JDBC.java` | Live telemetry dashboard, health meter, safety advisory & chart builder. |
+
+### 4. Earth Operations Monitoring Center
+| File | Language / Type | External & Internal Dependencies | What It Does / How to Run |
+| :--- | :--- | :--- | :--- |
+| `earth_monitor/earth_monitor.cpp` | C++17 | `build/richa_routing_log.db`, `sqlite3_static` | Command line SQLite telemetry log bridge. Compiles to `build/earth_monitor`. |
+| `earth_monitor/index_earth_dashboard.html` | HTML5 / JS | Three.js (via CDN), `richa_routing_log.db` | WebGL 3D Earth Station Operations dashboard modal and alert viewer. |
 
 ---
 
-## 2. Richa Module: Interplanetary Mesh & DTN Transport Architecture
+## Core Build & Execution Workflows
 
-### Core Technical Principles
-- **Dynamic Contact Graph Routing (CGR)**: Uses a C++ dynamic Dijkstra algorithm over 100 deep-space mesh nodes (representing solar probes, relays, and planetary bases) to recalculate optimal multi-hop paths around coronal mass ejections and solar flare blackout zones.
-- **Bundle Protocol v7 (RFC 9171 / BPv7) Store-and-Forward**: Handles planetary occultations and long propagation delays via non-volatile custody memory. Sender EID (`ipn:1.1`), Cis-Lunar Relay EID (`ipn:2.1`), and Mars Base EID (`ipn:3.1`).
-- **Blackout Delay Latency Tracking**: Computes exact custody transfer latency and blackout duration when delayed receivers reconnect.
-- **3D Deep Space Visualizer (`richa/index3d.html`)**: Real-time Three.js visualization featuring orbital rings, particle-emitter sun radiation sprinklers, interactive blackout triggers, CGR path rerouting lines, and collapsible console sidebars.
-
----
-
-## 3. Akashdeep Module: Autonomous Mission Control & Early Warning System
-
-### Core Technical Principles
-- **Single-Unit Autonomous Data Integration**: Embedded background thread (`startAutoDataFeeder()`) automatically populates and streams telemetry records into SQLite (`akashdeep_telemetry.db`), running standalone without requiring manual data input.
-- **3D Celestial Trajectory Engine (`TrajectoryMapPanel` & `ExpandedTrajectoryFrame`)**:
-  - Renders 3D perspective plane grid, 3D Sun sphere, 3D Earth station, and 3D Mars target (`ipn:3.1`).
-  - Animates smooth harmonic spacecraft transit along the 3D parabolic transfer arc (Perseverance / Akashdeep flight vector).
-  - Renders 3D solar radiation particle swarms and concentric shockwave envelopes actively chasing the spacecraft.
-- **Overall Space Health Index Meter (`HealthMeterPanel`)**: Calculates space weather threat status (0-100%) with dynamic color-coded arcs (`NOMINAL HEALTH`, `ELEVATED THREAT`, `CRITICAL SEVERE`).
-- **Actionable Flight Safety Advisory (`FlightSuggestionPanel`)**: Generates real-time tactical directives and interactive buttons (`EXECUTE SAFE ZONE` and `RE-CALCULATE PATH`).
-- **Gradual Waveform Builder (`DangerEventsChart` & `CMEAlertTrendChart`)**: Streams dataset rows at a controlled, steady pace (every 300-400 ms) so judges watch the line plot construct live.
-- **Go Back Screen Navigation**: Includes prominent `[◀ GO BACK TO MAIN CONTROL CENTER]` header buttons on all sub-windows (`CME_Dashboard` and `ExpandedTrajectoryFrame`).
-
----
-
-## 4. Key Execution & Build Commands
-
-### **Full C/C++ Native Mesh Pipeline Build & Run**
+### 1. Single Command Build
 ```bash
-# Build native C/C++ binaries
-cd shivodaya
-./build_all.sh
+./build_all.sh      # Compiles all C/C++ modules into build/
+./build_java.sh     # Compiles Java Swing GUI into akashdeep/java_gui/bin/
+```
 
-# Run end-to-end Prakash -> Richa -> Akashdeep -> Earth Monitor pipeline
+### 2. End-to-End Automated Pipeline Execution
+```bash
 ./run_full_mesh_pipeline.sh
 ```
-
-### **Akashdeep Control Center GUI Build & Run**
-```bash
-# Build Java GUI codebase
-cd shivodaya
-./build_java.sh
-
-# Launch Akashdeep Control Center Dashboard
-cd shivodaya/akashdeep/java_gui
-java -cp "bin" Main
-```
+Executes: `prakash_encoder` $\rightarrow$ `richa_neural_router` $\rightarrow$ `akashdeep_decoder` $\rightarrow$ `earth_monitor`.
 
 ---
 
-## 5. Overall Execution Summary Benchmark
+## Technical Performance Benchmarks
 ```text
 ========================================================================
              PROJECT SHIVODAYA :: SYSTEM ARCHITECTURE BENCHMARK         
