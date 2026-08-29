@@ -10,9 +10,12 @@ mkdir -p "$BUILD_DIR"
 echo "[+] Compiling Akashdeep Java Swing Dashboard & Embedded Drivers..."
 javac -d "$BUILD_DIR" "${JAVA_GUI_DIR}/org/sqlite/JDBC.java" "${JAVA_GUI_DIR}/"*.java
 
+echo "[+] Compiling Earth Operations Control Center GUI..."
+"${SCRIPT_DIR}/build_earth_gui.sh"
+
 echo ""
 echo "========================================================================"
-echo "   [+] AKASHDEEP JAVA SWING DASHBOARD BUILD SUCCESSFUL!                 "
+echo "   [+] ALL JAVA MODULES BUILD SUCCESSFUL!                                "
 echo "========================================================================"
-echo "To launch the Akashdeep Control Center Swing Dashboard:"
-echo "cd ${JAVA_GUI_DIR} && java -cp \"${BUILD_DIR}\" Main"
+echo "To launch Akashdeep Dashboard : cd ${JAVA_GUI_DIR} && java -cp \"${BUILD_DIR}\" Main"
+echo "To launch Earth Operations GUI  : ./run_earth_control_center.sh"

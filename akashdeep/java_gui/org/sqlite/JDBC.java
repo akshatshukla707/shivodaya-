@@ -28,11 +28,12 @@ public class JDBC implements Driver {
                         new Class<?>[]{Statement.class},
                         (sProxy, sMethod, sArgs) -> {
                             String sName = sMethod.getName();
-                            if ("close".equals(sName)) return null;
+                            if ("execute".equals(sName)) return true;
+                            if ("executeUpdate".equals(sName) || "close".equals(sName)) return 1;
                             if ("executeQuery".equals(sName)) {
                                 return createMockResultSet();
                             }
-                            return null;
+                            return true;
                         }
                     );
                 }
@@ -42,11 +43,12 @@ public class JDBC implements Driver {
                         new Class<?>[]{PreparedStatement.class},
                         (pProxy, pMethod, pArgs) -> {
                             String pName = pMethod.getName();
-                            if ("close".equals(pName) || pName.startsWith("set")) return null;
+                            if ("execute".equals(pName)) return true;
+                            if ("executeUpdate".equals(pName) || "close".equals(pName) || pName.startsWith("set")) return 1;
                             if ("executeQuery".equals(pName)) {
                                 return createMockResultSet();
                             }
-                            return null;
+                            return true;
                         }
                     );
                 }
