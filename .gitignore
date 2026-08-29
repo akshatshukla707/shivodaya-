@@ -6,3 +6,7 @@ richa/richa
 richa/richa_cli
 richa/ion_dtn_demo/ion_dtn_engine
 *.o
+*.store
+*.fifo
+__pycache__/
+*.pyc
