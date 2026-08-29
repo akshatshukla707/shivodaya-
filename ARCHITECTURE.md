@@ -117,6 +117,7 @@ flowchart TD
 ### 4. Earth Operations Monitoring Center
 | File | Language / Type | External & Internal Dependencies | What It Does / How to Run |
 | :--- | :--- | :--- | :--- |
+| `earth_control_center/src/earthcontrol/EarthControlCenterUI.java` | Java (JDK 17+) | Java Swing, FlatLaf, SQLite JDBC | Project Shivodaya Ground Operations Center GUI featuring collapsible HUD sidebar, flashing alert timers, monospaced Consolas typography, and live waveform charts. Run via `./run_earth_control_center.sh` |
 | `earth_monitor/earth_monitor.cpp` | C++17 | `build/richa_routing_log.db`, `sqlite3_static` | Command line SQLite telemetry log bridge. Compiles to `build/earth_monitor`. |
 | `earth_monitor/index_earth_dashboard.html` | HTML5 / JS | Three.js (via CDN), `richa_routing_log.db` | WebGL 3D Earth Station Operations dashboard modal and alert viewer. |
 
@@ -126,8 +127,10 @@ flowchart TD
 
 ### 1. Single Command Build
 ```bash
-./build_all.sh      # Compiles all C/C++ modules into build/
-./build_java.sh     # Compiles Java Swing GUI into akashdeep/java_gui/bin/
+./build_all.sh            # Compiles all C/C++ modules into build/
+./build_java.sh           # Compiles Java Swing GUIs (Akashdeep & Ground Control) into bin directories
+./build_earth_gui.sh      # Compiles Ground Control Center GUI into earth_control_center/bin/
+./run_earth_control_center.sh # Launches Ground Control Center GUI
 ```
 
 ### 2. End-to-End Automated Pipeline Execution
