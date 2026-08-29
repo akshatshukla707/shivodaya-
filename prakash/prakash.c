@@ -400,6 +400,15 @@ static void *consumer_thread(void *arg) {
                 (void)written;
             }
 
+            // Live high-visibility terminal output for filtered radiation dispatches
+            const char* color = "\033[1;31m"; // Red for CME/SEP
+            if (alert.stream_type == STREAM_SOLAR_WIND) color = "\033[1;33m"; // Yellow
+            else if (alert.stream_type == STREAM_PROTON_FLUX) color = "\033[1;35m"; // Magenta
+            else if (alert.stream_type == STREAM_XRAY_FLUX) color = "\033[1;36m"; // Cyan
+
+            printf("%s[DISPATCH FILTERED] TS: %s | STREAM: %-11s | P1: %-8.1f | P2: %-8.1f | dPhi/dt: %-7.1f -> WRITTEN TO DISPATCH\033[0m\n",
+                   color, alert.timestamp, stream_names[alert.stream_type], alert.param1, alert.param2, alert.delta_rate);
+
             if (sockfd >= 0) {
                 sendto(sockfd, &alert, sizeof(AlertBundle), 0, (const struct sockaddr *)&servaddr, sizeof(servaddr));
             }
