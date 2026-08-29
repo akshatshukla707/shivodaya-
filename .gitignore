@@ -1,4 +1,10 @@
 build/
+bin/
+*.class
 *.db
 *.log
 *.fifo
+.latentcode
+.opencode
+
+
