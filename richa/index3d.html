@@ -733,7 +733,11 @@
                     const startNode = spaceNodes.find(n => n.id === p.path[p.currentHop]);
                     const endNode = spaceNodes.find(n => n.id === p.path[p.currentHop + 1]);
 
+                    // Lerp position along hop path
                     p.mesh.position.lerpVectors(startNode.pos, endNode.pos, p.progress);
+                    
+                    // Align the 3-dot message vector to point along the travel direction
+                    p.mesh.lookAt(endNode.pos);
 
                     // Check if packet hits disturbance zone (SpaceX Relay 1 - Node 10)
                     if (isDisturbanceActive && !p.isRerouted && !p.isCustodyMode && endNode.id === 10 && p.progress > 0.85) {
@@ -806,14 +810,14 @@
                 logConsole(`[DISPATCH #${totalDispatches}] BPv7 Radiation Alert Dispatched:\n  Route: ${pathText}`, 'log-cgr');
             }
 
-            // Create 3 Dots in a Line Packet Group
+            // Create 3 Dots in a Line Packet Group (Aligned along Z axis)
             const pGroup = new THREE.Group();
-            const dotGeo = new THREE.SphereGeometry(3.5, 12, 12);
+            const dotGeo = new THREE.SphereGeometry(3.2, 12, 12);
             const dotMat = new THREE.MeshBasicMaterial({ color: dotColor });
 
             for (let d = -1; d <= 1; d++) {
                 const dot = new THREE.Mesh(dotGeo, dotMat);
-                dot.position.set(d * 7.5, 0, 0); // 3 dots lined up in a row
+                dot.position.set(0, 0, d * 7.0); // Line up along local Z axis for lookAt alignment
                 pGroup.add(dot);
             }
 
@@ -885,14 +889,14 @@
             
             logConsole(`[CUSTODY DISPATCH #${totalDispatches}] RFC 9171 Store-and-Forward Custody Transfer:\n  Route: ${pathText}`, 'log-cgr');
 
-            // Create 3 Purple/Magenta Dots in a Line Custody Packet Group
+            // Create 3 Purple/Magenta Dots in a Line Custody Packet Group (Aligned along Z axis)
             const pGroup = new THREE.Group();
-            const dotGeo = new THREE.SphereGeometry(4.0, 12, 12);
+            const dotGeo = new THREE.SphereGeometry(3.6, 12, 12);
             const dotMat = new THREE.MeshBasicMaterial({ color: 0xa855f7 });
 
             for (let d = -1; d <= 1; d++) {
                 const dot = new THREE.Mesh(dotGeo, dotMat);
-                dot.position.set(d * 8.0, 0, 0); // 3 dots lined up in a row
+                dot.position.set(0, 0, d * 7.5); // Line up along local Z axis for lookAt alignment
                 pGroup.add(dot);
             }
 
