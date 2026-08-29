@@ -3,7 +3,7 @@ import unittest
 
 class TestIndex3DVisualizer(unittest.TestCase):
     def setUp(self):
-        with open('richa/index3d.html', 'r', encoding='utf-8') as f:
+        with open('richa/main3dvisual.html', 'r', encoding='utf-8') as f:
             self.html = f.read()
 
     def test_threejs_and_structure(self):

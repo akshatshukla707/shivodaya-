@@ -45,6 +45,6 @@ Every space probe, satellite, or orbital platform across global agencies (**ISRO
 
 - **`richa.cpp`**: Core C++ DTN transport engine executing CGR Dijkstra & BFS blackout evasion.
 - **`richa_live_cli.cpp`**: Terminal runner for live hop-by-hop custody transfer debugging.
-- **`index3d.html`**: Interactive Three.js 3D Deep Space Mesh Command Center featuring Earth-bypassing Mars routing visualization and camera presets.
+- **`main3dvisual.html`**: Interactive Three.js 3D Deep Space Mesh Command Center featuring Earth-bypassing Mars routing visualization and camera presets.
 - **`index.html`**: 2D tactical network topology graph.
 - **`run_richa_demo.sh`**: Sub-second execution benchmark script.

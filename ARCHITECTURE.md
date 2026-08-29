@@ -57,7 +57,7 @@ flowchart TD
         EM_CPP["earth_monitor/earth_monitor.cpp<br/>(C++17, Query Bridge)"]
         EM_BIN["build/earth_monitor"]
         HTML_DASH["earth_monitor/index_earth_dashboard.html<br/>(HTML5 / WebGL 3D Dashboard)"]
-        THREE_3D["richa/index3d.html<br/>(Three.js Mesh Visualizer)"]
+        THREE_3D["richa/main3dvisual.html<br/>(Three.js Mesh Visualizer)"]
     end
 
     %% Dependencies and Flow
@@ -105,7 +105,7 @@ flowchart TD
 | `richa/richa_neural_router.cpp` | C++17 | `pthread`, `sqlite3_static` (`third_party/sqlite3`) | 100-node Perceptron Dijkstra CGR router. Compiles to `build/richa_neural_router`. |
 | `richa/richa.cpp` | C++17 | `prakash/warning_dispatch.txt` | Offline batch router script. Run via `./richa/run_richa_demo.sh`. |
 | `richa/ion_dtn_demo/ion_dtn_engine.cpp` | C++17 | `pthread`, `math` | Standalone BPv7 store-and-forward custody engine with delayed receiver simulation. Tested via `python3 richa/ion_dtn_demo/test_ion_dtn_engine.py`. |
-| `richa/index3d.html` | HTML5 / JS | Three.js (via CDN), `build/richa_routing_log.db` | Interactive 3D Deep Space network mesh visualizer. Open directly in browser. |
+| `richa/main3dvisual.html` | HTML5 / JS | Three.js (via CDN), `build/richa_routing_log.db` | Interactive 3D Deep Space network mesh visualizer. Open directly in browser. |
 
 ### 3. Akashdeep Module (Mars Target Semantic Decoder & Mission Control)
 | File | Language / Type | External & Internal Dependencies | What It Does / How to Run |
