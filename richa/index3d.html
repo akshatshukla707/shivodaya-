@@ -535,27 +535,27 @@
         }
         createStarfield();
 
-        // 4. International Space Mesh Nodes (ISRO, NASA, ESA, Roscosmos, JAXA, SpaceX)
+        // 4. International Space Mesh Nodes (ISRO, NASA, ESA, Roscosmos, JAXA, SpaceX) - Well Spaced 3D Coordinates
         const spaceNodes = [
             // Sun Orbit Solar Probes (Radiation Source Nodes)
-            { id: 0, name: 'Aditya-L1 (ISRO Bhaarat)', agency: 'ISRO', pos: new THREE.Vector3(-220, 20, 0), color: 0xff9933 },
-            { id: 1, name: 'Parker Solar Probe (NASA USA)', agency: 'NASA', pos: new THREE.Vector3(-210, -35, 30), color: 0x00bfff },
-            { id: 2, name: 'Solar Orbiter (ESA Europe)', agency: 'ESA', pos: new THREE.Vector3(-200, 45, -40), color: 0x00ff66 },
+            { id: 0, name: 'Aditya-L1 (ISRO Bhaarat)', agency: 'ISRO', pos: new THREE.Vector3(-240, 35, 10), color: 0xff9933 },
+            { id: 1, name: 'Parker Solar Probe (NASA USA)', agency: 'NASA', pos: new THREE.Vector3(-225, -45, 45), color: 0x00bfff },
+            { id: 2, name: 'Solar Orbiter (ESA Europe)', agency: 'ESA', pos: new THREE.Vector3(-210, 55, -55), color: 0x00ff66 },
 
             // Interplanetary Normal Path Relays
-            { id: 10, name: 'Starshield Relay 1 (SpaceX)', agency: 'SpaceX', pos: new THREE.Vector3(-110, 70, 50), color: 0xa855f7 },
-            { id: 11, name: 'Spektr-RG Deep Relay (Roscosmos)', agency: 'Roscosmos', pos: new THREE.Vector3(-40, -50, -60), color: 0xff3333 },
-            { id: 12, name: 'Cis-Lunar Gateway (NASA USA)', agency: 'NASA', pos: new THREE.Vector3(50, 65, -30), color: 0x00bfff },
+            { id: 10, name: 'Starshield Relay 1 (SpaceX)', agency: 'SpaceX', pos: new THREE.Vector3(-120, 85, 60), color: 0xa855f7 },
+            { id: 11, name: 'Spektr-RG Deep Relay (Roscosmos)', agency: 'Roscosmos', pos: new THREE.Vector3(-50, -65, -70), color: 0xff3333 },
+            { id: 12, name: 'Cis-Lunar Gateway (NASA USA)', agency: 'NASA', pos: new THREE.Vector3(40, 75, -40), color: 0x00bfff },
 
             // Deep Space Inter-Agency Relays & Mars Mesh
-            { id: 20, name: 'Mangalyaan-2 Orbit Relay (ISRO)', agency: 'ISRO', pos: new THREE.Vector3(120, -70, 100), color: 0xff9933 },
-            { id: 21, name: 'MAVEN Relay (NASA USA)', agency: 'NASA', pos: new THREE.Vector3(140, -40, 80), color: 0x00bfff },
-            { id: 22, name: 'ExoMars TGO (ESA Europe)', agency: 'ESA', pos: new THREE.Vector3(130, 30, 90), color: 0x00ff66 },
-            { id: 23, name: 'MMX Phobos Relay (JAXA Japan)', agency: 'JAXA', pos: new THREE.Vector3(160, -20, 110), color: 0xeab308 },
-            { id: 24, name: 'Luna-26 Deep Relay (Roscosmos)', agency: 'Roscosmos', pos: new THREE.Vector3(100, 50, -40), color: 0xff3333 },
+            { id: 20, name: 'Mangalyaan-2 Orbit Relay (ISRO)', agency: 'ISRO', pos: new THREE.Vector3(130, -85, 110), color: 0xff9933 },
+            { id: 21, name: 'MAVEN Relay (NASA USA)', agency: 'NASA', pos: new THREE.Vector3(155, -45, 90), color: 0x00bfff },
+            { id: 22, name: 'ExoMars TGO (ESA Europe)', agency: 'ESA', pos: new THREE.Vector3(140, 40, 100), color: 0x00ff66 },
+            { id: 23, name: 'MMX Phobos Relay (JAXA Japan)', agency: 'JAXA', pos: new THREE.Vector3(175, -25, 125), color: 0xeab308 },
+            { id: 24, name: 'Luna-26 Deep Relay (Roscosmos)', agency: 'Roscosmos', pos: new THREE.Vector3(110, 60, -50), color: 0xff3333 },
 
             // Mars Deep Space Operations Center (Primary Deep Space Target)
-            { id: 99, name: 'Mars Operations Station (ISRO Mangalyaan Base)', agency: 'ISRO', pos: new THREE.Vector3(210, -30, 120), color: 0xff3300 }
+            { id: 99, name: 'Mars Operations Station (ISRO Mangalyaan Base)', agency: 'ISRO', pos: new THREE.Vector3(230, -35, 135), color: 0xff3300 }
         ];
 
         // Celestial Bodies & Sun Sprinkler Particles
@@ -786,10 +786,18 @@
 
             logConsole(`[DISPATCH #${totalDispatches}] BPv7 Radiation Alert Dispatched:\n  Route: ${pathText}`, isRerouted || isDisturbanceActive ? 'log-mars' : 'log-cgr');
 
-            const pGeo = new THREE.SphereGeometry(5.5, 16, 16);
-            const pMat = new THREE.MeshBasicMaterial({ color: bundleColor });
-            const pMesh = new THREE.Mesh(pGeo, pMat);
-            scene.add(pMesh);
+            // Create 3 Red Dots in a Line Packet Group
+            const pGroup = new THREE.Group();
+            const dotGeo = new THREE.SphereGeometry(3.5, 12, 12);
+            const dotMat = new THREE.MeshBasicMaterial({ color: 0xff0044 });
+
+            for (let d = -1; d <= 1; d++) {
+                const dot = new THREE.Mesh(dotGeo, dotMat);
+                dot.position.set(d * 7.5, 0, 0); // 3 red dots lined up in a row
+                pGroup.add(dot);
+            }
+
+            scene.add(pGroup);
 
             activePackets.push({
                 path: path,
@@ -797,7 +805,7 @@
                 progress: 0,
                 speed: 0.02,
                 isCustodyMode: false,
-                mesh: pMesh
+                mesh: pGroup
             });
         }
 
@@ -851,10 +859,18 @@
             let path = isDisturbanceActive ? [0, 2, 21, 20, 23, 99] : [0, 10, 12, 99];
             logConsole(`[CUSTODY DISPATCH #${totalDispatches}] BPv7 Store-and-Forward Custody Transfer Initiated across ${path.length - 1} hops.`, 'log-cgr');
 
-            const pGeo = new THREE.SphereGeometry(6, 16, 16);
-            const pMat = new THREE.MeshBasicMaterial({ color: 0xa855f7 });
-            const pMesh = new THREE.Mesh(pGeo, pMat);
-            scene.add(pMesh);
+            // Create 3 Red Dots in a Line Custody Packet Group
+            const pGroup = new THREE.Group();
+            const dotGeo = new THREE.SphereGeometry(4.0, 12, 12);
+            const dotMat = new THREE.MeshBasicMaterial({ color: 0xff0055 });
+
+            for (let d = -1; d <= 1; d++) {
+                const dot = new THREE.Mesh(dotGeo, dotMat);
+                dot.position.set(d * 8.0, 0, 0); // 3 red dots lined up in a row
+                pGroup.add(dot);
+            }
+
+            scene.add(pGroup);
 
             activePackets.push({
                 path: path,
@@ -862,7 +878,7 @@
                 progress: 0,
                 speed: 0.012, // deliberate store-and-forward step speed
                 isCustodyMode: true,
-                mesh: pMesh
+                mesh: pGroup
             });
         }
 
