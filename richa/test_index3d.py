@@ -24,10 +24,12 @@ class TestIndex3DVisualizer(unittest.TestCase):
         self.assertIn('sprinklerParticleCount', self.html)
         self.assertIn('sprinklerParticles', self.html)
 
-    def test_console_toggle_controls(self):
+    def test_console_and_hud_toggle_controls(self):
         self.assertIn('toggleConsolePanel', self.html)
+        self.assertIn('toggleHudPanel', self.html)
         self.assertIn('close-btn', self.html)
         self.assertIn('sidebarConsole', self.html)
+        self.assertIn('hudStatusBox', self.html)
 
     def test_no_duplicate_code_snippets(self):
         # Ensure animate() and script functions are declared exactly once

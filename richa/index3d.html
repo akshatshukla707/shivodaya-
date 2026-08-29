@@ -136,6 +136,49 @@
             gap: 8px;
             font-size: 0.78rem;
             width: 330px;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+        }
+
+        .hud-status-box.minimized {
+            transform: translateX(-360px);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .hud-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 6px;
+            margin-bottom: 4px;
+            border-bottom: 1px solid var(--border-panel);
+            font-weight: 800;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+            color: var(--accent-cyan);
+            text-transform: uppercase;
+        }
+
+        .hud-toggle-pill {
+            position: absolute;
+            top: 80px;
+            left: 16px;
+            z-index: 9;
+            background: var(--bg-panel);
+            border: 1px solid var(--accent-cyan);
+            color: var(--accent-cyan);
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
+            transition: all 0.2s;
+            display: none;
+        }
+
+        .hud-toggle-pill.visible {
+            display: block;
         }
 
         .hud-row {
@@ -345,7 +388,15 @@
         </div>
     </header>
 
-    <div class="hud-status-box">
+    <button class="hud-toggle-pill" id="hudTogglePill" onclick="toggleHudPanel()">
+        📊 OPEN HUD STATUS
+    </button>
+
+    <div class="hud-status-box" id="hudStatusBox">
+        <div class="hud-header">
+            <span>Mission Telemetry HUD</span>
+            <button class="close-btn" onclick="toggleHudPanel()" title="Close Status Box">✖</button>
+        </div>
         <div class="hud-row">
             <span>DTN Routing Engine</span>
             <span class="hud-val" style="color:var(--accent-green);">RFC 9171 CGR Active</span>
@@ -682,6 +733,18 @@
         animate();
 
         // 6. UI Handlers & Layout Controls
+        function toggleHudPanel() {
+            const hudEl = document.getElementById('hudStatusBox');
+            const pillEl = document.getElementById('hudTogglePill');
+            
+            hudEl.classList.toggle('minimized');
+            if (hudEl.classList.contains('minimized')) {
+                pillEl.classList.add('visible');
+            } else {
+                pillEl.classList.remove('visible');
+            }
+        }
+
         function toggleConsolePanel() {
             const consoleEl = document.getElementById('sidebarConsole');
             const pillEl = document.getElementById('consoleTogglePill');
