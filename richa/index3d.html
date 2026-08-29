@@ -280,12 +280,12 @@
             <span class="badge-pill">Richa Module :: 3D Interplanetary DTN Mesh</span>
         </div>
         <div class="agency-legend">
-            <div class="legend-item"><div class="legend-dot" style="background:#ffcc00; color:#ffcc00;"></div><span>Sun (Solar Probes)</span></div>
-            <div class="legend-item"><div class="legend-dot" style="background:#ff9933; color:#ff9933;"></div><span>ISRO (Bhaarat)</span></div>
-            <div class="legend-item"><div class="legend-dot" style="background:#00bfff; color:#00bfff;"></div><span>NASA</span></div>
-            <div class="legend-item"><div class="legend-dot" style="background:#00ff66; color:#00ff66;"></div><span>ESA</span></div>
-            <div class="legend-item"><div class="legend-dot" style="background:#eab308; color:#eab308;"></div><span>JAXA</span></div>
-            <div class="legend-item"><div class="legend-dot" style="background:#ff3300; color:#ff3300;"></div><span>Mars Mesh</span></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#ffcc00; color:#ffcc00;"></div><span>Sun (Aditya-L1 / Solar Probes)</span></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#ff9933; color:#ff9933;"></div><span>ISRO (Bhaarat Deep Space)</span></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#00bfff; color:#00bfff;"></div><span>NASA Relay</span></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#00ff66; color:#00ff66;"></div><span>ESA Relay</span></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#eab308; color:#eab308;"></div><span>JAXA Relay</span></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#ff3300; color:#ff3300;"></div><span>Mars Operations Mesh (Target)</span></div>
         </div>
     </header>
 
@@ -295,12 +295,16 @@
             <span class="hud-val" style="color:var(--accent-green);">RFC 9171 CGR Active</span>
         </div>
         <div class="hud-row">
-            <span>Earth Alignment</span>
-            <span class="hud-val" id="earthAlignText" style="color:var(--accent-green);">NOMINAL (Line of Sight)</span>
+            <span>Primary Deep-Space Link</span>
+            <span class="hud-val" id="linkStatusText" style="color:var(--accent-green);">NOMINAL (Line of Sight)</span>
         </div>
         <div class="hud-row">
-            <span>Active Trajectory Mode</span>
-            <span class="hud-val" id="routeModeText" style="color:var(--accent-cyan);">Direct CGR Dijkstra</span>
+            <span>Active Routing Mode</span>
+            <span class="hud-val" id="routeModeText" style="color:var(--accent-cyan);">Direct Space Relay</span>
+        </div>
+        <div class="hud-row">
+            <span>Custody Store & Forward</span>
+            <span class="hud-val" id="custodyStatusText" style="color:var(--accent-purple);">STANDBY</span>
         </div>
         <div class="hud-row">
             <span>Total Dispatched Bundles</span>
@@ -312,11 +316,17 @@
         <button class="btn-action" onclick="dispatchRadiationAlert()">
             <span>⚡ DISPATCH BPv7 ALERT</span>
         </button>
-        <button class="btn-action btn-blackout" onclick="toggleEarthOccultation()">
-            <span>🔴 TOGGLE EARTH OCCULTATION</span>
+        <button class="btn-action btn-blackout" id="blackoutBtn" onclick="toggleSolarDisturbance()">
+            <span>🔴 SIMULATE SOLAR DISTURBANCE</span>
+        </button>
+        <button class="btn-action" style="border-color:var(--accent-orange); color:var(--accent-orange);" onclick="executeCgrReroute()">
+            <span>🔀 EXECUTE CGR REROUTE</span>
+        </button>
+        <button class="btn-action" style="border-color:var(--accent-purple); color:var(--accent-purple);" onclick="startCustodyRelay()">
+            <span>📡 START CUSTODY RELAY</span>
         </button>
         <button class="btn-action" id="autoStreamBtn" onclick="toggleAutoStream()">
-            <span>🔄 AUTO-STREAM (OFF)</span>
+            <span>🔄 AUTO-ROUTER (OFF)</span>
         </button>
         <button class="btn-action btn-cam" onclick="cycleCameraPreset()">
             <span>🎥 CAMERA PRESET</span>
@@ -329,9 +339,9 @@
             <span style="color:var(--accent-green);">100% RELIABLE</span>
         </div>
         <div class="console-body" id="consoleBody">
-            <div class="log-entry log-sys">[SYS_INIT] 3D Deep Space Solar System Mesh Command Center Loaded.</div>
-            <div class="log-entry log-sys">[NODES] Solar Probes @ Sun Orbit | Mars Orbiter Relays @ 1.52 AU | Bhaarat Earth Station @ 1.0 AU</div>
-            <div class="log-entry log-sys">[CGR] Contact Graph Routing Ready. Mouse Drag to Orbit 3D Space.</div>
+            <div class="log-entry log-sys">[SYS_INIT] 3D Deep Space Mesh Command Center Online. Target: Mars Station.</div>
+            <div class="log-entry log-sys">[NODES] Solar Probes @ Sun Orbit | Deep Space Relays @ Lagrangian Points | Mars Ground Station @ Target</div>
+            <div class="log-entry log-sys">[CGR] Contact Graph Routing Ready. Interactive Relaying & Disturbance Controls Enabled.</div>
             <div class="log-entry log-sys">--------------------------------------------------------------------------------</div>
         </div>
     </div>
@@ -402,24 +412,24 @@
 
         // 4. Solar System Celestial Bodies & Interplanetary Nodes
         const spaceNodes = [
-            // Solar Probes (Sun Region)
-            { id: 0, name: 'Aditya-L1 (ISRO)', agency: 'ISRO', pos: new THREE.Vector3(-220, 20, 0), color: 0xff9933 },
+            // Solar Probes (Sun Region) - Source
+            { id: 0, name: 'Aditya-L1 (ISRO Solar Probe)', agency: 'ISRO', pos: new THREE.Vector3(-220, 20, 0), color: 0xff9933 },
             { id: 1, name: 'Parker Solar Probe (NASA)', agency: 'NASA', pos: new THREE.Vector3(-210, -35, 30), color: 0x00bfff },
             { id: 2, name: 'Solar Orbiter (ESA)', agency: 'ESA', pos: new THREE.Vector3(-200, 45, -40), color: 0x00ff66 },
 
-            // Interplanetary Relay Mesh Nodes
-            { id: 10, name: 'Deep Space Relay 1', agency: 'Commercial', pos: new THREE.Vector3(-100, 70, 50), color: 0xa855f7 },
-            { id: 11, name: 'Deep Space Relay 2', agency: 'NASA', pos: new THREE.Vector3(-30, -50, -60), color: 0x00bfff },
-            { id: 12, name: 'Cis-Lunar Gateway', agency: 'NASA', pos: new THREE.Vector3(60, 60, -30), color: 0x00bfff },
+            // Primary Deep-Space Relay Nodes (Normal Path)
+            { id: 10, name: 'Deep Space Relay 1 (Commercial)', agency: 'Commercial', pos: new THREE.Vector3(-100, 70, 50), color: 0xa855f7 },
+            { id: 11, name: 'Deep Space Relay 2 (NASA)', agency: 'NASA', pos: new THREE.Vector3(-30, -50, -60), color: 0x00bfff },
+            { id: 12, name: 'Cis-Lunar Gateway (NASA)', agency: 'NASA', pos: new THREE.Vector3(60, 60, -30), color: 0x00bfff },
 
-            // Mars Orbiters Mesh
-            { id: 20, name: 'Mangalyaan-2 (ISRO Mars)', agency: 'ISRO', pos: new THREE.Vector3(180, -70, 110), color: 0xff3300 },
-            { id: 21, name: 'MAVEN Relay (NASA Mars)', agency: 'NASA', pos: new THREE.Vector3(195, -60, 90), color: 0xff3300 },
-            { id: 22, name: 'ExoMars TGO (ESA Mars)', agency: 'ESA', pos: new THREE.Vector3(170, -85, 130), color: 0xff3300 },
-            { id: 23, name: 'MMX Phobos Relay (JAXA Mars)', agency: 'JAXA', pos: new THREE.Vector3(205, -75, 120), color: 0xeab308 },
+            // Failover / Inter-Agency Relay Mesh Nodes
+            { id: 20, name: 'Mangalyaan-2 Orbit Relay (ISRO)', agency: 'ISRO', pos: new THREE.Vector3(120, -70, 100), color: 0xff9933 },
+            { id: 21, name: 'MAVEN Deep Space Relay (NASA)', agency: 'NASA', pos: new THREE.Vector3(140, -40, 80), color: 0x00bfff },
+            { id: 22, name: 'ExoMars TGO Relay (ESA)', agency: 'ESA', pos: new THREE.Vector3(130, 30, 90), color: 0x00ff66 },
+            { id: 23, name: 'MMX Phobos Relay (JAXA)', agency: 'JAXA', pos: new THREE.Vector3(160, -20, 110), color: 0xeab308 },
 
-            // Earth Target Station
-            { id: 99, name: 'Bhaarat Earth Ground Station', agency: 'ISRO', pos: new THREE.Vector3(140, 15, -20), color: 0x3388ff }
+            // Mars Deep Space Operations Center (Primary Deep-Space Destination Target)
+            { id: 99, name: 'Mars Deep Space Base (Mangalyaan Station)', agency: 'ISRO', pos: new THREE.Vector3(210, -30, 120), color: 0xff3300 }
         ];
 
         // Celestial Geometry
@@ -430,56 +440,54 @@
         sunMesh.position.set(-260, 0, 0);
         scene.add(sunMesh);
 
-        // Earth
-        const earthGeo = new THREE.SphereGeometry(18, 32, 32);
-        const earthMat = new THREE.MeshBasicMaterial({ color: 0x3388ff, wireframe: true });
-        const earthMesh = new THREE.Mesh(earthGeo, earthMat);
-        earthMesh.position.copy(spaceNodes.find(n => n.id === 99).pos);
-        scene.add(earthMesh);
-
-        // Earth Occultation Cone Mesh
-        const shadowGeo = new THREE.SphereGeometry(24, 32, 32);
-        const shadowMat = new THREE.MeshBasicMaterial({ color: 0xff0055, transparent: true, opacity: 0, wireframe: true });
-        const shadowMesh = new THREE.Mesh(shadowGeo, shadowMat);
-        shadowMesh.position.copy(earthMesh.position);
-        scene.add(shadowMesh);
-
-        // Mars
-        const marsGeo = new THREE.SphereGeometry(14, 32, 32);
+        // Mars Planet Mesh (Target Location)
+        const marsGeo = new THREE.SphereGeometry(22, 32, 32);
         const marsMat = new THREE.MeshBasicMaterial({ color: 0xff3300, wireframe: true });
         const marsMesh = new THREE.Mesh(marsGeo, marsMat);
-        marsMesh.position.set(185, -72, 110);
+        marsMesh.position.copy(spaceNodes.find(n => n.id === 99).pos);
         scene.add(marsMesh);
+
+        // Solar Storm / CME Disturbance Zone Mesh (Placed over normal path)
+        const disturbanceGeo = new THREE.SphereGeometry(42, 32, 32);
+        const disturbanceMat = new THREE.MeshBasicMaterial({ color: 0xff0055, transparent: true, opacity: 0, wireframe: true });
+        const disturbanceMesh = new THREE.Mesh(disturbanceGeo, disturbanceMat);
+        disturbanceMesh.position.set(-20, 65, 10);
+        scene.add(disturbanceMesh);
 
         // Render Space Mesh Nodes & Constellation Beams
         spaceNodes.forEach(node => {
-            const nGeo = new THREE.SphereGeometry(4.5, 16, 16);
+            const nGeo = new THREE.SphereGeometry(node.id === 99 ? 6.5 : 4.5, 16, 16);
             const nMat = new THREE.MeshBasicMaterial({ color: node.color });
             const nMesh = new THREE.Mesh(nGeo, nMat);
             nMesh.position.copy(node.pos);
             scene.add(nMesh);
         });
 
-        // Draw Constellation Inter-Link Beams
+        // Draw Inter-Link Network Beams
+        const linkLines = [];
         for (let i = 0; i < spaceNodes.length; i++) {
             for (let j = i + 1; j < spaceNodes.length; j++) {
                 const dist = spaceNodes[i].pos.distanceTo(spaceNodes[j].pos);
-                if (dist < 210) {
-                    const lMat = new THREE.LineBasicMaterial({ color: 0x1a263e, transparent: true, opacity: 0.3 });
+                if (dist < 230) {
+                    const lMat = new THREE.LineBasicMaterial({ color: 0x1a263e, transparent: true, opacity: 0.35 });
                     const points = [spaceNodes[i].pos, spaceNodes[j].pos];
                     const lGeo = new THREE.BufferGeometry().setFromPoints(points);
-                    scene.add(new THREE.Line(lGeo, lMat));
+                    const line = new THREE.Line(lGeo, lMat);
+                    line.userData = { nodeA: spaceNodes[i].id, nodeB: spaceNodes[j].id };
+                    scene.add(line);
+                    linkLines.push(line);
                 }
             }
         }
 
         // 5. Packet Trajectory Animation Engine
         const activePackets = [];
-        let isEarthOcculted = false;
+        let isDisturbanceActive = false;
         let isAutoStreaming = false;
         let autoStreamTimer = null;
         let totalDispatches = 0;
         let cameraPresetIdx = 0;
+        let isRerouted = false;
 
         function animate() {
             requestAnimationFrame(animate);
@@ -492,15 +500,28 @@
             camera.lookAt(0, 0, 0);
 
             sunMesh.rotation.y += 0.004;
-            earthMesh.rotation.y += 0.008;
             marsMesh.rotation.y += 0.006;
+            if (isDisturbanceActive) {
+                disturbanceMesh.rotation.y += 0.02;
+                disturbanceMesh.rotation.z += 0.01;
+            }
 
             // Animate Packet Bundles
-            activePackets.forEach((p, idx) => {
-                p.progress += 0.02;
+            for (let idx = activePackets.length - 1; idx >= 0; idx--) {
+                const p = activePackets[idx];
+                p.progress += p.speed || 0.025;
+
                 if (p.progress >= 1) {
                     p.currentHop++;
                     p.progress = 0;
+
+                    // Log Hop Custody Release
+                    if (p.isCustodyMode && p.currentHop < p.path.length) {
+                        const currentHopNode = spaceNodes.find(n => n.id === p.path[p.currentHop]);
+                        if (currentHopNode) {
+                            logConsole(`[CUSTODY ACK] Node ${currentHopNode.name} accepted custody. Releasing prior hop buffer.`, 'log-cgr');
+                        }
+                    }
                 }
 
                 if (p.currentHop < p.path.length - 1) {
@@ -509,10 +530,11 @@
 
                     p.mesh.position.lerpVectors(startNode.pos, endNode.pos, p.progress);
                 } else {
+                    logConsole(`[DELIVERED] BPv7 Radiation Alert successfully arrived at Mars Deep Space Station!`, 'log-mars');
                     scene.remove(p.mesh);
                     activePackets.splice(idx, 1);
                 }
-            });
+            }
 
             renderer.render(scene, camera);
         }
@@ -532,19 +554,24 @@
             totalDispatches++;
             document.getElementById('totalDispatchesText').innerText = totalDispatches;
 
-            let path = [0, 10, 12, 99]; // Direct Earth Path
-            let pathText = 'Aditya-L1 -> Relay 1 -> Gateway -> Bhaarat Earth Station';
+            let path = [0, 10, 12, 99]; // Normal Direct Path
+            let pathText = 'Aditya-L1 -> Relay 1 -> Cis-Lunar Gateway -> Mars Deep Space Base';
+            let bundleColor = 0x00ff66;
 
-            if (isEarthOcculted) {
-                path = [0, 1, 10, 21, 20]; // Earth-Bypassing Mars Mesh Path
-                pathText = 'Aditya-L1 -> Parker Probe -> Relay 1 -> MAVEN -> Mangalyaan-2 (Mars Relay)';
+            if (isDisturbanceActive && !isRerouted) {
+                logConsole(`[ALERT BLOCKED] Bundle dispatched along normal path encountered CME Solar Disturbance at Relay 1! Execution stalled.`, 'log-blackout');
+                // Drop packet simulation
+                return;
+            } else if (isDisturbanceActive || isRerouted) {
+                path = [0, 2, 21, 20, 23, 99]; // Failover Inter-agency path
+                pathText = 'Aditya-L1 -> Solar Orbiter (ESA) -> MAVEN (NASA) -> Mangalyaan-2 (ISRO) -> MMX (JAXA) -> Mars Base';
+                bundleColor = 0xff7300;
             }
 
-            logConsole(`[DISPATCH #${totalDispatches}] BPv7 Radiation Alert Dispatched:\n  Route: ${pathText}`, isEarthOcculted ? 'log-mars' : 'log-cgr');
+            logConsole(`[DISPATCH #${totalDispatches}] BPv7 Radiation Alert Dispatched:\n  Route: ${pathText}`, isRerouted || isDisturbanceActive ? 'log-mars' : 'log-cgr');
 
-            // Glowing Packet Mesh
-            const pGeo = new THREE.SphereGeometry(5, 16, 16);
-            const pMat = new THREE.MeshBasicMaterial({ color: isEarthOcculted ? 0xff7300 : 0x00ff66 });
+            const pGeo = new THREE.SphereGeometry(5.5, 16, 16);
+            const pMat = new THREE.MeshBasicMaterial({ color: bundleColor });
             const pMesh = new THREE.Mesh(pGeo, pMat);
             scene.add(pMesh);
 
@@ -552,43 +579,93 @@
                 path: path,
                 currentHop: 0,
                 progress: 0,
+                speed: 0.02,
+                isCustodyMode: false,
                 mesh: pMesh
             });
         }
 
-        function toggleEarthOccultation() {
-            isEarthOcculted = !isEarthOcculted;
-            const alignEl = document.getElementById('earthAlignText');
+        function toggleSolarDisturbance() {
+            isDisturbanceActive = !isDisturbanceActive;
+            const linkEl = document.getElementById('linkStatusText');
             const routeEl = document.getElementById('routeModeText');
+            const blackoutBtn = document.getElementById('blackoutBtn');
 
-            if (isEarthOcculted) {
-                alignEl.innerText = 'OCCULTED (Blackout)';
-                alignEl.style.color = '#ff0055';
-                routeEl.innerText = 'BFS Earth-Bypassing Mars Mesh';
-                routeEl.style.color = '#ff7300';
-                shadowMat.opacity = 0.6;
-                logConsole('[BLACKOUT DETECTED] Earth Line-of-Sight Occulted! Ground Link Inaccessible.', 'log-blackout');
-                logConsole('[RICHA DTN] Rerouting Bundles Directly to Mars Orbiters (Mangalyaan-2 / MAVEN)', 'log-mars');
+            if (isDisturbanceActive) {
+                linkEl.innerText = 'CME SOLAR FLARE INTERFERENCE (BLOCKED)';
+                linkEl.style.color = '#ff0055';
+                blackoutBtn.style.background = '#ff0055';
+                blackoutBtn.style.color = '#fff';
+                disturbanceMat.opacity = 0.65;
+                logConsole('[DISTURBANCE DETECTED] Solar CME Flare Plasma Interference along Normal Path (Relay 1 / Cis-Lunar Gateway)!', 'log-blackout');
+                logConsole('[LINK DROP] Normal path links experiencing infinite latency. Press "EXECUTE CGR REROUTE" or "START CUSTODY RELAY".', 'log-sys');
             } else {
-                alignEl.innerText = 'NOMINAL (Line of Sight)';
-                alignEl.style.color = '#00ff66';
-                routeEl.innerText = 'Direct CGR Dijkstra';
+                isRerouted = false;
+                linkEl.innerText = 'NOMINAL (Line of Sight)';
+                linkEl.style.color = '#00ff66';
+                routeEl.innerText = 'Direct Space Relay';
                 routeEl.style.color = '#00f0ff';
-                shadowMat.opacity = 0;
-                logConsole('[RESTORED] Earth Contact Line-of-Sight Restored. CGR Direct Route Re-activated.', 'log-sys');
+                blackoutBtn.style.background = 'rgba(255, 0, 85, 0.1)';
+                blackoutBtn.style.color = 'var(--accent-red)';
+                disturbanceMat.opacity = 0;
+                logConsole('[RESTORED] Solar CME Flare Cleared. Deep space primary relay channels re-established.', 'log-sys');
             }
+        }
+
+        function executeCgrReroute() {
+            isRerouted = true;
+            const routeEl = document.getElementById('routeModeText');
+            routeEl.innerText = 'CGR Inter-Agency Mesh (BFS Failover)';
+            routeEl.style.color = '#ff7300';
+
+            logConsole('[CGR CALCULATION] Contact Graph Routing Time-Dependent Dijkstra executed.', 'log-cgr');
+            logConsole('[REROUTE PATH] Diverting deep-space traffic via ESA Solar Orbiter & NASA MAVEN to Mars Base.', 'log-mars');
+
+            dispatchRadiationAlert();
+        }
+
+        function startCustodyRelay() {
+            totalDispatches++;
+            document.getElementById('totalDispatchesText').innerText = totalDispatches;
+
+            const custodyEl = document.getElementById('custodyStatusText');
+            custodyEl.innerText = 'STORE-AND-FORWARD ACTIVE';
+            custodyEl.style.color = '#00ff66';
+
+            let path = isDisturbanceActive ? [0, 2, 21, 20, 23, 99] : [0, 10, 12, 99];
+            logConsole(`[CUSTODY DISPATCH #${totalDispatches}] BPv7 Store-and-Forward Custody Transfer Initiated across ${path.length - 1} hops.`, 'log-cgr');
+
+            const pGeo = new THREE.SphereGeometry(6, 16, 16);
+            const pMat = new THREE.MeshBasicMaterial({ color: 0xa855f7 });
+            const pMesh = new THREE.Mesh(pGeo, pMat);
+            scene.add(pMesh);
+
+            activePackets.push({
+                path: path,
+                currentHop: 0,
+                progress: 0,
+                speed: 0.012, // deliberate store-and-forward step speed
+                isCustodyMode: true,
+                mesh: pMesh
+            });
         }
 
         function toggleAutoStream() {
             isAutoStreaming = !isAutoStreaming;
             const btn = document.getElementById('autoStreamBtn');
             if (isAutoStreaming) {
-                btn.innerHTML = '<span>🔄 AUTO-STREAM (ON)</span>';
+                btn.innerHTML = '<span>🔄 AUTO-ROUTER (ON)</span>';
                 btn.style.borderColor = '#00ff66';
                 btn.style.color = '#00ff66';
-                autoStreamTimer = setInterval(dispatchRadiationAlert, 1400);
+                autoStreamTimer = setInterval(() => {
+                    if (isDisturbanceActive) {
+                        executeCgrReroute();
+                    } else {
+                        dispatchRadiationAlert();
+                    }
+                }, 1600);
             } else {
-                btn.innerHTML = '<span>🔄 AUTO-STREAM (OFF)</span>';
+                btn.innerHTML = '<span>🔄 AUTO-ROUTER (OFF)</span>';
                 btn.style.borderColor = '#00f0ff';
                 btn.style.color = '#00f0ff';
                 clearInterval(autoStreamTimer);
@@ -598,21 +675,21 @@
         function cycleCameraPreset() {
             cameraPresetIdx = (cameraPresetIdx + 1) % 4;
             if (cameraPresetIdx === 0) {
-                // Overview
+                // Solar System Overview
                 targetRotationX = 0.3;
                 targetRotationY = 0.0;
             } else if (cameraPresetIdx === 1) {
-                // Solar Probes
+                // Solar Probes Focus
                 targetRotationX = 0.1;
                 targetRotationY = -1.1;
             } else if (cameraPresetIdx === 2) {
-                // Mars Mesh Focus
-                targetRotationX = -0.3;
-                targetRotationY = 1.0;
+                // Disturbance Zone Focus
+                targetRotationX = 0.2;
+                targetRotationY = -0.2;
             } else if (cameraPresetIdx === 3) {
-                // Earth Focus
-                targetRotationX = 0.0;
-                targetRotationY = 0.7;
+                // Mars Deep Space Operations Focus
+                targetRotationX = -0.3;
+                targetRotationY = 0.9;
             }
         }
     </script>
