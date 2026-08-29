@@ -2,6 +2,8 @@ import subprocess
 import time
 import os
 
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+
 def test_single_choices():
     proc = subprocess.Popen(
         ['./richa/ion_dtn_demo/ion_dtn_engine', 'sender'],
@@ -9,7 +11,7 @@ def test_single_choices():
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
-        cwd='/home/akshat/shivodaya'
+        cwd=REPO_ROOT
     )
     out, err = proc.communicate(input="1\n2\n3\n4\n0\n", timeout=10)
     
@@ -25,7 +27,7 @@ def test_auto_stream():
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
-        cwd='/home/akshat/shivodaya'
+        cwd=REPO_ROOT
     )
     out, err = proc.communicate(input="5\n0\n", timeout=20)
     
@@ -46,7 +48,7 @@ def test_delayed_receiver_timing():
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
-        cwd='/home/akshat/shivodaya'
+        cwd=REPO_ROOT
     )
     proc_send.communicate(input="1\n0\n", timeout=5)
     
@@ -58,7 +60,7 @@ def test_delayed_receiver_timing():
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
-        cwd='/home/akshat/shivodaya'
+        cwd=REPO_ROOT
     )
     out_recv, _ = proc_recv.communicate(timeout=10)
     

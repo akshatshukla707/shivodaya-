@@ -63,7 +63,7 @@ The system is composed of four primary sub-modules:
 ### **Full C/C++ Native Mesh Pipeline Build & Run**
 ```bash
 # Build native C/C++ binaries
-cd /home/akshat/shivodaya
+cd shivodaya
 ./build_all.sh
 
 # Run end-to-end Prakash -> Richa -> Akashdeep -> Earth Monitor pipeline
@@ -73,11 +73,11 @@ cd /home/akshat/shivodaya
 ### **Akashdeep Control Center GUI Build & Run**
 ```bash
 # Build Java GUI codebase
-cd /home/akshat/shivodaya
+cd shivodaya
 ./build_java.sh
 
 # Launch Akashdeep Control Center Dashboard
-cd /home/akshat/shivodaya/akashdeep/java_gui
+cd shivodaya/akashdeep/java_gui
 java -cp "bin" Main
 ```
 

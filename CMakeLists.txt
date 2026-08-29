@@ -11,9 +11,19 @@ add_compile_options(-O3 -Wall -Wextra -pthread)
 # Include directories
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sqlite3
-    /home/akshat/ION-DTN/bpv7/include
-    /home/akshat/ION-DTN/ici/include
 )
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/third_party/ION-DTN")
+    include_directories(
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/ION-DTN/bpv7/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/ION-DTN/ici/include
+    )
+elseif(EXISTS "/home/akshat/ION-DTN")
+    include_directories(
+        /home/akshat/ION-DTN/bpv7/include
+        /home/akshat/ION-DTN/ici/include
+    )
+endif()
 
 # SQLite3 Library
 add_library(sqlite3_static STATIC third_party/sqlite3/sqlite3.c)
@@ -38,3 +48,7 @@ target_link_libraries(akashdeep_ion_backend PRIVATE sqlite3_static pthread m)
 # Module 4: Earth Monitoring Center & Visualization Bridge
 add_executable(earth_monitor earth_monitor/earth_monitor.cpp)
 target_link_libraries(earth_monitor PRIVATE sqlite3_static pthread m)
+
+# Module 5: Standalone ION DTN Engine Demo
+add_executable(ion_dtn_engine richa/ion_dtn_demo/ion_dtn_engine.cpp)
+target_link_libraries(ion_dtn_engine PRIVATE pthread m)

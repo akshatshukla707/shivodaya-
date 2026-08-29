@@ -6,5 +6,9 @@ bin/
 *.fifo
 .latentcode
 .opencode
+__pycache__/
+richa/ion_dtn_demo/ion_dtn_engine
+session-*.md
+*.pyc
 
 

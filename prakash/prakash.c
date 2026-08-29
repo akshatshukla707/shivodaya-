@@ -444,11 +444,11 @@ int main(int argc, char *argv[]) {
     }
 
     const char *files[STREAM_COUNT] = {
-        "/home/akshat/shivodaya/prakash/cme_sim.txt",
-        "/home/akshat/shivodaya/prakash/sep_sim.txt",
-        "/home/akshat/shivodaya/prakash/solar_wind_sim.txt",
-        "/home/akshat/shivodaya/prakash/proton_flux_sim.txt",
-        "/home/akshat/shivodaya/prakash/xray_flux_sim.txt"
+        "prakash/cme_sim.txt",
+        "prakash/sep_sim.txt",
+        "prakash/solar_wind_sim.txt",
+        "prakash/proton_flux_sim.txt",
+        "prakash/xray_flux_sim.txt"
     };
 
     pthread_t producer_threads[STREAM_COUNT];

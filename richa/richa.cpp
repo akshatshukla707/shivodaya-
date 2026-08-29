@@ -292,8 +292,8 @@ int main() {
 
     RichaTransportEngine richa;
     richa.process_prakash_dispatches(
-        "/home/akshat/shivodaya/prakash/warning_dispatch.txt",
-        "/home/akshat/shivodaya/richa/richa_dispatch_log.txt"
+        "prakash/warning_dispatch.txt",
+        "richa/richa_dispatch_log.txt"
     );
 
     return 0;

@@ -70,9 +70,12 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    std::ifstream infile("/home/akshat/shivodaya/prakash/warning_dispatch.txt");
+    std::ifstream infile("prakash/warning_dispatch.txt");
     if (!infile.is_open()) {
-        std::cerr << RED << "[!] Error: Cannot open /home/akshat/shivodaya/prakash/warning_dispatch.txt" << RESET << "\n";
+        infile.open("../prakash/warning_dispatch.txt");
+    }
+    if (!infile.is_open()) {
+        std::cerr << RED << "[!] Error: Cannot open prakash/warning_dispatch.txt or ../prakash/warning_dispatch.txt" << RESET << "\n";
         return 1;
     }
 

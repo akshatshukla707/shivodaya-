@@ -13,6 +13,9 @@ cd "$BUILD_DIR"
 cmake "$SCRIPT_DIR"
 make -j$(nproc)
 
+# Copy ion_dtn_engine binary to richa/ion_dtn_demo directory for script compatibility
+cp -f "${BUILD_DIR}/ion_dtn_engine" "${SCRIPT_DIR}/richa/ion_dtn_demo/ion_dtn_engine" 2>/dev/null || true
+
 echo ""
 echo "[+] Build Successful! Binaries generated in build/:"
-ls -la prakash_encoder richa_neural_router akashdeep_decoder earth_monitor
+ls -la prakash_encoder richa_neural_router akashdeep_decoder earth_monitor ion_dtn_engine

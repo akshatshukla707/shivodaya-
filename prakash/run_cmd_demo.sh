@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
-rm -f /home/akshat/shivodaya/prakash/warning_dispatch.txt
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+rm -f "$SCRIPT_DIR/warning_dispatch.txt"
 echo "==============================================================="
 echo "        PROJECT SHIVODAYA :: PRAKASH ACQUISITION MODULE        "
 echo "==============================================================="
 echo "[+] Mmapping 5 telemetry streams & binding CPU core affinity..."
 echo "[+] Running zero-copy C11 lock-free acquisition pipeline..."
 echo ""
-time /home/akshat/shivodaya/prakash/prakash
+time "$SCRIPT_DIR/prakash"
 echo ""
 echo "[+] Verification & Output Summary:"
-echo "    - Output Dispatch File: /home/akshat/shivodaya/prakash/warning_dispatch.txt"
-echo "    - Total Severe Radiation Alerts Logged: $(wc -l < /home/akshat/shivodaya/prakash/warning_dispatch.txt) lines"
+echo "    - Output Dispatch File: $SCRIPT_DIR/warning_dispatch.txt"
+echo "    - Total Severe Radiation Alerts Logged: $(wc -l < "$SCRIPT_DIR/warning_dispatch.txt") lines"
 echo ""
 echo "[+] Sample Real-Time Alert Dispatches:"
-head -n 6 /home/akshat/shivodaya/prakash/warning_dispatch.txt
+head -n 6 "$SCRIPT_DIR/warning_dispatch.txt"
 
