@@ -20,7 +20,9 @@
             --isro-color: #ff9933;
             --nasa-color: #00bfff;
             --esa-color: #00ff66;
+            --roscosmos-color: #ff3333;
             --jaxa-color: #eab308;
+            --spacex-color: #a855f7;
 
             --text-heading: #f8fafc;
             --text-body: #94a3b8;
@@ -100,19 +102,20 @@
 
         .agency-legend {
             display: flex;
-            gap: 18px;
-            font-size: 0.8rem;
+            gap: 14px;
+            font-size: 0.75rem;
+            flex-wrap: wrap;
         }
 
         .legend-item {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
         }
 
         .legend-dot {
-            width: 10px;
-            height: 10px;
+            width: 9px;
+            height: 9px;
             border-radius: 50%;
             box-shadow: 0 0 8px currentColor;
         }
@@ -130,9 +133,9 @@
             border-radius: 10px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            font-size: 0.8rem;
-            width: 320px;
+            gap: 8px;
+            font-size: 0.78rem;
+            width: 330px;
         }
 
         .hud-row {
@@ -153,28 +156,30 @@
             left: 16px;
             z-index: 10;
             display: flex;
-            gap: 12px;
+            gap: 10px;
             background: var(--bg-panel);
             border: 1px solid var(--border-panel);
             backdrop-filter: blur(12px);
-            padding: 12px;
+            padding: 10px 14px;
             border-radius: 12px;
+            flex-wrap: wrap;
+            max-width: calc(100vw - 32px);
         }
 
         .btn-action {
             background: rgba(0, 240, 255, 0.1);
             border: 1px solid var(--accent-cyan);
             color: var(--accent-cyan);
-            padding: 10px 18px;
+            padding: 8px 14px;
             border-radius: 8px;
-            font-size: 0.8rem;
+            font-size: 0.78rem;
             font-weight: 800;
-            letter-spacing: 1px;
+            letter-spacing: 0.8px;
             cursor: pointer;
             transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
 
         .btn-action:hover {
@@ -208,27 +213,34 @@
             box-shadow: 0 0 20px var(--accent-purple);
         }
 
-        /* Console Sidebar */
+        /* Non-Overlapping Floating Console Sidebar with Toggle & Dismiss */
         .sidebar-console {
             position: absolute;
             top: 80px;
             right: 16px;
-            bottom: 20px;
-            width: 380px;
+            height: 480px;
+            width: 360px;
             z-index: 10;
             background: var(--bg-panel);
             border: 1px solid var(--border-panel);
-            backdrop-filter: blur(12px);
+            backdrop-filter: blur(14px);
             border-radius: 12px;
-            padding: 16px;
+            padding: 14px;
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+            gap: 10px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.8);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+        }
+
+        .sidebar-console.minimized {
+            transform: translateX(390px);
+            opacity: 0;
+            pointer-events: none;
         }
 
         .console-header {
-            font-size: 0.85rem;
+            font-size: 0.82rem;
             font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -240,16 +252,58 @@
             border-bottom: 1px solid var(--border-panel);
         }
 
+        .close-btn {
+            background: rgba(255, 0, 85, 0.15);
+            border: 1px solid var(--accent-red);
+            color: var(--accent-red);
+            border-radius: 4px;
+            width: 22px;
+            height: 22px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .close-btn:hover {
+            background: var(--accent-red);
+            color: #fff;
+        }
+
+        .console-toggle-pill {
+            position: absolute;
+            top: 80px;
+            right: 16px;
+            z-index: 9;
+            background: var(--bg-panel);
+            border: 1px solid var(--accent-cyan);
+            color: var(--accent-cyan);
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
+            transition: all 0.2s;
+            display: none;
+        }
+
+        .console-toggle-pill.visible {
+            display: block;
+        }
+
         .console-body {
-            background: rgba(2, 4, 8, 0.9);
+            background: rgba(2, 4, 8, 0.92);
             border: 1px solid var(--border-panel);
             border-radius: 8px;
             flex: 1;
-            padding: 12px;
+            padding: 10px;
             font-family: 'SF Mono', Consolas, 'Courier New', monospace;
-            font-size: 0.72rem;
+            font-size: 0.70rem;
             overflow-y: auto;
-            line-height: 1.6;
+            line-height: 1.5;
         }
 
         .log-entry {
@@ -277,15 +331,17 @@
     <header>
         <div class="header-title">
             <h1>Project Shivodaya</h1>
-            <span class="badge-pill">Richa Module :: 3D Interplanetary DTN Mesh</span>
+            <span class="badge-pill">Richa Module :: Interplanetary DTN Mesh</span>
         </div>
         <div class="agency-legend">
-            <div class="legend-item"><div class="legend-dot" style="background:#ffcc00; color:#ffcc00;"></div><span>Sun (Aditya-L1 / Solar Probes)</span></div>
-            <div class="legend-item"><div class="legend-dot" style="background:#ff9933; color:#ff9933;"></div><span>ISRO (Bhaarat Deep Space)</span></div>
-            <div class="legend-item"><div class="legend-dot" style="background:#00bfff; color:#00bfff;"></div><span>NASA Relay</span></div>
-            <div class="legend-item"><div class="legend-dot" style="background:#00ff66; color:#00ff66;"></div><span>ESA Relay</span></div>
-            <div class="legend-item"><div class="legend-dot" style="background:#eab308; color:#eab308;"></div><span>JAXA Relay</span></div>
-            <div class="legend-item"><div class="legend-dot" style="background:#ff3300; color:#ff3300;"></div><span>Mars Operations Mesh (Target)</span></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#ffcc00; color:#ffcc00;"></div><span>Sun (Radiation Source)</span></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#ff9933; color:#ff9933;"></div><span>ISRO (Bhaarat)</span></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#00bfff; color:#00bfff;"></div><span>NASA (USA)</span></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#00ff66; color:#00ff66;"></div><span>ESA (Europe)</span></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#ff3333; color:#ff3333;"></div><span>Roscosmos (Russia)</span></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#eab308; color:#eab308;"></div><span>JAXA (Japan)</span></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#a855f7; color:#a855f7;"></div><span>SpaceX / Starlink</span></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#ff3300; color:#ff3300;"></div><span>Mars Operations Mesh Target</span></div>
         </div>
     </header>
 
@@ -295,11 +351,11 @@
             <span class="hud-val" style="color:var(--accent-green);">RFC 9171 CGR Active</span>
         </div>
         <div class="hud-row">
-            <span>Primary Deep-Space Link</span>
+            <span>Primary Link Status</span>
             <span class="hud-val" id="linkStatusText" style="color:var(--accent-green);">NOMINAL (Line of Sight)</span>
         </div>
         <div class="hud-row">
-            <span>Active Routing Mode</span>
+            <span>Routing Protocol</span>
             <span class="hud-val" id="routeModeText" style="color:var(--accent-cyan);">Direct Space Relay</span>
         </div>
         <div class="hud-row">
@@ -307,8 +363,16 @@
             <span class="hud-val" id="custodyStatusText" style="color:var(--accent-purple);">STANDBY</span>
         </div>
         <div class="hud-row">
-            <span>Total Dispatched Bundles</span>
+            <span>Total Dispatches</span>
             <span class="hud-val" id="totalDispatchesText">0</span>
+        </div>
+        <div class="hud-row">
+            <span>Avg One-Way Latency</span>
+            <span class="hud-val" id="latencyText" style="color:var(--accent-cyan);">4.2 min (710M km)</span>
+        </div>
+        <div class="hud-row">
+            <span>Delivery Reliability</span>
+            <span class="hud-val" id="reliabilityText" style="color:var(--accent-green);">100.0%</span>
         </div>
     </div>
 
@@ -331,17 +395,27 @@
         <button class="btn-action btn-cam" onclick="cycleCameraPreset()">
             <span>🎥 CAMERA PRESET</span>
         </button>
+        <button class="btn-action" style="border-color:var(--accent-cyan); color:var(--accent-cyan);" onclick="toggleConsolePanel()">
+            <span>📜 TOGGLE CONSOLE</span>
+        </button>
     </div>
 
-    <div class="sidebar-console">
+    <button class="console-toggle-pill" id="consoleTogglePill" onclick="toggleConsolePanel()">
+        📜 OPEN DTN CONSOLE
+    </button>
+
+    <div class="sidebar-console" id="sidebarConsole">
         <div class="console-header">
             <span>DTN Custody Transfer Console</span>
-            <span style="color:var(--accent-green);">100% RELIABLE</span>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span style="color:var(--accent-green); font-size:0.7rem;">100% RELIABLE</span>
+                <button class="close-btn" onclick="toggleConsolePanel()" title="Close Console">✖</button>
+            </div>
         </div>
         <div class="console-body" id="consoleBody">
-            <div class="log-entry log-sys">[SYS_INIT] 3D Deep Space Mesh Command Center Online. Target: Mars Station.</div>
-            <div class="log-entry log-sys">[NODES] Solar Probes @ Sun Orbit | Deep Space Relays @ Lagrangian Points | Mars Ground Station @ Target</div>
-            <div class="log-entry log-sys">[CGR] Contact Graph Routing Ready. Interactive Relaying & Disturbance Controls Enabled.</div>
+            <div class="log-entry log-sys">[SYS_INIT] 3D Deep Space Mesh Command Center Online. Target: Mars Base.</div>
+            <div class="log-entry log-sys">[NODES] Solar Probes @ Sun Orbit | Inter-Agency Relays @ Deep Space | Mars Operations Base</div>
+            <div class="log-entry log-sys">[CGR] Contact Graph Routing Ready. ISRO, NASA, ESA, Roscosmos, JAXA, SpaceX Nodes Connected.</div>
             <div class="log-entry log-sys">--------------------------------------------------------------------------------</div>
         </div>
     </div>
@@ -410,60 +484,106 @@
         }
         createStarfield();
 
-        // 4. Solar System Celestial Bodies & Interplanetary Nodes
+        // 4. International Space Mesh Nodes (ISRO, NASA, ESA, Roscosmos, JAXA, SpaceX)
         const spaceNodes = [
-            // Solar Probes (Sun Region) - Source
-            { id: 0, name: 'Aditya-L1 (ISRO Solar Probe)', agency: 'ISRO', pos: new THREE.Vector3(-220, 20, 0), color: 0xff9933 },
-            { id: 1, name: 'Parker Solar Probe (NASA)', agency: 'NASA', pos: new THREE.Vector3(-210, -35, 30), color: 0x00bfff },
-            { id: 2, name: 'Solar Orbiter (ESA)', agency: 'ESA', pos: new THREE.Vector3(-200, 45, -40), color: 0x00ff66 },
+            // Sun Orbit Solar Probes (Radiation Source Nodes)
+            { id: 0, name: 'Aditya-L1 (ISRO Bhaarat)', agency: 'ISRO', pos: new THREE.Vector3(-220, 20, 0), color: 0xff9933 },
+            { id: 1, name: 'Parker Solar Probe (NASA USA)', agency: 'NASA', pos: new THREE.Vector3(-210, -35, 30), color: 0x00bfff },
+            { id: 2, name: 'Solar Orbiter (ESA Europe)', agency: 'ESA', pos: new THREE.Vector3(-200, 45, -40), color: 0x00ff66 },
 
-            // Primary Deep-Space Relay Nodes (Normal Path)
-            { id: 10, name: 'Deep Space Relay 1 (Commercial)', agency: 'Commercial', pos: new THREE.Vector3(-100, 70, 50), color: 0xa855f7 },
-            { id: 11, name: 'Deep Space Relay 2 (NASA)', agency: 'NASA', pos: new THREE.Vector3(-30, -50, -60), color: 0x00bfff },
-            { id: 12, name: 'Cis-Lunar Gateway (NASA)', agency: 'NASA', pos: new THREE.Vector3(60, 60, -30), color: 0x00bfff },
+            // Interplanetary Normal Path Relays
+            { id: 10, name: 'Starshield Relay 1 (SpaceX)', agency: 'SpaceX', pos: new THREE.Vector3(-110, 70, 50), color: 0xa855f7 },
+            { id: 11, name: 'Spektr-RG Deep Relay (Roscosmos)', agency: 'Roscosmos', pos: new THREE.Vector3(-40, -50, -60), color: 0xff3333 },
+            { id: 12, name: 'Cis-Lunar Gateway (NASA USA)', agency: 'NASA', pos: new THREE.Vector3(50, 65, -30), color: 0x00bfff },
 
-            // Failover / Inter-Agency Relay Mesh Nodes
+            // Deep Space Inter-Agency Relays & Mars Mesh
             { id: 20, name: 'Mangalyaan-2 Orbit Relay (ISRO)', agency: 'ISRO', pos: new THREE.Vector3(120, -70, 100), color: 0xff9933 },
-            { id: 21, name: 'MAVEN Deep Space Relay (NASA)', agency: 'NASA', pos: new THREE.Vector3(140, -40, 80), color: 0x00bfff },
-            { id: 22, name: 'ExoMars TGO Relay (ESA)', agency: 'ESA', pos: new THREE.Vector3(130, 30, 90), color: 0x00ff66 },
-            { id: 23, name: 'MMX Phobos Relay (JAXA)', agency: 'JAXA', pos: new THREE.Vector3(160, -20, 110), color: 0xeab308 },
+            { id: 21, name: 'MAVEN Relay (NASA USA)', agency: 'NASA', pos: new THREE.Vector3(140, -40, 80), color: 0x00bfff },
+            { id: 22, name: 'ExoMars TGO (ESA Europe)', agency: 'ESA', pos: new THREE.Vector3(130, 30, 90), color: 0x00ff66 },
+            { id: 23, name: 'MMX Phobos Relay (JAXA Japan)', agency: 'JAXA', pos: new THREE.Vector3(160, -20, 110), color: 0xeab308 },
+            { id: 24, name: 'Luna-26 Deep Relay (Roscosmos)', agency: 'Roscosmos', pos: new THREE.Vector3(100, 50, -40), color: 0xff3333 },
 
-            // Mars Deep Space Operations Center (Primary Deep-Space Destination Target)
-            { id: 99, name: 'Mars Deep Space Base (Mangalyaan Station)', agency: 'ISRO', pos: new THREE.Vector3(210, -30, 120), color: 0xff3300 }
+            // Mars Deep Space Operations Center (Primary Deep Space Target)
+            { id: 99, name: 'Mars Operations Station (ISRO Mangalyaan Base)', agency: 'ISRO', pos: new THREE.Vector3(210, -30, 120), color: 0xff3300 }
         ];
 
-        // Celestial Geometry
-        // Sun
+        // Celestial Bodies & Sun Sprinkler Particles
+        // Sun Mesh
         const sunGeo = new THREE.SphereGeometry(35, 32, 32);
         const sunMat = new THREE.MeshBasicMaterial({ color: 0xffcc00, wireframe: true });
         const sunMesh = new THREE.Mesh(sunGeo, sunMat);
         sunMesh.position.set(-260, 0, 0);
         scene.add(sunMesh);
 
-        // Mars Planet Mesh (Target Location)
+        // Sun Radiation Water Sprinkler Particle Emitter
+        const sprinklerParticleCount = 1200;
+        const sprinklerGeo = new THREE.BufferGeometry();
+        const sprinklerPos = new Float32Array(sprinklerParticleCount * 3);
+        const sprinklerVel = [];
+
+        for (let i = 0; i < sprinklerParticleCount; i++) {
+            sprinklerPos[i * 3] = sunMesh.position.x;
+            sprinklerPos[i * 3 + 1] = sunMesh.position.y;
+            sprinklerPos[i * 3 + 2] = sunMesh.position.z;
+
+            // Spherical random velocity spray
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos((Math.random() * 2) - 1);
+            const speed = 1.2 + Math.random() * 2.8;
+
+            sprinklerVel.push(new THREE.Vector3(
+                speed * Math.sin(phi) * Math.cos(theta),
+                speed * Math.sin(phi) * Math.sin(theta),
+                speed * Math.cos(phi)
+            ));
+        }
+
+        sprinklerGeo.setAttribute('position', new THREE.BufferAttribute(sprinklerPos, 3));
+        const sprinklerMat = new THREE.PointsMaterial({
+            color: 0xffaa00,
+            size: 2.2,
+            transparent: true,
+            opacity: 0.85
+        });
+        const sprinklerParticles = new THREE.Points(sprinklerGeo, sprinklerMat);
+        scene.add(sprinklerParticles);
+
+        // Mars Planet Mesh (Target Base Location)
         const marsGeo = new THREE.SphereGeometry(22, 32, 32);
         const marsMat = new THREE.MeshBasicMaterial({ color: 0xff3300, wireframe: true });
         const marsMesh = new THREE.Mesh(marsGeo, marsMat);
         marsMesh.position.copy(spaceNodes.find(n => n.id === 99).pos);
         scene.add(marsMesh);
 
-        // Solar Storm / CME Disturbance Zone Mesh (Placed over normal path)
-        const disturbanceGeo = new THREE.SphereGeometry(42, 32, 32);
+        // CME Solar Storm Disturbance Mesh
+        const disturbanceGeo = new THREE.SphereGeometry(45, 32, 32);
         const disturbanceMat = new THREE.MeshBasicMaterial({ color: 0xff0055, transparent: true, opacity: 0, wireframe: true });
         const disturbanceMesh = new THREE.Mesh(disturbanceGeo, disturbanceMat);
-        disturbanceMesh.position.set(-20, 65, 10);
+        disturbanceMesh.position.set(-30, 60, 10);
         scene.add(disturbanceMesh);
 
-        // Render Space Mesh Nodes & Constellation Beams
+        // Orbit Rings for Satellites & Nodes
         spaceNodes.forEach(node => {
+            // Node Mesh
             const nGeo = new THREE.SphereGeometry(node.id === 99 ? 6.5 : 4.5, 16, 16);
             const nMat = new THREE.MeshBasicMaterial({ color: node.color });
             const nMesh = new THREE.Mesh(nGeo, nMat);
             nMesh.position.copy(node.pos);
             scene.add(nMesh);
+
+            // Orbit Ring Trailing Path
+            if (node.id !== 0 && node.id !== 99) {
+                const orbitRadius = Math.sqrt(node.pos.x * node.pos.x + node.pos.z * node.pos.z);
+                const ringGeo = new THREE.RingGeometry(orbitRadius - 0.4, orbitRadius + 0.4, 64);
+                const ringMat = new THREE.MeshBasicMaterial({ color: node.color, side: THREE.DoubleSide, transparent: true, opacity: 0.12 });
+                const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+                ringMesh.rotation.x = Math.PI / 2;
+                ringMesh.position.y = node.pos.y;
+                scene.add(ringMesh);
+            }
         });
 
-        // Draw Inter-Link Network Beams
+        // Inter-Agency Mesh Links
         const linkLines = [];
         for (let i = 0; i < spaceNodes.length; i++) {
             for (let j = i + 1; j < spaceNodes.length; j++) {
@@ -473,14 +593,13 @@
                     const points = [spaceNodes[i].pos, spaceNodes[j].pos];
                     const lGeo = new THREE.BufferGeometry().setFromPoints(points);
                     const line = new THREE.Line(lGeo, lMat);
-                    line.userData = { nodeA: spaceNodes[i].id, nodeB: spaceNodes[j].id };
                     scene.add(line);
                     linkLines.push(line);
                 }
             }
         }
 
-        // 5. Packet Trajectory Animation Engine
+        // 5. Packet Trajectory & Radiation Sprinkler Animation Engine
         const activePackets = [];
         let isDisturbanceActive = false;
         let isAutoStreaming = false;
@@ -492,7 +611,7 @@
         function animate() {
             requestAnimationFrame(animate);
 
-            // Orbit Camera rotation
+            // Smooth Orbit Camera
             const radius = 560;
             camera.position.x = radius * Math.sin(targetRotationY) * Math.cos(targetRotationX);
             camera.position.z = radius * Math.cos(targetRotationY) * Math.cos(targetRotationX);
@@ -501,10 +620,33 @@
 
             sunMesh.rotation.y += 0.004;
             marsMesh.rotation.y += 0.006;
+
             if (isDisturbanceActive) {
                 disturbanceMesh.rotation.y += 0.02;
                 disturbanceMesh.rotation.z += 0.01;
             }
+
+            // Animate Sun Radiation Sprinkler Particles
+            const positions = sprinklerParticles.geometry.attributes.position.array;
+            for (let i = 0; i < sprinklerParticleCount; i++) {
+                positions[i * 3] += sprinklerVel[i].x;
+                positions[i * 3 + 1] += sprinklerVel[i].y;
+                positions[i * 3 + 2] += sprinklerVel[i].z;
+
+                // Reset particle to Sun center when far out (Sprinkler Effect)
+                const dist = Math.sqrt(
+                    Math.pow(positions[i * 3] - sunMesh.position.x, 2) +
+                    Math.pow(positions[i * 3 + 1] - sunMesh.position.y, 2) +
+                    Math.pow(positions[i * 3 + 2] - sunMesh.position.z, 2)
+                );
+
+                if (dist > 350) {
+                    positions[i * 3] = sunMesh.position.x;
+                    positions[i * 3 + 1] = sunMesh.position.y;
+                    positions[i * 3 + 2] = sunMesh.position.z;
+                }
+            }
+            sprinklerParticles.geometry.attributes.position.needsUpdate = true;
 
             // Animate Packet Bundles
             for (let idx = activePackets.length - 1; idx >= 0; idx--) {
@@ -515,14 +657,42 @@
                     p.currentHop++;
                     p.progress = 0;
 
-                    // Log Hop Custody Release
                     if (p.isCustodyMode && p.currentHop < p.path.length) {
                         const currentHopNode = spaceNodes.find(n => n.id === p.path[p.currentHop]);
                         if (currentHopNode) {
-                            logConsole(`[CUSTODY ACK] Node ${currentHopNode.name} accepted custody. Releasing prior hop buffer.`, 'log-cgr');
+                            logConsole(`[CUSTODY ACK] ${currentHopNode.agency} Node ${currentHopNode.name} accepted custody. Releasing prior buffer.`, 'log-cgr');
                         }
                     }
                 }
+
+                if (p.currentHop < p.path.length - 1) {
+                    const startNode = spaceNodes.find(n => n.id === p.path[p.currentHop]);
+                    const endNode = spaceNodes.find(n => n.id === p.path[p.currentHop + 1]);
+
+                    p.mesh.position.lerpVectors(startNode.pos, endNode.pos, p.progress);
+                } else {
+                    logConsole(`[DELIVERED] BPv7 Radiation Alert arrived at Mars Operations Base!`, 'log-mars');
+                    scene.remove(p.mesh);
+                    activePackets.splice(idx, 1);
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // 6. UI Handlers & Layout Controls
+        function toggleConsolePanel() {
+            const consoleEl = document.getElementById('sidebarConsole');
+            const pillEl = document.getElementById('consoleTogglePill');
+            
+            consoleEl.classList.toggle('minimized');
+            if (consoleEl.classList.contains('minimized')) {
+                pillEl.classList.add('visible');
+            } else {
+                pillEl.classList.remove('visible');
+            }
+        }
 
                 if (p.currentHop < p.path.length - 1) {
                     const startNode = spaceNodes.find(n => n.id === p.path[p.currentHop]);
