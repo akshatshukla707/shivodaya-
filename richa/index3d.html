@@ -566,6 +566,15 @@
         sunMesh.position.set(-260, 0, 0);
         scene.add(sunMesh);
 
+        // Solar Orbit Ring for Solar Probes (Aditya-L1, Parker, Solar Orbiter)
+        const sunOrbitRadius = 55;
+        const sunOrbitGeo = new THREE.RingGeometry(sunOrbitRadius - 0.5, sunOrbitRadius + 0.5, 64);
+        const sunOrbitMat = new THREE.MeshBasicMaterial({ color: 0xff9933, side: THREE.DoubleSide, transparent: true, opacity: 0.4 });
+        const sunOrbitMesh = new THREE.Mesh(sunOrbitGeo, sunOrbitMat);
+        sunOrbitMesh.position.copy(sunMesh.position);
+        sunOrbitMesh.rotation.x = Math.PI / 2.3;
+        scene.add(sunOrbitMesh);
+
         // Sun Radiation Water Sprinkler Particle Emitter
         const sprinklerParticleCount = 1200;
         const sprinklerGeo = new THREE.BufferGeometry();
@@ -682,6 +691,33 @@
 
             sunMesh.rotation.y += 0.004;
             marsMesh.rotation.y += 0.006;
+
+            // Animate Solar Probes revolving around Sun (Aditya-L1, Parker, Solar Orbiter)
+            const sunProbeTime = Date.now() * 0.0012;
+            const adityaNode = spaceNodes.find(n => n.id === 0);
+            if (adityaNode && adityaNode.mesh) {
+                const angle = sunProbeTime;
+                adityaNode.pos.x = sunMesh.position.x + Math.cos(angle) * 55;
+                adityaNode.pos.z = sunMesh.position.z + Math.sin(angle) * 55;
+                adityaNode.pos.y = Math.sin(angle * 1.5) * 15;
+                adityaNode.mesh.position.copy(adityaNode.pos);
+            }
+            const parkerNode = spaceNodes.find(n => n.id === 1);
+            if (parkerNode && parkerNode.mesh) {
+                const angle = sunProbeTime + 2.09; // ~120 deg shift
+                parkerNode.pos.x = sunMesh.position.x + Math.cos(angle) * 45;
+                parkerNode.pos.z = sunMesh.position.z + Math.sin(angle) * 45;
+                parkerNode.pos.y = Math.cos(angle * 1.5) * 12;
+                parkerNode.mesh.position.copy(parkerNode.pos);
+            }
+            const solarOrbiterNode = spaceNodes.find(n => n.id === 2);
+            if (solarOrbiterNode && solarOrbiterNode.mesh) {
+                const angle = sunProbeTime + 4.18; // ~240 deg shift
+                solarOrbiterNode.pos.x = sunMesh.position.x + Math.cos(angle) * 65;
+                solarOrbiterNode.pos.z = sunMesh.position.z + Math.sin(angle) * 65;
+                solarOrbiterNode.pos.y = Math.sin(angle * 1.2) * 18;
+                solarOrbiterNode.mesh.position.copy(solarOrbiterNode.pos);
+            }
 
             if (isDisturbanceActive) {
                 disturbanceMesh.rotation.y += 0.02;
