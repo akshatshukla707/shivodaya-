@@ -23,7 +23,7 @@
 #define RING_BUFFER_MASK (RING_BUFFER_CAPACITY - 1)
 #define UDP_PORT 8080
 #define UDP_HOST "127.0.0.1"
-#define LOG_FILE_PATH "prakash/warning_dispatch.txt"
+#define LOG_FILE_PATH "warning_dispatch.txt"
 #define CACHE_LINE_SIZE 64
 
 typedef enum {
@@ -450,6 +450,18 @@ int main(int argc, char *argv[]) {
         "prakash/proton_flux_sim.txt",
         "prakash/xray_flux_sim.txt"
     };
+
+    for (int i = 0; i < STREAM_COUNT; i++) {
+        struct stat st;
+        if (stat(files[i], &st) != 0) {
+            files[0] = "cme_sim.txt";
+            files[1] = "sep_sim.txt";
+            files[2] = "solar_wind_sim.txt";
+            files[3] = "proton_flux_sim.txt";
+            files[4] = "xray_flux_sim.txt";
+            break;
+        }
+    }
 
     pthread_t producer_threads[STREAM_COUNT];
     ProducerArgs p_args[STREAM_COUNT];
