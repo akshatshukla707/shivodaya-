@@ -1,28 +1,31 @@
 package earthcontrol;
 
 import javax.swing.*;
-import javax.swing.border.CompoundBorder;
-import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
 import javax.swing.border.TitledBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.File;
 import java.sql.*;
 
 public class EarthControlCenterUI extends JFrame {
     private DatabaseManager dbManager;
-    private JTabbedPane tabbedPane;
+    private JPanel sidebarPanel;
+    private boolean sidebarExpanded = true;
+    private JPanel contentCardsPanel;
+    private CardLayout cardLayout;
+    private JLabel alertBannerLabel;
+    private boolean flashState = false;
 
     public EarthControlCenterUI() {
-        // Initialize modern FlatLaf dark look and sharp geometric styling (Arc=0, focusWidth=1)
         ModernTheme.applyFlatLafSettings();
 
         dbManager = new DatabaseManager();
         dbManager.initializeTablesIfMissing();
 
         setTitle("PROJECT SHIVODAYA :: ISRO GROUND OPERATIONS MISSION CONTROL CENTER");
-        setSize(1440, 900);
+        setSize(1480, 920);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         getContentPane().setBackground(ModernTheme.BG_DARK);
@@ -31,71 +34,87 @@ public class EarthControlCenterUI extends JFrame {
     }
 
     private void initUI() {
-        JPanel mainPanel = new JPanel(new BorderLayout(12, 12));
+        JPanel mainPanel = new JPanel(new BorderLayout(8, 8));
         mainPanel.setBackground(ModernTheme.BG_DARK);
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(14, 14, 14, 14));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // Header Command Bar
+        // Top HUD Header Command Bar
         JPanel headerPanel = createHeaderPanel();
         mainPanel.add(headerPanel, BorderLayout.NORTH);
 
-        // Modern Tabbed Command Hub
-        tabbedPane = new JTabbedPane();
-        tabbedPane.setFont(ModernTheme.FONT_BOLD);
-        tabbedPane.setBackground(ModernTheme.PANEL_BG);
+        // Center Split Layout (Collapsible Collapsible Sidebar + Content Cards)
+        sidebarPanel = createSidebarPanel();
+        contentCardsPanel = new JPanel(cardLayout = new CardLayout());
+        contentCardsPanel.setBackground(ModernTheme.BG_DARK);
 
-        tabbedPane.addTab("  🚀 MISSION REGISTRATION (pbtmission)  ", createMissionPanel());
-        tabbedPane.addTab("  🏛️ AGENCY REGISTRATION (pbtagencyregistration)  ", createAgencyPanel());
-        tabbedPane.addTab("  ⚠️ RADIATION ALERTS LOG (pbtalert)  ", createAlertPanel());
-        tabbedPane.addTab("  👨‍🚀 ASTRONAUT MANAGEMENT (pbtastronaut)  ", createAstronautPanel());
-        tabbedPane.addTab("  🛰️ TRAJECTORY COMPARISON (pbttrajectory)  ", createTrajectoryPanel());
-        tabbedPane.addTab("  📋 AUDIT & SYSTEM LOGS (pbtlogtable)  ", createAuditLogPanel());
+        contentCardsPanel.add(createMissionPanel(), "pbtmission");
+        contentCardsPanel.add(createAgencyPanel(), "pbtagencyregistration");
+        contentCardsPanel.add(createAlertPanel(), "pbtalert");
+        contentCardsPanel.add(createAstronautPanel(), "pbtastronaut");
+        contentCardsPanel.add(createTrajectoryPanel(), "pbttrajectory");
+        contentCardsPanel.add(createAuditLogPanel(), "pbtlogtable");
 
-        mainPanel.add(tabbedPane, BorderLayout.CENTER);
+        mainPanel.add(sidebarPanel, BorderLayout.WEST);
+        mainPanel.add(contentCardsPanel, BorderLayout.CENTER);
 
         // Footer Bar
         JPanel footerPanel = createFooterPanel();
         mainPanel.add(footerPanel, BorderLayout.SOUTH);
 
         add(mainPanel);
+
+        // Flashing Critical Radiation Alert Banner Timer
+        Timer flashTimer = new Timer(500, e -> {
+            flashState = !flashState;
+            if (flashState) {
+                alertBannerLabel.setForeground(ModernTheme.VIVID_RED);
+            } else {
+                alertBannerLabel.setForeground(ModernTheme.VIVID_YELLOW);
+            }
+        });
+        flashTimer.start();
     }
 
     private JPanel createHeaderPanel() {
         JPanel header = new JPanel(new BorderLayout());
         header.setBackground(ModernTheme.PANEL_BG);
-        header.setBorder(ModernTheme.createSharpBorder(ModernTheme.ACCENT_CYAN));
+        header.setBorder(ModernTheme.createSharpBorder(ModernTheme.VIVID_CYAN));
 
-        JLabel titleLabel = new JLabel("BHAARAT PROJECT SHIVODAYA :: GROUND MONITORING CENTER");
+        // Sidebar Toggle Button
+        JButton toggleSidebarBtn = ModernTheme.createTacticalButton("☰ SIDEBAR", ModernTheme.CARD_BG, ModernTheme.VIVID_CYAN);
+        toggleSidebarBtn.addActionListener(e -> {
+            sidebarExpanded = !sidebarExpanded;
+            sidebarPanel.setPreferredSize(new Dimension(sidebarExpanded ? 260 : 50, sidebarPanel.getHeight()));
+            sidebarPanel.revalidate();
+            sidebarPanel.repaint();
+        });
+
+        JLabel titleLabel = new JLabel(" BHAARAT PROJECT SHIVODAYA :: GROUND OPERATIONS CENTER");
         titleLabel.setFont(ModernTheme.FONT_TITLE);
-        titleLabel.setForeground(ModernTheme.ACCENT_CYAN);
+        titleLabel.setForeground(ModernTheme.VIVID_CYAN);
 
-        JLabel subtitleLabel = new JLabel("Interplanetary Space Weather Mesh Operations | Database: " + dbManager.getActiveDbPath());
-        subtitleLabel.setFont(ModernTheme.FONT_REGULAR);
-        subtitleLabel.setForeground(ModernTheme.TEXT_SECONDARY);
-
-        JPanel leftHeader = new JPanel(new GridLayout(2, 1, 0, 2));
+        JPanel leftHeader = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         leftHeader.setOpaque(false);
+        leftHeader.add(toggleSidebarBtn);
         leftHeader.add(titleLabel);
-        leftHeader.add(subtitleLabel);
 
-        // Header Actions Panel
-        JPanel rightHeader = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 0));
-        rightHeader.setOpaque(false);
+        // Flashing Alert Status Banner
+        alertBannerLabel = new JLabel("⚠️ CRITICAL ALERT: HALO CME VELOCITY 1800 KM/S DETECTED AT ADITYA-L1");
+        alertBannerLabel.setFont(ModernTheme.FONT_MONO_BOLD);
+        alertBannerLabel.setForeground(ModernTheme.VIVID_RED);
 
-        JLabel statusLabel = new JLabel("● SECURITY MODULE: ACTIVE");
-        statusLabel.setFont(ModernTheme.FONT_BOLD);
-        statusLabel.setForeground(ModernTheme.ACCENT_GREEN);
-
-        JButton launch3dBtn = ModernTheme.createTacticalButton("🌐 OPEN 3D MESH VISUALIZER", ModernTheme.ACCENT_AMBER, Color.BLACK);
+        JButton launch3dBtn = ModernTheme.createTacticalButton("🌐 3D MESH VISUALIZER", ModernTheme.VIVID_AMBER, Color.BLACK);
         launch3dBtn.addActionListener(e -> {
             try {
                 Desktop.getDesktop().open(new File("/home/akshat/shivodaya/richa/main3dvisual.html"));
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Opening 3D visualizer at: richa/main3dvisual.html", "3D Mesh Visualizer", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Opening 3D visualizer at: richa/main3dvisual.html", "3D Visualizer", JOptionPane.INFORMATION_MESSAGE);
             }
         });
 
-        rightHeader.add(statusLabel);
+        JPanel rightHeader = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 0));
+        rightHeader.setOpaque(false);
+        rightHeader.add(alertBannerLabel);
         rightHeader.add(launch3dBtn);
 
         header.add(leftHeader, BorderLayout.WEST);
@@ -103,13 +122,65 @@ public class EarthControlCenterUI extends JFrame {
         return header;
     }
 
+    private JPanel createSidebarPanel() {
+        JPanel sidebar = new JPanel(new BorderLayout());
+        sidebar.setBackground(ModernTheme.PANEL_BG);
+        sidebar.setPreferredSize(new Dimension(260, 0));
+        sidebar.setBorder(ModernTheme.createSharpBorder(ModernTheme.BORDER_COLOR));
+
+        JPanel navPanel = new JPanel();
+        navPanel.setLayout(new BoxLayout(navPanel, BoxLayout.Y_AXIS));
+        navPanel.setOpaque(false);
+        navPanel.setBorder(BorderFactory.createEmptyBorder(10, 8, 10, 8));
+
+        JLabel navTitle = new JLabel("PRIMARY MISSION TABLES");
+        navTitle.setFont(ModernTheme.FONT_MONO_BOLD);
+        navTitle.setForeground(ModernTheme.VIVID_CYAN);
+        navTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
+        navPanel.add(navTitle);
+        navPanel.add(Box.createRigidArea(new Dimension(0, 12)));
+
+        addNavButton(navPanel, "🚀 Mission Reg (pbtmission)", "pbtmission", ModernTheme.VIVID_CYAN);
+        addNavButton(navPanel, "🏛️ Agency Reg (pbtagency)", "pbtagencyregistration", ModernTheme.VIVID_GREEN);
+        addNavButton(navPanel, "⚠️ Alerts Log (pbtalert)", "pbtalert", ModernTheme.VIVID_RED);
+        addNavButton(navPanel, "👨‍🚀 Astronauts (pbtastronaut)", "pbtastronaut", ModernTheme.VIVID_PURPLE);
+        addNavButton(navPanel, "🛰️ Trajectory (pbttrajectory)", "pbttrajectory", ModernTheme.VIVID_AMBER);
+        addNavButton(navPanel, "📋 Audit Logs (pbtlogtable)", "pbtlogtable", ModernTheme.VIVID_YELLOW);
+
+        navPanel.add(Box.createRigidArea(new Dimension(0, 20)));
+
+        // Live Telemetry Waveform Component Embedded in Sidebar
+        JLabel chartTitle = new JLabel("LIVE SOLAR WAVEFORMS");
+        chartTitle.setFont(ModernTheme.FONT_MONO_BOLD);
+        chartTitle.setForeground(ModernTheme.VIVID_ORANGE);
+        chartTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
+        navPanel.add(chartTitle);
+        navPanel.add(Box.createRigidArea(new Dimension(0, 8)));
+
+        TelemetryChartPanel chartPanel = new TelemetryChartPanel();
+        chartPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        navPanel.add(chartPanel);
+
+        sidebar.add(navPanel, BorderLayout.NORTH);
+        return sidebar;
+    }
+
+    private void addNavButton(JPanel navPanel, String label, String cardName, Color accent) {
+        JButton btn = ModernTheme.createTacticalButton(label, ModernTheme.CARD_BG, ModernTheme.TEXT_PRIMARY);
+        btn.setMaximumSize(new Dimension(240, 36));
+        btn.setAlignmentX(Component.LEFT_ALIGNMENT);
+        btn.addActionListener(e -> cardLayout.show(contentCardsPanel, cardName));
+        navPanel.add(btn);
+        navPanel.add(Box.createRigidArea(new Dimension(0, 6)));
+    }
+
     // =========================================================================
     // TAB 1: MISSION REGISTRATION (pbtmission)
     // =========================================================================
     private JPanel createMissionPanel() {
-        JPanel panel = new JPanel(new BorderLayout(12, 12));
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBackground(ModernTheme.PANEL_BG);
-        panel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         DefaultTableModel model = new DefaultTableModel(new String[]{
                 "MID", "Mission Name", "Official ID", "Launch Date/Time", "Destination Date/Time",
@@ -123,13 +194,13 @@ public class EarthControlCenterUI extends JFrame {
         JPanel formPanel = new JPanel(new GridBagLayout());
         formPanel.setBackground(ModernTheme.PANEL_BG);
         formPanel.setBorder(BorderFactory.createTitledBorder(
-                ModernTheme.createSharpBorder(ModernTheme.ACCENT_CYAN),
-                " 📝 REGISTER NEW MISSION & BHAARAT SECURITY SWITCH ",
-                TitledBorder.LEFT, TitledBorder.TOP, ModernTheme.FONT_SUBTITLE, ModernTheme.ACCENT_CYAN
+                ModernTheme.createSharpBorder(ModernTheme.VIVID_CYAN),
+                " 📝 REGISTER MISSION & BHAARAT SECURITY MODULE SWITCH ",
+                TitledBorder.LEFT, TitledBorder.TOP, ModernTheme.FONT_SUBTITLE, ModernTheme.VIVID_CYAN
         ));
 
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 8, 5, 8);
+        gbc.insets = new Insets(4, 6, 4, 6);
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
         JTextField tfName = new JTextField(14);
@@ -141,7 +212,6 @@ public class EarthControlCenterUI extends JFrame {
         JComboBox<String> cbAgency = new JComboBox<>(new String[]{"ISRO , INDIA", "NASA , USA", "ESA , EUROPE", "SPACEX , USA", "ROSCOSMOS , RUSSIA", "JAXA , JAPAN"});
         JTextField tfLife = new JTextField("5.0", 5);
 
-        // Bhaarat Security Switch Configuration:
         JComboBox<String> cbModuleType = new JComboBox<>(new String[]{
                 "Bhaarat Transceiver v2 (Full Transmit & Receive Mesh Node)",
                 "Receiver-Only Mode (Security Switch ACTIVE - No Transmission)",
@@ -175,8 +245,8 @@ public class EarthControlCenterUI extends JFrame {
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 5));
         btnPanel.setOpaque(false);
 
-        JButton btnKillSwitch = ModernTheme.createTacticalButton("🛑 EMERGENCY SECURITY KILL SWITCH (RECEIVE-ONLY MODE)", ModernTheme.ACCENT_RED, Color.WHITE);
-        JButton btnSave = ModernTheme.createTacticalButton("💾 SAVE MISSION REGISTRATION", ModernTheme.ACCENT_CYAN, Color.BLACK);
+        JButton btnKillSwitch = ModernTheme.createTacticalButton("🛑 EMERGENCY SECURITY KILL SWITCH (RECEIVE-ONLY)", ModernTheme.VIVID_RED, Color.WHITE);
+        JButton btnSave = ModernTheme.createTacticalButton("💾 SAVE MISSION REGISTRATION", ModernTheme.VIVID_CYAN, Color.BLACK);
 
         btnSave.addActionListener(e -> {
             try (Connection conn = dbManager.getConnection()) {
@@ -272,9 +342,9 @@ public class EarthControlCenterUI extends JFrame {
     // TAB 2: AGENCY REGISTRATION (pbtagencyregistration)
     // =========================================================================
     private JPanel createAgencyPanel() {
-        JPanel panel = new JPanel(new BorderLayout(12, 12));
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBackground(ModernTheme.PANEL_BG);
-        panel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         DefaultTableModel model = new DefaultTableModel(new String[]{"SNo", "Agency Name", "Abbreviation", "Country", "Status", "Comment", "Note"}, 0);
         JTable table = createStyledTable(model);
@@ -283,13 +353,13 @@ public class EarthControlCenterUI extends JFrame {
         JPanel formPanel = new JPanel(new GridBagLayout());
         formPanel.setBackground(ModernTheme.PANEL_BG);
         formPanel.setBorder(BorderFactory.createTitledBorder(
-                ModernTheme.createSharpBorder(ModernTheme.ACCENT_CYAN),
+                ModernTheme.createSharpBorder(ModernTheme.VIVID_GREEN),
                 " 🏛️ REGISTER DEEP SPACE AGENCY (pbtagencyregistration) ",
-                TitledBorder.LEFT, TitledBorder.TOP, ModernTheme.FONT_SUBTITLE, ModernTheme.ACCENT_CYAN
+                TitledBorder.LEFT, TitledBorder.TOP, ModernTheme.FONT_SUBTITLE, ModernTheme.VIVID_GREEN
         ));
 
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 8, 5, 8);
+        gbc.insets = new Insets(4, 6, 4, 6);
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
         JTextField tfSno = new JTextField(6);
@@ -308,7 +378,7 @@ public class EarthControlCenterUI extends JFrame {
         addFormField(formPanel, gbc, 2, 2, "Comment:", tfComment);
         addFormField(formPanel, gbc, 3, 0, "Note:", tfNote);
 
-        JButton btnSave = ModernTheme.createTacticalButton("💾 REGISTER AGENCY", ModernTheme.ACCENT_CYAN, Color.BLACK);
+        JButton btnSave = ModernTheme.createTacticalButton("💾 REGISTER AGENCY", ModernTheme.VIVID_GREEN, Color.BLACK);
         btnSave.addActionListener(e -> {
             try (Connection conn = dbManager.getConnection()) {
                 String sql = "INSERT INTO pbtagencyregistration (Sno, agencyname, agencyabbreviation, country, status, comment, note) VALUES (?, ?, ?, ?, ?, ?, ?)";
@@ -359,9 +429,9 @@ public class EarthControlCenterUI extends JFrame {
     // TAB 3: RADIATION ALERTS LOG (pbtalert)
     // =========================================================================
     private JPanel createAlertPanel() {
-        JPanel panel = new JPanel(new BorderLayout(12, 12));
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBackground(ModernTheme.PANEL_BG);
-        panel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         DefaultTableModel model = new DefaultTableModel(new String[]{
                 "Alert ID", "Rec Date/Time", "Source Probe", "Type ID", "Detect Date/Time",
@@ -375,13 +445,13 @@ public class EarthControlCenterUI extends JFrame {
         JPanel formPanel = new JPanel(new GridBagLayout());
         formPanel.setBackground(ModernTheme.PANEL_BG);
         formPanel.setBorder(BorderFactory.createTitledBorder(
-                ModernTheme.createSharpBorder(ModernTheme.ACCENT_RED),
+                ModernTheme.createSharpBorder(ModernTheme.VIVID_RED),
                 " ⚠️ BROADCAST & LOG RADIATION ALERT DISPATCH (pbtalert) ",
-                TitledBorder.LEFT, TitledBorder.TOP, ModernTheme.FONT_SUBTITLE, ModernTheme.ACCENT_RED
+                TitledBorder.LEFT, TitledBorder.TOP, ModernTheme.FONT_SUBTITLE, ModernTheme.VIVID_RED
         ));
 
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 8, 5, 8);
+        gbc.insets = new Insets(4, 6, 4, 6);
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
         JTextField tfAlertId = new JTextField("ALT-2026-006", 10);
@@ -404,7 +474,7 @@ public class EarthControlCenterUI extends JFrame {
         addFormField(formPanel, gbc, 3, 2, "Visibility Scope:", cbVis);
         addFormField(formPanel, gbc, 4, 0, "Alert Description / Comment:", tfComment, 3);
 
-        JButton btnSave = ModernTheme.createTacticalButton("🚨 BROADCAST ALERT TO GROUND & MESH MODULES", ModernTheme.ACCENT_RED, Color.WHITE);
+        JButton btnSave = ModernTheme.createTacticalButton("🚨 BROADCAST ALERT TO GROUND & MESH MODULES", ModernTheme.VIVID_RED, Color.WHITE);
         btnSave.addActionListener(e -> {
             try (Connection conn = dbManager.getConnection()) {
                 String sql = "INSERT INTO pbtalert (alertid, frecdate, frectime, alertsource, alerttypeid, alertdetectdate, alertdetecttime, " +
@@ -469,9 +539,9 @@ public class EarthControlCenterUI extends JFrame {
     // TAB 4: ASTRONAUT MANAGEMENT (pbtastronaut)
     // =========================================================================
     private JPanel createAstronautPanel() {
-        JPanel panel = new JPanel(new BorderLayout(12, 12));
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBackground(ModernTheme.PANEL_BG);
-        panel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         DefaultTableModel model = new DefaultTableModel(new String[]{
                 "Astronaut ID", "Name", "DOB", "Gender", "Nationality", "Role 1", "Role 2",
@@ -484,13 +554,13 @@ public class EarthControlCenterUI extends JFrame {
         JPanel formPanel = new JPanel(new GridBagLayout());
         formPanel.setBackground(ModernTheme.PANEL_BG);
         formPanel.setBorder(BorderFactory.createTitledBorder(
-                ModernTheme.createSharpBorder(ModernTheme.ACCENT_CYAN),
-                " 👨‍🚀 ASTRONAUT CREW REGISTRATION & RADIATION DOSAGE MONITOR (pbtastronaut) ",
-                TitledBorder.LEFT, TitledBorder.TOP, ModernTheme.FONT_SUBTITLE, ModernTheme.ACCENT_CYAN
+                ModernTheme.createSharpBorder(ModernTheme.VIVID_PURPLE),
+                " 👨‍🚀 ASTRONAUT CREW REGISTRATION & DOSAGE MONITOR (pbtastronaut) ",
+                TitledBorder.LEFT, TitledBorder.TOP, ModernTheme.FONT_SUBTITLE, ModernTheme.VIVID_PURPLE
         ));
 
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 8, 5, 8);
+        gbc.insets = new Insets(4, 6, 4, 6);
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
         JTextField tfAid = new JTextField("AST-06", 8);
@@ -517,7 +587,7 @@ public class EarthControlCenterUI extends JFrame {
         addFormField(formPanel, gbc, 4, 2, "Monitored Radiation Level:", tfRadLvl);
         addFormField(formPanel, gbc, 5, 0, "Assigned Mission MID:", tfMid);
 
-        JButton btnSave = ModernTheme.createTacticalButton("💾 REGISTER ASTRONAUT", ModernTheme.ACCENT_CYAN, Color.BLACK);
+        JButton btnSave = ModernTheme.createTacticalButton("💾 REGISTER ASTRONAUT", ModernTheme.VIVID_PURPLE, Color.BLACK);
         btnSave.addActionListener(e -> {
             try (Connection conn = dbManager.getConnection()) {
                 String sql = "INSERT INTO pbtastronaut (aid, aname, adob, agender, anationality, arole1, arole2, aagencyname, aagencyid, " +
@@ -576,9 +646,9 @@ public class EarthControlCenterUI extends JFrame {
     // TAB 5: TRAJECTORY COMPARISON (pbttrajectory)
     // =========================================================================
     private JPanel createTrajectoryPanel() {
-        JPanel panel = new JPanel(new BorderLayout(12, 12));
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBackground(ModernTheme.PANEL_BG);
-        panel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         DefaultTableModel model = new DefaultTableModel(new String[]{
                 "Path ID", "Dynamic Target ID", "Fixed Target ID", "Mission MID", "Date", "Time",
@@ -591,13 +661,13 @@ public class EarthControlCenterUI extends JFrame {
         JPanel formPanel = new JPanel(new GridBagLayout());
         formPanel.setBackground(ModernTheme.PANEL_BG);
         formPanel.setBorder(BorderFactory.createTitledBorder(
-                ModernTheme.createSharpBorder(ModernTheme.ACCENT_AMBER),
-                " 🛰️ TRAJECTORY COMPARISON ENGINE (Mission Flight Path vs Solar Radiation Front) ",
-                TitledBorder.LEFT, TitledBorder.TOP, ModernTheme.FONT_SUBTITLE, ModernTheme.ACCENT_AMBER
+                ModernTheme.createSharpBorder(ModernTheme.VIVID_AMBER),
+                " 🛰️ TRAJECTORY COMPARISON ENGINE (Mission Path vs Radiation Front) ",
+                TitledBorder.LEFT, TitledBorder.TOP, ModernTheme.FONT_SUBTITLE, ModernTheme.VIVID_AMBER
         ));
 
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 8, 5, 8);
+        gbc.insets = new Insets(4, 6, 4, 6);
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
         JTextField tfPathId = new JTextField("TRAJ-106", 8);
@@ -629,7 +699,7 @@ public class EarthControlCenterUI extends JFrame {
         JPanel btnBox = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 5));
         btnBox.setOpaque(false);
 
-        JButton btnEvaluate = ModernTheme.createTacticalButton("⚡ RUN TRAJECTORY INTERSECTION & RADIATION COLLISION ANALYSIS", ModernTheme.ACCENT_AMBER, Color.BLACK);
+        JButton btnEvaluate = ModernTheme.createTacticalButton("⚡ RUN TRAJECTORY INTERSECTION & RADIATION COLLISION ANALYSIS", ModernTheme.VIVID_AMBER, Color.BLACK);
 
         btnEvaluate.addActionListener(e -> {
             try (Connection conn = dbManager.getConnection()) {
@@ -704,9 +774,9 @@ public class EarthControlCenterUI extends JFrame {
     // TAB 6: AUDIT & SYSTEM LOGS (pbtlogtable)
     // =========================================================================
     private JPanel createAuditLogPanel() {
-        JPanel panel = new JPanel(new BorderLayout(12, 12));
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBackground(ModernTheme.PANEL_BG);
-        panel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         DefaultTableModel model = new DefaultTableModel(new String[]{
                 "Operator Login ID", "Login Date/Time", "Switch Date/Time", "Switch Login ID",
@@ -752,10 +822,10 @@ public class EarthControlCenterUI extends JFrame {
         table.setForeground(ModernTheme.TEXT_PRIMARY);
         table.setGridColor(ModernTheme.GRID_COLOR);
         table.setRowHeight(28);
-        table.setSelectionBackground(new Color(0, 140, 220));
+        table.setSelectionBackground(new Color(0, 110, 190));
         table.setSelectionForeground(Color.WHITE);
 
-        table.setDefaultRenderer(Object.class, ModernTheme.createTableRenderer());
+        table.setDefaultRenderer(Object.class, ModernTheme.createDynamicTableRenderer());
         return table;
     }
 
@@ -769,16 +839,16 @@ public class EarthControlCenterUI extends JFrame {
         gbc.gridwidth = 1;
         JLabel lbl = new JLabel(labelText);
         lbl.setForeground(ModernTheme.TEXT_PRIMARY);
-        lbl.setFont(ModernTheme.FONT_BOLD);
+        lbl.setFont(ModernTheme.FONT_MONO_BOLD);
         panel.add(lbl, gbc);
 
         gbc.gridx = col + 1;
         gbc.gridwidth = colSpan;
-        field.setFont(ModernTheme.FONT_REGULAR);
+        field.setFont(ModernTheme.FONT_MONO);
         if (field instanceof JTextField) {
             field.setBackground(ModernTheme.INPUT_BG);
             field.setForeground(Color.WHITE);
-            ((JTextField) field).setCaretColor(ModernTheme.ACCENT_CYAN);
+            ((JTextField) field).setCaretColor(ModernTheme.VIVID_CYAN);
             field.setBorder(BorderFactory.createCompoundBorder(
                     BorderFactory.createLineBorder(ModernTheme.BORDER_COLOR, 1),
                     BorderFactory.createEmptyBorder(5, 8, 5, 8)
@@ -795,13 +865,13 @@ public class EarthControlCenterUI extends JFrame {
         footer.setBackground(ModernTheme.PANEL_BG);
         footer.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 12));
 
-        JLabel copyLabel = new JLabel("BHAARAT PROJECT SHIVODAYA © 2026 | ISRO Deep Space Monitoring & NASA DSN Interface");
-        copyLabel.setFont(ModernTheme.FONT_REGULAR);
-        copyLabel.setForeground(ModernTheme.TEXT_SECONDARY);
+        JLabel copyLabel = new JLabel("BHAARAT PROJECT SHIVODAYA © 2026 | ISRO Ground Monitoring & NASA DSN Telemetry Integration");
+        copyLabel.setFont(ModernTheme.FONT_MONO);
+        copyLabel.setForeground(ModernTheme.TEXT_MUTED);
 
-        JLabel statusLabel = new JLabel("● SYSTEM STATUS: ONLINE (FlatDarkLaf Modern UI Initialized)");
-        statusLabel.setFont(ModernTheme.FONT_BOLD);
-        statusLabel.setForeground(ModernTheme.ACCENT_GREEN);
+        JLabel statusLabel = new JLabel("● SYSTEM STATUS: ONLINE (HUD Monospaced Telemetry Enabled)");
+        statusLabel.setFont(ModernTheme.FONT_MONO_BOLD);
+        statusLabel.setForeground(ModernTheme.VIVID_GREEN);
 
         footer.add(copyLabel, BorderLayout.WEST);
         footer.add(statusLabel, BorderLayout.EAST);
