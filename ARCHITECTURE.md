@@ -3,9 +3,11 @@
 ## Executive Overview
 **Project Shivodaya** is a high-performance deep-space mesh network architecture designed for real-time solar radiation telemetry acquisition, space weather alert routing, and delay-tolerant store-and-forward communications.
 
-The system is composed of two primary sub-modules:
-1. **Prakash Module (Telemetry Acquisition & Pre-Processing Engine)**: Written in C, optimized with zero-copy POSIX `mmap()`, lock-free C11 atomic ring buffers, core pinning (`pthread_setaffinity_np()`), L1 cache line isolation (`alignas(64)`), and zero-allocation pointer arithmetic parsing.
+The system is composed of four primary sub-modules:
+1. **Prakash Module (Telemetry Acquisition & Pre-Processing Engine)**: Written in C11, optimized with zero-copy POSIX `mmap()`, lock-free C11 atomic ring buffers, core pinning (`pthread_setaffinity_np()`), L1 cache line isolation (`alignas(64)`), and JSCC 32-float semantic linear projection.
 2. **Richa Module (Interplanetary Transport & DTN Engine)**: Written in C++/HTML5/Three.js, implementing dynamic Dijkstra Contact Graph Routing (CGR), Bundle Protocol v7 (RFC 9171 / BPv7) Store-and-Forward Custody Transfer, and a real-time 3D deep space visualizer dashboard.
+3. **Akashdeep Module (Autonomous Mission Control & Early Warning System)**: Written in Java Swing (JDK 17+), featuring a pseudo-3D celestial trajectory engine, overall space health meter, automated flight safety advisory engine, dynamic waveform chart builder, and auto-data integration feeder writing to SQLite (`akashdeep_telemetry.db`).
+4. **Earth Operations Monitoring Center**: Native C++ SQLite query bridge and HTML5 WebGL dashboard monitoring deep-space agency nodes (ISRO Bhaarat, NASA, ESA, Roscosmos, JAXA).
 
 ---
 
@@ -18,7 +20,7 @@ The system is composed of two primary sub-modules:
 - **L1 Cache Line Alignment (`alignas(64)`)**: Eliminates CPU false sharing by isolating atomic read/write pointers onto separate 64-byte hardware cache lines.
 - **Fast Zero-Allocation ASCII-to-Float Parser (`fast_atof`)**: Direct memory pointer arithmetic parsing without `sscanf()` overhead, cutting processing time for 500,000 records down to ~330 ms.
 - **Derivative Spike Detection ($\frac{d\Phi}{dt}$)**: Real-time detection of radiation acceleration prior to absolute limit breaches.
-- **UDP Alert Dispatch**: Streams breached solar alert events over non-blocking socket loops to local/mesh listener ports.
+- **Joint Source-Channel Coding (JSCC)**: Compresses raw telemetry features into 32-float semantic vectors embedded with the security marker `'Bhaarat'`.
 
 ### Data Stream Thresholds & Derivative Rules
 | Telemetry Stream | Physical Quantity | Danger Ceiling | Derivative Warning ($\frac{d\Phi}{dt}$) |
@@ -41,29 +43,47 @@ The system is composed of two primary sub-modules:
 
 ---
 
-## 3. 3-Terminal DTN Demonstration Workflow
+## 3. Akashdeep Module: Autonomous Mission Control & Early Warning System
 
-### **Terminal 1: Shivodaya DTN Sender (`ipn:1.1` - ISRO Aditya-L1 Solar Probe)**
-```bash
-./richa/ion_dtn_demo/terminal1sender.sh
-```
-*Dispatches specific CME, SEP, Solar Wind, or X-Ray alerts, or runs a 20-packet multi-radiation auto stream.*
-
-### **Terminal 2: Online Receiver (`ipn:2.1` - Cis-Lunar Relay)**
-```bash
-./richa/ion_dtn_demo/terminal2receiver.sh
-```
-*Launched FIRST to stream live incoming BPv7 radiation alert bundles.*
-
-### **Terminal 3: Delayed Custody Receiver (`ipn:3.1` - Mars Operations Station)**
-```bash
-./richa/ion_dtn_demo/terminal3_delayed_receiver.sh
-```
-*Launched LATER (after dispatches) to retrieve stored custody bundles with visual pacing (0.8s) and blackout delay timing.*
+### Core Technical Principles
+- **Single-Unit Autonomous Data Integration**: Embedded background thread (`startAutoDataFeeder()`) automatically populates and streams telemetry records into SQLite (`akashdeep_telemetry.db`), running standalone without requiring manual data input.
+- **3D Celestial Trajectory Engine (`TrajectoryMapPanel` & `ExpandedTrajectoryFrame`)**:
+  - Renders 3D perspective plane grid, 3D Sun sphere, 3D Earth station, and 3D Mars target (`ipn:3.1`).
+  - Animates smooth harmonic spacecraft transit along the 3D parabolic transfer arc (Perseverance / Akashdeep flight vector).
+  - Renders 3D solar radiation particle swarms and concentric shockwave envelopes actively chasing the spacecraft.
+- **Overall Space Health Index Meter (`HealthMeterPanel`)**: Calculates space weather threat status (0-100%) with dynamic color-coded arcs (`NOMINAL HEALTH`, `ELEVATED THREAT`, `CRITICAL SEVERE`).
+- **Actionable Flight Safety Advisory (`FlightSuggestionPanel`)**: Generates real-time tactical directives and interactive buttons (`EXECUTE SAFE ZONE` and `RE-CALCULATE PATH`).
+- **Gradual Waveform Builder (`DangerEventsChart` & `CMEAlertTrendChart`)**: Streams dataset rows at a controlled, steady pace (every 300-400 ms) so judges watch the line plot construct live.
+- **Go Back Screen Navigation**: Includes prominent `[◀ GO BACK TO MAIN CONTROL CENTER]` header buttons on all sub-windows (`CME_Dashboard` and `ExpandedTrajectoryFrame`).
 
 ---
 
-## 4. Overall Execution Summary Benchmark
+## 4. Key Execution & Build Commands
+
+### **Full C/C++ Native Mesh Pipeline Build & Run**
+```bash
+# Build native C/C++ binaries
+cd /home/akshat/shivodaya
+./build_all.sh
+
+# Run end-to-end Prakash -> Richa -> Akashdeep -> Earth Monitor pipeline
+./run_full_mesh_pipeline.sh
+```
+
+### **Akashdeep Control Center GUI Build & Run**
+```bash
+# Build Java GUI codebase
+cd /home/akshat/shivodaya
+./build_java.sh
+
+# Launch Akashdeep Control Center Dashboard
+cd /home/akshat/shivodaya/akashdeep/java_gui
+java -cp "bin" Main
+```
+
+---
+
+## 5. Overall Execution Summary Benchmark
 ```text
 ========================================================================
              PROJECT SHIVODAYA :: SYSTEM ARCHITECTURE BENCHMARK         
@@ -73,5 +93,6 @@ The system is composed of two primary sub-modules:
 [+] Cache Optimization        : 64-Byte Line Alignment & Power-of-2 Bitwise Masking
 [+] Networking Protocols      : RFC 9171 BPv7 DTN & Contact Graph Routing (CGR)
 [+] Deep Space Mesh Nodes     : 100 Inter-Agency Space Probes & Orbiters
+[+] Control Center GUI        : Pseudo-3D Celestial Engine & Live SQLite Bridge
 ========================================================================
 ```
