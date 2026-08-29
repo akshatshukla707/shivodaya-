@@ -694,23 +694,6 @@
             }
         }
 
-                if (p.currentHop < p.path.length - 1) {
-                    const startNode = spaceNodes.find(n => n.id === p.path[p.currentHop]);
-                    const endNode = spaceNodes.find(n => n.id === p.path[p.currentHop + 1]);
-
-                    p.mesh.position.lerpVectors(startNode.pos, endNode.pos, p.progress);
-                } else {
-                    logConsole(`[DELIVERED] BPv7 Radiation Alert successfully arrived at Mars Deep Space Station!`, 'log-mars');
-                    scene.remove(p.mesh);
-                    activePackets.splice(idx, 1);
-                }
-            }
-
-            renderer.render(scene, camera);
-        }
-        animate();
-
-        // 6. UI Handlers & Logic
         function logConsole(msg, cssClass = 'log-sys') {
             const consoleBody = document.getElementById('consoleBody');
             const div = document.createElement('div');
