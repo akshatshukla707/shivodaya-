@@ -23,7 +23,7 @@
 #define RING_BUFFER_MASK (RING_BUFFER_CAPACITY - 1)
 #define UDP_PORT 8080
 #define UDP_HOST "127.0.0.1"
-#define LOG_FILE_PATH "warning_dispatch.txt"
+#define LOG_FILE_PATH "prakash/warning_dispatch.txt"
 #define CACHE_LINE_SIZE 64
 
 typedef enum {
