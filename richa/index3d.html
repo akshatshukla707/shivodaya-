@@ -606,11 +606,11 @@
         marsMesh.position.copy(spaceNodes.find(n => n.id === 99).pos);
         scene.add(marsMesh);
 
-        // CME Solar Storm Disturbance Mesh
-        const disturbanceGeo = new THREE.SphereGeometry(45, 32, 32);
+        // CME Solar Storm Disturbance Mesh (Cube Shape Plasma Zone)
+        const disturbanceGeo = new THREE.BoxGeometry(65, 65, 65);
         const disturbanceMat = new THREE.MeshBasicMaterial({ color: 0xff0055, transparent: true, opacity: 0, wireframe: true });
         const disturbanceMesh = new THREE.Mesh(disturbanceGeo, disturbanceMat);
-        disturbanceMesh.position.set(-30, 60, 10);
+        disturbanceMesh.position.set(-120, 85, 60); // Placed directly over SpaceX Relay 1 (Node 10)
         scene.add(disturbanceMesh);
 
         // Orbit Rings for Satellites & Nodes
@@ -721,6 +721,13 @@
                     const endNode = spaceNodes.find(n => n.id === p.path[p.currentHop + 1]);
 
                     p.mesh.position.lerpVectors(startNode.pos, endNode.pos, p.progress);
+
+                    // Check if packet hits disturbance zone (SpaceX Relay 1 - Node 10)
+                    if (isDisturbanceActive && !p.isRerouted && !p.isCustodyMode && endNode.id === 10 && p.progress > 0.85) {
+                        logConsole(`[BLOCKED] Bundle encountered CME Solar Disturbance Cube at ${endNode.name}! Transmission severed.`, 'log-blackout');
+                        scene.remove(p.mesh);
+                        activePackets.splice(idx, 1);
+                    }
                 } else {
                     logConsole(`[DELIVERED] BPv7 Radiation Alert arrived at Mars Operations Base!`, 'log-mars');
                     scene.remove(p.mesh);
@@ -771,29 +778,29 @@
             document.getElementById('totalDispatchesText').innerText = totalDispatches;
 
             let path = [0, 10, 12, 99]; // Normal Direct Path
-            let pathText = 'Aditya-L1 -> Relay 1 -> Cis-Lunar Gateway -> Mars Deep Space Base';
-            let bundleColor = 0x00ff66;
+            let pathText = 'Aditya-L1 -> Starshield Relay 1 -> Cis-Lunar Gateway -> Mars Base';
+            let dotColor = 0x00ff66;
 
             if (isDisturbanceActive && !isRerouted) {
-                logConsole(`[ALERT BLOCKED] Bundle dispatched along normal path encountered CME Solar Disturbance at Relay 1! Execution stalled.`, 'log-blackout');
-                // Drop packet simulation
-                return;
+                logConsole(`[DISPATCH #${totalDispatches}] BPv7 Radiation Alert Dispatched along Normal Path...`, 'log-sys');
+                dotColor = 0xff0055;
             } else if (isDisturbanceActive || isRerouted) {
                 path = [0, 2, 21, 20, 23, 99]; // Failover Inter-agency path
                 pathText = 'Aditya-L1 -> Solar Orbiter (ESA) -> MAVEN (NASA) -> Mangalyaan-2 (ISRO) -> MMX (JAXA) -> Mars Base';
-                bundleColor = 0xff7300;
+                dotColor = 0xff7300;
+                logConsole(`[DISPATCH #${totalDispatches}] BPv7 Radiation Alert Dispatched:\n  Route: ${pathText}`, 'log-mars');
+            } else {
+                logConsole(`[DISPATCH #${totalDispatches}] BPv7 Radiation Alert Dispatched:\n  Route: ${pathText}`, 'log-cgr');
             }
 
-            logConsole(`[DISPATCH #${totalDispatches}] BPv7 Radiation Alert Dispatched:\n  Route: ${pathText}`, isRerouted || isDisturbanceActive ? 'log-mars' : 'log-cgr');
-
-            // Create 3 Red Dots in a Line Packet Group
+            // Create 3 Dots in a Line Packet Group
             const pGroup = new THREE.Group();
             const dotGeo = new THREE.SphereGeometry(3.5, 12, 12);
-            const dotMat = new THREE.MeshBasicMaterial({ color: 0xff0044 });
+            const dotMat = new THREE.MeshBasicMaterial({ color: dotColor });
 
             for (let d = -1; d <= 1; d++) {
                 const dot = new THREE.Mesh(dotGeo, dotMat);
-                dot.position.set(d * 7.5, 0, 0); // 3 red dots lined up in a row
+                dot.position.set(d * 7.5, 0, 0); // 3 dots lined up in a row
                 pGroup.add(dot);
             }
 
@@ -805,6 +812,7 @@
                 progress: 0,
                 speed: 0.02,
                 isCustodyMode: false,
+                isRerouted: isRerouted,
                 mesh: pGroup
             });
         }
@@ -854,19 +862,22 @@
 
             const custodyEl = document.getElementById('custodyStatusText');
             custodyEl.innerText = 'STORE-AND-FORWARD ACTIVE';
-            custodyEl.style.color = '#00ff66';
+            custodyEl.style.color = '#a855f7';
 
-            let path = isDisturbanceActive ? [0, 2, 21, 20, 23, 99] : [0, 10, 12, 99];
-            logConsole(`[CUSTODY DISPATCH #${totalDispatches}] BPv7 Store-and-Forward Custody Transfer Initiated across ${path.length - 1} hops.`, 'log-cgr');
+            // Distinct Inter-Agency Custody Relay Trajectory
+            let path = [0, 1, 11, 22, 24, 99];
+            let pathText = 'Aditya-L1 -> Parker Probe (NASA) -> Spektr-RG (Roscosmos) -> ExoMars TGO (ESA) -> Luna-26 (Roscosmos) -> Mars Base';
+            
+            logConsole(`[CUSTODY DISPATCH #${totalDispatches}] RFC 9171 Store-and-Forward Custody Transfer:\n  Route: ${pathText}`, 'log-cgr');
 
-            // Create 3 Red Dots in a Line Custody Packet Group
+            // Create 3 Purple/Magenta Dots in a Line Custody Packet Group
             const pGroup = new THREE.Group();
             const dotGeo = new THREE.SphereGeometry(4.0, 12, 12);
-            const dotMat = new THREE.MeshBasicMaterial({ color: 0xff0055 });
+            const dotMat = new THREE.MeshBasicMaterial({ color: 0xa855f7 });
 
             for (let d = -1; d <= 1; d++) {
                 const dot = new THREE.Mesh(dotGeo, dotMat);
-                dot.position.set(d * 8.0, 0, 0); // 3 red dots lined up in a row
+                dot.position.set(d * 8.0, 0, 0); // 3 dots lined up in a row
                 pGroup.add(dot);
             }
 
@@ -876,8 +887,9 @@
                 path: path,
                 currentHop: 0,
                 progress: 0,
-                speed: 0.012, // deliberate store-and-forward step speed
+                speed: 0.015, // deliberate store-and-forward custody transfer step speed
                 isCustodyMode: true,
+                isRerouted: true,
                 mesh: pGroup
             });
         }
