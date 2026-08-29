@@ -138,16 +138,62 @@ Executes: `prakash_encoder` $\rightarrow$ `richa_neural_router` $\rightarrow$ `a
 
 ---
 
-## Technical Performance Benchmarks
-```text
-========================================================================
-             PROJECT SHIVODAYA :: SYSTEM ARCHITECTURE BENCHMARK         
-========================================================================
-[+] Prakash Telemetry Pipeline : 500,000 Records Parsed in 0.330 sec
-[+] Synchronization Primitive : Lock-Free Atomic SPCM/MPMC Ring Buffer
-[+] Cache Optimization        : 64-Byte Line Alignment & Power-of-2 Bitwise Masking
-[+] Networking Protocols      : RFC 9171 BPv7 DTN & Contact Graph Routing (CGR)
-[+] Deep Space Mesh Nodes     : 100 Inter-Agency Space Probes & Orbiters
-[+] Control Center GUI        : Pseudo-3D Celestial Engine & Live SQLite Bridge
-========================================================================
-```
+---
+
+## Detailed Step-by-Step Low-Bandwidth Neural Pipeline Architecture
+
+### Step 1: Prakash Module (Neural Semantic Vector Embedding at Aditya-L1 - ipn:1.1)
+- **Problem Solved**: High-volume sensor streams (CME speeds, proton surges, X-ray flux curves) generate continuous numerical data that cannot fit across ultra-low bandwidth deep-space links.
+- **Implementation**:
+  - `prakash_encoder.c`: Memory-maps 5 telemetry channels (`mmap()`) across CPU cores with lock-free atomic ring buffers (`alignas(64)`).
+  - Computes derivative spike detection ($\frac{d\Phi}{dt}$) to catch radiation surges before limit breaches.
+  - Applies a 1-layer **JSCC linear projection matrix** to compress raw telemetry into a fixed **32-float semantic vector** (~128 bytes total).
+  - Embeds the security signature `'Bhaarat'` into vector header bytes.
+- **Concrete Example**:
+  ```text
+  [RAW SENSOR INPUT]  : TS: 2026-08-28 00:02:00 | CME Speed: 1800.0 km/s | Width: 360 deg | dPhi/dt: 1500.0
+  [JSCC PROJECTION]   : JSCC_Linear_Transform(Raw_Telemetry[5]) -> 32-Float Embedding
+  [ENCODED EMBEDDING] : [ 0.841, -0.112, 0.950, ..., 0.043 ] + Marker: 'Bhaarat' (Size: 128 Bytes)
+  ```
+
+### Step 2: Richa Module (Neural Perceptron Contact Graph Routing - ipn:2.1)
+- **Problem Solved**: Planets block line-of-sight (occultation) and solar flares destroy direct communications with Earth.
+- **Implementation**:
+  - `richa_neural_router.cpp`: Evaluates link states across a 100-node space mesh (ISRO, NASA, ESA, Roscosmos, JAXA).
+  - Runs a **Perceptron neural weight decision model** ($W_i = \sum w_k x_k + b$) scoring radiation interference, link delay, storage health, and line-of-sight.
+  - Computes Time-Dependent Dijkstra routing (`ipn:1.1 -> ipn:2.1 -> ipn:3.1`). On solar blackout, instantly triggers **Multi-Hop BFS Rerouting** (`ipn:1.1 -> ipn:6.1 -> ipn:5.1 -> ipn:4.1 -> ipn:3.1`), bypassing solar blackout zones.
+  - Asynchronously logs bundle transactions into `richa_routing_log.db` (SQLite WAL mode).
+- **Concrete Example**:
+  ```text
+  [PRIMARY PATH EVAL] : Link(ipn:1.1 -> ipn:2.1 -> ipn:3.1) | Radiation Score: 0.98 (BLACKOUT DETECTED)
+  [NEURAL REROUTE]    : Perceptron Weight Cost Trigger -> Multi-Hop BFS Reroute
+  [REROUTED PATH]     : ipn:1.1 (Aditya-L1) -> ipn:6.1 (ExoMars) -> ipn:5.1 (MAVEN) -> ipn:3.1 (Mars Base)
+  ```
+
+### Step 3: Akashdeep Module (Semantic Reconstruction & Early Warning at Mars Base - ipn:3.1)
+- **Problem Solved**: Reconstructing physical space-weather parameters from compressed vectors and issuing flight safety directives.
+- **Implementation**:
+  - `akashdeep_decoder.cpp`: Verifies the `'Bhaarat'` signature marker.
+  - Performs **Reverse MLP Matrix Projection** ($Y = W^T \cdot V_{vector}$) to reconstruct physical telemetry values (CME speed in km/s, surge rates $\frac{d\Phi}{dt}$).
+  - Evaluates danger thresholds and issues real-time flight safety advisories (`EXECUTE SAFE ZONE` / `RE-CALCULATE PATH`).
+  - Appends alert dispatches to `akashdeep_mission_control.log` via POSIX `write()`.
+- **Concrete Example**:
+  ```text
+  [INGRESS VECTOR]    : [ 0.841, -0.112, 0.950, ..., 0.043 ] (Marker 'Bhaarat' Verified)
+  [REVERSE MLP DECODE]: Inverse_Matrix_Projection(32-Float Vector)
+  [RECONSTRUCTED DATA]: Reconstructed CME Speed: 1798.4 km/s | Alert Level: SEVERE CRITICAL
+  [FLIGHT ADVISORY]   : [TACTICAL DIRECTIVE]: EXECUTE SAFE ZONE & SHIELD SOLAR PANELS
+  ```
+
+### Step 4: Earth Operations & Visualization Layer (Ground Control)
+- **Problem Solved**: Provides Ground Control with real-time situational awareness across deep-space agency nodes without burdening space communications.
+- **Implementation**:
+  - `earth_monitor.cpp`: Queries `richa_routing_log.db` to extract mesh telemetry across ISRO, NASA, ESA, Roscosmos, and JAXA nodes.
+  - `richa/main3dvisual.html`: Interactive Three.js WebGL visualizer rendering 100 space probes orbiting the Sun, Earth, and Mars with revolving Aditya-L1 probe animations and interactive blackout toggles.
+  - `akashdeep/java_gui/Main.java`: Java Swing 3D celestial trajectory engine, dynamic speedometer gauges, health meters, and safety advisory panels.
+- **Concrete Example**:
+  ```text
+  [OPERATIONS QUERY]  : Query richa_routing_log.db -> Active Nodes: 100 | Blackout Reroutes: 24
+  [3D WEB VISUALIZER] : Renders live Three.js Mesh + Aditya-L1 Solar Orbit Ring + Dynamic Dijkstra Lines
+  [MISSION CONTROL]   : Java Swing GUI Displays 3D Spacecraft Transit Arc & Speedometers in Danger Zone
+  ```
