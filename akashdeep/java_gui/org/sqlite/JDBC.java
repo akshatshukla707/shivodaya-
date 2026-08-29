@@ -82,7 +82,7 @@ public class JDBC implements Driver {
                     if ("stream_name".equals(col)) return "CME";
                     if ("marker".equals(col)) return "Bhaarat";
                     if ("severity".equals(col)) return "CRITICAL";
-                    return "INFO";
+                    return "TELEMETRY_RECORD";
                 }
                 if ("close".equals(rName)) return null;
                 return null;

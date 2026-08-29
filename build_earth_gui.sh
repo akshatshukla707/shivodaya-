@@ -9,7 +9,7 @@ DB_PATH="/home/akshat/Downloads/parabitshivchaitanya.db"
 mkdir -p "$BIN_DIR"
 
 echo "========================================================================"
-echo "   BUILDING BHAARAT PROJECT SHIVODAYA EARTH CONTROL CENTER JAVA GUI      "
+echo "   BUILDING PROJECT SHIVODAYA EARTH CONTROL CENTER JAVA GUI            "
 echo "========================================================================"
 
 # Extract embedded SQLite JDBC wrapper from akashdeep if available

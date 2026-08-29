@@ -8,7 +8,7 @@ if [ ! -d "$BIN_DIR" ] || [ ! -f "${BIN_DIR}/earthcontrol/EarthControlCenterUI.c
 fi
 
 echo "========================================================================"
-echo "   LAUNCHING BHAARAT PROJECT SHIVODAYA EARTH CONTROL CENTER JAVA GUI    "
+echo "   LAUNCHING PROJECT SHIVODAYA EARTH CONTROL CENTER JAVA GUI          "
 echo "========================================================================"
 
 cd "$BIN_DIR"

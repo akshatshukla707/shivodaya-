@@ -76,9 +76,10 @@ public class EarthControlCenterUI extends JFrame {
     }
 
     private JPanel createHeaderPanel() {
-        JPanel header = new JPanel(new BorderLayout());
+        JPanel header = new JPanel(new BorderLayout(15, 0));
         header.setBackground(ModernTheme.PANEL_BG);
         header.setBorder(ModernTheme.createSharpBorder(ModernTheme.VIVID_CYAN));
+        header.setPreferredSize(new Dimension(0, 50));
 
         // Sidebar Toggle Button
         JButton toggleSidebarBtn = ModernTheme.createTacticalButton("☰ SIDEBAR", ModernTheme.CARD_BG, ModernTheme.VIVID_CYAN);
@@ -89,17 +90,17 @@ public class EarthControlCenterUI extends JFrame {
             sidebarPanel.repaint();
         });
 
-        JLabel titleLabel = new JLabel(" BHAARAT PROJECT SHIVODAYA :: GROUND OPERATIONS CENTER");
+        JLabel titleLabel = new JLabel(" PROJECT SHIVODAYA GROUND CENTER ");
         titleLabel.setFont(ModernTheme.FONT_TITLE);
         titleLabel.setForeground(ModernTheme.VIVID_CYAN);
 
-        JPanel leftHeader = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        JPanel leftHeader = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
         leftHeader.setOpaque(false);
         leftHeader.add(toggleSidebarBtn);
         leftHeader.add(titleLabel);
 
         // Flashing Alert Status Banner
-        alertBannerLabel = new JLabel("⚠️ CRITICAL ALERT: HALO CME VELOCITY 1800 KM/S DETECTED AT ADITYA-L1");
+        alertBannerLabel = new JLabel("⚠️ CRITICAL: HALO CME 1800 KM/S AT ADITYA-L1");
         alertBannerLabel.setFont(ModernTheme.FONT_MONO_BOLD);
         alertBannerLabel.setForeground(ModernTheme.VIVID_RED);
 
@@ -112,7 +113,7 @@ public class EarthControlCenterUI extends JFrame {
             }
         });
 
-        JPanel rightHeader = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 0));
+        JPanel rightHeader = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 5));
         rightHeader.setOpaque(false);
         rightHeader.add(alertBannerLabel);
         rightHeader.add(launch3dBtn);
@@ -195,7 +196,7 @@ public class EarthControlCenterUI extends JFrame {
         formPanel.setBackground(ModernTheme.PANEL_BG);
         formPanel.setBorder(BorderFactory.createTitledBorder(
                 ModernTheme.createSharpBorder(ModernTheme.VIVID_CYAN),
-                " 📝 REGISTER MISSION & BHAARAT SECURITY MODULE SWITCH ",
+                " 📝 REGISTER MISSION & SHIVODAYA SECURITY MODULE SWITCH ",
                 TitledBorder.LEFT, TitledBorder.TOP, ModernTheme.FONT_SUBTITLE, ModernTheme.VIVID_CYAN
         ));
 
@@ -213,7 +214,7 @@ public class EarthControlCenterUI extends JFrame {
         JTextField tfLife = new JTextField("5.0", 5);
 
         JComboBox<String> cbModuleType = new JComboBox<>(new String[]{
-                "Bhaarat Transceiver v2 (Full Transmit & Receive Mesh Node)",
+                "Shivodaya Transceiver v2 (Full Transmit & Receive Mesh Node)",
                 "Receiver-Only Mode (Security Switch ACTIVE - No Transmission)",
                 "Emergency Off (Module Deactivated for National Security)"
         });
@@ -223,7 +224,7 @@ public class EarthControlCenterUI extends JFrame {
         JTextField tfPurpose1 = new JTextField("Space Weather Detection", 14);
         JTextField tfPurpose2 = new JTextField("Deep Space Routing", 14);
         JTextField tfComment = new JTextField("Primary Mission Profile", 16);
-        JTextField tfNote = new JTextField("Bhaarat Shivodaya Network Integrated", 16);
+        JTextField tfNote = new JTextField("Shivodaya Network Integrated", 16);
 
         addFormField(formPanel, gbc, 0, 0, "Mission Name:", tfName);
         addFormField(formPanel, gbc, 0, 2, "Official Mission ID:", tfOfficialId);
@@ -234,7 +235,7 @@ public class EarthControlCenterUI extends JFrame {
         addFormField(formPanel, gbc, 3, 0, "Space Agency:", cbAgency);
         addFormField(formPanel, gbc, 3, 2, "Expected Life (Yrs):", tfLife);
 
-        addFormField(formPanel, gbc, 4, 0, "Bhaarat Security Module Config:", cbModuleType, 3);
+        addFormField(formPanel, gbc, 4, 0, "Shivodaya Security Module Config:", cbModuleType, 3);
         addFormField(formPanel, gbc, 5, 0, "Module Hardware ID:", tfModuleId);
         addFormField(formPanel, gbc, 5, 2, "Crew Members Count:", tfMembers);
         addFormField(formPanel, gbc, 6, 0, "Primary Purpose:", tfPurpose1);
@@ -286,12 +287,12 @@ public class EarthControlCenterUI extends JFrame {
             }
             int mid = (Integer) model.getValueAt(selectedRow, 0);
             try (Connection conn = dbManager.getConnection()) {
-                String sql = "UPDATE pbtmission SET mmodule = 'Receiver-Only Mode (Security Switch ACTIVE - No Transmission)', mnote = 'BHAARAT SECURITY KILL SWITCH ACTIVATED - TRANSMITTER SHUT DOWN' WHERE mid = ?";
+                String sql = "UPDATE pbtmission SET mmodule = 'Receiver-Only Mode (Security Switch ACTIVE - No Transmission)', mnote = 'SHIVODAYA SECURITY KILL SWITCH ACTIVATED - TRANSMITTER SHUT DOWN' WHERE mid = ?";
                 PreparedStatement pstmt = conn.prepareStatement(sql);
                 pstmt.setInt(1, mid);
                 pstmt.executeUpdate();
 
-                JOptionPane.showMessageDialog(this, "SECURITY DIRECTIVE EXECUTED:\nMission ID [" + mid + "] Bhaarat Transmitter Switch DEACTIVATED.\nModule set to RECEIVE-ONLY mode.", "Security Kill Switch Executed", JOptionPane.WARNING_MESSAGE);
+                JOptionPane.showMessageDialog(this, "SECURITY DIRECTIVE EXECUTED:\nMission ID [" + mid + "] Shivodaya Transmitter Switch DEACTIVATED.\nModule set to RECEIVE-ONLY mode.", "Security Kill Switch Executed", JOptionPane.WARNING_MESSAGE);
                 refreshMissionTable(model);
             } catch (Exception ex) {
                 ex.printStackTrace();
@@ -461,7 +462,7 @@ public class EarthControlCenterUI extends JFrame {
         JTextField tfPredTime = new JTextField("05:00:00", 8);
         JComboBox<String> cbRisk = new JComboBox<>(new String[]{"HIGH_CRITICAL", "MEDIUM_HIGH", "LOW_NOMINAL"});
         JComboBox<String> cbStatus = new JComboBox<>(new String[]{"HARMFUL", "MONITORING", "RESOLVED", "SAFE"});
-        JComboBox<String> cbVis = new JComboBox<>(new String[]{"PUBLIC_AGENCY", "RESTRICTED_BHAARAT", "ISRO_INTERNAL"});
+        JComboBox<String> cbVis = new JComboBox<>(new String[]{"PUBLIC_AGENCY", "RESTRICTED_SHIVODAYA", "ISRO_INTERNAL"});
         JTextField tfComment = new JTextField("Halo Coronal Mass Ejection trajectory direct vector to Mars Base ipn:3.1", 22);
 
         addFormField(formPanel, gbc, 0, 0, "Alert ID:", tfAlertId);
@@ -479,7 +480,7 @@ public class EarthControlCenterUI extends JFrame {
             try (Connection conn = dbManager.getConnection()) {
                 String sql = "INSERT INTO pbtalert (alertid, frecdate, frectime, alertsource, alerttypeid, alertdetectdate, alertdetecttime, " +
                         "fcreateddate, fcreatedtime, predictedalertdate, predictedalerttime, predictalertrisk, aloginid, status, comment, note, visibility) " +
-                        "VALUES (?, '2026-08-28', '00:25:00', ?, ?, '2026-08-28', '00:23:00', '2026-08-28', '00:25:05', ?, ?, ?, 'OPERATOR_BHAARAT', ?, ?, 'Logged by Shivodaya Module', ?)";
+                        "VALUES (?, '2026-08-28', '00:25:00', ?, ?, '2026-08-28', '00:23:00', '2026-08-28', '00:25:05', ?, ?, ?, 'OPERATOR_SHIVODAYA', ?, ?, 'Logged by Shivodaya Module', ?)";
                 PreparedStatement pstmt = conn.prepareStatement(sql);
                 pstmt.setString(1, tfAlertId.getText());
                 pstmt.setString(2, tfSource.getText());
@@ -865,7 +866,7 @@ public class EarthControlCenterUI extends JFrame {
         footer.setBackground(ModernTheme.PANEL_BG);
         footer.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 12));
 
-        JLabel copyLabel = new JLabel("BHAARAT PROJECT SHIVODAYA © 2026 | ISRO Ground Monitoring & NASA DSN Telemetry Integration");
+        JLabel copyLabel = new JLabel("PROJECT SHIVODAYA © 2026 | ISRO Ground Monitoring & DSN Telemetry Integration");
         copyLabel.setFont(ModernTheme.FONT_MONO);
         copyLabel.setForeground(ModernTheme.TEXT_MUTED);
 

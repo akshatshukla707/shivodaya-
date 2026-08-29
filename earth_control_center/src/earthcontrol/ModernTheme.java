@@ -107,7 +107,7 @@ public class ModernTheme {
                     setFont(FONT_MONO_BOLD);
                 } else if (strVal.contains("ACTIVE") || strVal.contains("SAFE") || strVal.contains("NOMINAL")) {
                     c.setForeground(VIVID_GREEN);
-                } else if (strVal.contains("Bhaarat Transceiver")) {
+                } else if (strVal.contains("Shivodaya Transceiver") || strVal.contains("Bhaarat Transceiver")) {
                     c.setForeground(VIVID_CYAN);
                 }
                 return c;
