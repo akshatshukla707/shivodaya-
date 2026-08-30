@@ -351,6 +351,15 @@ public class CME_Dashboard extends JFrame {
         return label;
     }
 
+    private String getUnitForStream(String stream) {
+        if (stream == null) return "km/s";
+        switch (stream.toUpperCase()) {
+            case "SOLAR_FLARES": case "PROTON_FLUX": return "pfu";
+            case "SOLAR_WIND": return "p/cm³";
+            case "XRAY_FLUX": case "X-RAY_FLUX": return "W/m²";
+            default: return "km/s";
+        }
+    }
     private void loadDatasetQueue() {
         File datasetFile = new File("CME_dataset_1000_harmful.txt");
         if (!datasetFile.exists()) return;
@@ -366,6 +375,9 @@ public class CME_Dashboard extends JFrame {
                     String time = parts[1].replace("\"", "");
                     String speedStr = parts[4].replace("\"", "");
                     String notes = parts[7].replace("\"", "");
+                    if (!"ALL".equalsIgnoreCase(streamFilter) && !"CME".equalsIgnoreCase(streamFilter)) {
+                        notes = streamFilter + " High-Energy Event - Peak Threshold Crossed";
+                    }
                     try {
                         int speed = Integer.parseInt(speedStr);
                         datasetQueue.add(new Object[]{count + 1, date + " " + time, speed, notes});
@@ -390,14 +402,15 @@ public class CME_Dashboard extends JFrame {
                     String notes = (String) item[3];
 
                     ZonedDateTime zdt = ZonedDateTime.now();
-                    CMEAlert alert = new CMEAlert(zdt, speed, speed * 1.5, notes, "Bhaarat", "CME");
+                    CMEAlert alert = new CMEAlert(zdt, speed, speed * 1.5, notes, "Bhaarat", streamFilter);
                     liveAlertsList.add(alert);
 
                     // Add point to line chart to show graph building live
                     trendChart.addDataPoint(speed);
 
+                    String unit = getUnitForStream(streamFilter);
                     Object[] rowData = {
-                        id, ts, "CME Telemetry", speed + " km/s",
+                        id, ts, streamFilter + " Stream", speed + " " + unit,
                         String.format("%.1f", speed * 0.4), "1.25 W/m²", "Bhaarat", alert.severity.name()
                     };
                     historicalAlertsModel.insertRow(0, rowData);

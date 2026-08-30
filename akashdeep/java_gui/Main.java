@@ -670,8 +670,8 @@ class TrajectoryMapPanel extends JPanel {
         topBar.add(expandButton);
         add(topBar, BorderLayout.NORTH);
 
-        Timer timer = new Timer(30, e -> {
-            animAngle += 0.015;
+        Timer timer = new Timer(50, e -> {
+            animAngle += 0.005;
             repaint();
         });
         timer.start();
@@ -751,20 +751,23 @@ class TrajectoryMapPanel extends JPanel {
         traj.curveTo(earthX - 40, earthY + 50, marsX + 40, marsY + 40, marsX, marsY);
         g2d.draw(traj);
 
-        // Smooth continuous 3D Spacecraft transit along transfer arc (smooth harmonic transit)
-        double shipProgress = 0.5 + 0.45 * Math.sin(animAngle);
-        int shipX = (int) (earthX * (1 - shipProgress) + marsX * shipProgress - 30 * Math.sin(shipProgress * Math.PI));
-        int shipY = (int) (earthX * (1 - shipProgress) + marsY * shipProgress + 25 * Math.sin(shipProgress * Math.PI));
+        // Smooth continuous 3D Spacecraft transit along Earth->Mars transfer arc (slow, realistic)
+        double shipProgress = (animAngle % (2 * Math.PI)) / (2 * Math.PI);
+        int shipX = (int) (earthX * (1 - shipProgress) + marsX * shipProgress - 25 * Math.sin(shipProgress * Math.PI));
+        int shipY = (int) (earthY * (1 - shipProgress) + marsY * shipProgress + 20 * Math.sin(shipProgress * Math.PI));
 
         g2d.setColor(Main.NEON_GREEN);
         g2d.fillOval(shipX - 6, shipY - 6, 12, 12);
         g2d.drawString("PERSEVERANCE", shipX - 40, shipY - 10);
 
-        // 3D CME Radiation Particles & Wave Shell chasing ship
-        g2d.setColor(new Color(0xff, 0x17, 0x44, 190));
-        g2d.setStroke(new BasicStroke(2.5f));
-        int waveR = (int) (shipProgress * 180) + 20;
-        g2d.drawOval(sunX - waveR, sunY - (waveR / 2), waveR * 2, waveR);
+        // 3D CME Radiation Wave Shell propagating from Sun directly along mission trajectory towards ship
+        g2d.setColor(new Color(0xff, 0x17, 0x44, 180));
+        g2d.setStroke(new BasicStroke(2.0f));
+        int cmeEndX = (int) (sunX + (shipX - sunX) * 0.85);
+        int cmeEndY = (int) (sunY + (shipY - sunY) * 0.85);
+        g2d.drawLine(sunX, sunY, cmeEndX, cmeEndY);
+        int waveR = (int) (shipProgress * 120) + 15;
+        g2d.drawOval(cmeEndX - waveR/2, cmeEndY - waveR/2, waveR, waveR);
 
         g2d.dispose();
     }
@@ -817,8 +820,8 @@ class ExpandedTrajectoryCanvas extends JPanel {
 
     public ExpandedTrajectoryCanvas() {
         setBackground(new Color(0x09, 0x0b, 0x14));
-        Timer timer = new Timer(30, e -> {
-            animAngle += 0.015;
+        Timer timer = new Timer(50, e -> {
+            animAngle += 0.005;
             repaint();
         });
         timer.start();
@@ -896,31 +899,33 @@ class ExpandedTrajectoryCanvas extends JPanel {
         traj.curveTo(earthX - 80, earthY + 120, marsX + 80, marsY + 90, marsX, marsY);
         g2d.draw(traj);
 
-        // Smooth continuous 3D Spacecraft Transit (no jumping/glitching!)
-        double shipProgress = 0.5 + 0.45 * Math.sin(animAngle);
-        int shipX = (int) (earthX * (1 - shipProgress) + marsX * shipProgress - 70 * Math.sin(shipProgress * Math.PI));
-        int shipY = (int) (earthX * (1 - shipProgress) + marsY * shipProgress + 60 * Math.sin(shipProgress * Math.PI));
+        // Smooth continuous 3D Spacecraft Transit from Earth towards Mars (slow, realistic space movement)
+        double shipProgress = (animAngle % (2 * Math.PI)) / (2 * Math.PI);
+        int shipX = (int) (earthX * (1 - shipProgress) + marsX * shipProgress - 60 * Math.sin(shipProgress * Math.PI));
+        int shipY = (int) (earthY * (1 - shipProgress) + marsY * shipProgress + 50 * Math.sin(shipProgress * Math.PI));
 
         g2d.setColor(Main.NEON_GREEN);
         g2d.fillOval(shipX - 10, shipY - 10, 20, 20);
         g2d.drawString("🚀 PERSEVERANCE / AKASHDEEP CRAFT", shipX - 90, shipY - 18);
 
-        // 3D Particle Cloud & Radiation Waves Chasing Ship
+        // 3D CME Particle Swarm & Shockwave propagating from Sun along mission path towards spacecraft
         Random rand = new Random(42);
         for (int p = 0; p < 120; p++) {
-            double pProgress = (shipProgress * 0.8) + (rand.nextDouble() * 0.25);
-            int px = (int) (sunX + (pProgress * 450) * Math.cos(-0.6 + rand.nextDouble() * 1.2));
-            int py = (int) (sunY + (pProgress * 220) * Math.sin(-0.6 + rand.nextDouble() * 1.2));
+            double pProgress = (shipProgress * 0.85) + (rand.nextDouble() * 0.15);
+            int px = (int) (sunX + (shipX - sunX) * pProgress + (rand.nextDouble() - 0.5) * 50);
+            int py = (int) (sunY + (shipY - sunY) * pProgress + (rand.nextDouble() - 0.5) * 50);
 
             g2d.setColor(rand.nextBoolean() ? Main.NEON_RED : Main.NEON_AMBER);
             g2d.fillOval(px - 3, py - 3, 6, 6);
         }
 
-        // Concentric 3D Radiation Shockwave Shell
-        int waveR = (int) (shipProgress * 420) + 40;
-        g2d.setStroke(new BasicStroke(4.0f));
-        g2d.setColor(new Color(0xff, 0x17, 0x44, 210));
-        g2d.drawOval(sunX - waveR, sunY - (waveR / 2), waveR * 2, waveR);
+        // Concentric 3D Radiation Shockwave Front focused towards spacecraft
+        int shockX = (int) (sunX + (shipX - sunX) * (shipProgress * 0.85));
+        int shockY = (int) (sunY + (shipY - sunY) * (shipProgress * 0.85));
+        int waveR = (int) (shipProgress * 250) + 30;
+        g2d.setStroke(new BasicStroke(3.0f));
+        g2d.setColor(new Color(0xff, 0x17, 0x44, 200));
+        g2d.drawOval(shockX - waveR / 2, shockY - waveR / 2, waveR, waveR);
 
         g2d.dispose();
     }
