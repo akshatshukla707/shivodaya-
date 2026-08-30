@@ -61,7 +61,7 @@ This compiles the Akashdeep CME Dashboard and the Ground Operations Control Cent
 ### 4. Run Akashdeep Target Dashboard
 ```bash
 cd akashdeep/java_gui
-java -cp "bin" Main
+java -cp "bin:." Main
 ```
 
 ### 5. Run Full End-to-End Mesh Pipeline

@@ -95,7 +95,7 @@ cd shivodaya
 
 # Launch Dashboard
 cd shivodaya/akashdeep/java_gui
-java -cp "bin" Main
+java -cp "bin:." Main
 ```
 
 ---
