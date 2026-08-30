@@ -1,0 +1,170 @@
+#!/usr/bin/env bash
+trap 'killm f' EXIT
+#
+# script runs netcat on local port 4556, this will make tcpcl
+# on the local machine to send a contact header and wait for
+# a contact header.
+# while tcpcl is waiting for a contact header, open a new connection
+# and send a bundle. If we can receive the bundle successfully,
+# then the dos bug has been fixed.
+
+. ../test_utils.sh
+
+echo "########################################"
+echo
+pwd | sed "s/\/.*\///" | xargs echo "NAME: "
+echo
+echo "PURPOSE: To ensure that tcpcli doesn't have a denial-of-service type bug.
+    The bug, described in issue 146, is that tcpcli will not accept any new
+    connections if it is waiting on a contact header initialization from
+    the other end.  Tcpcli should still accept more incoming connections
+    even if one is improperly initialized."
+echo
+echo
+echo "########################################"
+
+# message sent over ion
+IONMESSAGE="iontestmessage"
+IONSENDFILE=./ionsendfile.txt
+IONRECEIVEFILE=./ionreceivefile.txt
+
+if command -v nc >/dev/null 2>&1; then
+    NC_CMD="nc"
+    echo "Found 'nc'"
+elif command -v netcat >/dev/null 2>&1; then
+    NC_CMD="netcat"
+    echo "Found 'netcat'"
+elif command -v ncat >/dev/null 2>&1; then
+    NC_CMD="ncat"
+    echo "Found 'ncat'"
+else
+    echo "Error: No version of netcat (nc, netcat, ncat) found." >&2
+    exit 2
+fi
+
+# Setup Two ION Instances
+
+SENDER_PORT=4555
+RECEIVER_PORT=4556
+
+echo "Cleaning up old ION ..."
+./cleanup
+
+echo "Starting ION..."
+export ION_NODE_LIST_DIR=$PWD
+
+# Set up node 1
+cd 1.ipn.tcp/
+./ionstart
+../../../system_up -i "p 30" -b "p 30"
+
+if [ $? -ne 2 ]; then
+    echo "Node 1 not started: Aborting Test"
+    exit 1
+fi
+
+# Set up node 2
+cd ../2.ipn.tcp/
+./ionstart
+../../../system_up -i "p 30" -b "p 30"
+
+if [ $? -ne 2 ]; then
+    echo "Node 2 not started: Aborting Test"
+    exit 1
+fi
+
+echo "ION Nodes started successfully..."
+echo ""
+echo "Due to potentailly very slow start for TCPCL when"
+echo "no peer is running. We need to make sure ipnadmin"
+echo "is completed and also bp daemons were launched"
+echo "before proceeding to the next step."
+echo ""
+echo "This can take up to 2 minutes."
+echo ""
+echo "Check Node 1 first..."
+cd ../1.ipn.tcp/
+waitForLog "bpclm is running" ion.log 60000 || {
+    echo "Timeout waiting for bpclm node 1"
+    killm
+    exit 1
+}
+echo "bpclm started for node 1"
+
+cd ../2.ipn.tcp/
+waitForLog "bpclm is running" ion.log 60000 || {
+    echo "Timeout waiting for bpclm node 2"
+    killm
+    exit 1
+}
+echo "bpclm started for node 2"
+
+echo "Ready to proceed to rest of the test..."
+
+# starting a bogus connection
+cd ../1.ipn.tcp/
+echo "starting netcat from node 1..."
+$NC_CMD 127.0.0.1 $RECEIVER_PORT >/dev/null &
+NETCATPID=$!
+
+# Wait for tcpcli to notice the bogus connection
+waitForLog "tcpcli sender thread has started" ../2.ipn.tcp/ion.log 10000 || true
+
+# create the test message in a sent file
+# the exclamation point signals the bundle sender to quit
+echo $IONMESSAGE > $IONSENDFILE
+echo "!" >> $IONSENDFILE
+
+# receive the message and store it in a file via test bundle sink
+echo "Starting Message Listener on node 2..."
+cd ../2.ipn.tcp/
+bpsink ipn:2.2 > $IONRECEIVEFILE &
+BPSINKPID=$!
+
+waitForPidReady $BPSINKPID 10000 || {
+    echo "bpsink failed to start"
+    killm
+    exit 1
+}
+
+# send the message in the file via test bundle source
+echo "Sending message from node 1..."
+cd ../1.ipn.tcp/
+bpsource ipn:2.2 < $IONSENDFILE &
+BPSOURCEPID=$!
+
+# Wait for message to arrive
+waitForFileContent "$IONMESSAGE" "../2.ipn.tcp/$IONRECEIVEFILE" 30000 &&
+    echo "Message received."
+
+# cleanup processes
+kill -9 $BPSOURCEPID >/dev/null 2>&1
+
+echo "stopping bpsink"
+killAndWaitForPidToDie $BPSINKPID 2 5000
+
+echo "Stopping netcat..."
+kill -9 $NETCATPID >/dev/null 2>&1
+
+cd ../2.ipn.tcp/
+
+# compare the sent message to the received one
+if ! grep -q $IONMESSAGE $IONRECEIVEFILE; then
+    echo "Oh noes, data corruption!"
+    echo
+    echo "Sent this:"
+    echo "----------------------------------------------------------------------"
+    cat ../1.ipn.tcp/$IONSENDFILE
+    echo "----------------------------------------------------------------------"
+    echo
+    echo "Received this:"
+    echo "----------------------------------------------------------------------"
+    cat $IONRECEIVEFILE
+    echo "----------------------------------------------------------------------"
+    RETVAL=1
+else
+    echo "bundle transfer successful!"
+    RETVAL=0
+fi
+
+exit $RETVAL

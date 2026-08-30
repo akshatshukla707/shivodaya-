@@ -1,0 +1,158 @@
+#!/usr/bin/env bash
+trap 'killm f' EXIT
+#
+# Test for GitHub issue #37: selectBlkNumber overflow when block 255 exists.
+#
+# Verifies that when a bundle with extension block number 255 is forwarded,
+# ION correctly assigns valid block numbers (2-254) to new extension blocks
+# instead of overflowing to 0.
+#
+# Topology:  external injector -> Node 2 (forwarder) -> runtest.py (acting as node 3)
+# The Python script runtest.py uses bespokebpv7 to build a BPv7 bundle with
+# block number 255, sends it via UDP to node 2, and receives/verifies it
+# (acting as node 3 endpoint). Node 2 forwards to ipn:3.1, adding
+# PreviousNode/BundleAge/QoS blocks through patchExtensionBlocks.
+
+CONFIGFILES=" \
+./2.ipn.udp/ipn.bprc \
+./2.ipn.udp/ipn.ionconfig \
+./2.ipn.udp/ipn.ionrc \
+./2.ipn.udp/ipn.ionsecrc \
+./2.ipn.udp/ipn.ipnrc \
+"
+
+echo "########################################"
+echo
+pwd | sed "s/\/.*\///" | xargs echo "NAME: "
+echo
+echo "PURPOSE: Verify that forwarding a bundle containing extension block
+    number 255 does not cause selectBlkNumber to overflow to 0.
+    (GitHub issue #37)
+"
+
+echo
+echo "CONFIG: 1 node custom (UDP, no BPSec) + Python receiver:"
+echo
+for N in $CONFIGFILES
+do
+    echo "$N:"
+    cat "$N"
+    echo "# EOF"
+    echo
+done
+echo "OUTPUT: Terminal messages will relay results."
+echo
+echo "########################################"
+echo
+
+# Find the latest available Python 3 version >= 3.10
+PYTHON_CMD="python3"
+
+if command -v "$PYTHON_CMD" &> /dev/null; then
+    py_maj=$("$PYTHON_CMD" -c 'import sys; print(sys.version_info[0])' 2>/dev/null)
+    py_min=$("$PYTHON_CMD" -c 'import sys; print(sys.version_info[1])' 2>/dev/null)
+
+    if [ "$py_maj" = "3" ] && [ "$py_min" -ge 10 ]; then
+        PYTHON_VERSION="3.$py_min"
+    else
+        PYTHON_CMD=""
+    fi
+else
+    PYTHON_CMD=""
+fi
+
+if [ -z "$PYTHON_CMD" ]; then
+    echo "SKIP: Python 3.10 or higher is required but not found."
+    exit 2
+fi
+
+echo "Using Python $PYTHON_VERSION (via $PYTHON_CMD)"
+echo
+
+./cleanup
+sleep 1
+echo "Starting ION..."
+export ION_NODE_LIST_DIR=$PWD
+rm -f ./ion_nodes
+RETVAL=0
+
+# Start node 2.
+cd 2.ipn.udp
+./ionstart
+cd ../
+
+# Give node time to start
+echo "Sleeping for 5 seconds for node startup..."
+sleep 5
+
+# Run the test script with bundle injection and verification
+# The script acts as node 3 receiver while sending to node 2
+echo "Running bundle injection and verification test..."
+$PYTHON_CMD runtest.py --send-port 2113 --recv-port 3113
+RUNTEST_STATUS=$?
+
+# Check runtest.py result
+if [ $RUNTEST_STATUS -eq 2 ]; then
+    echo "SKIP: runtest.py skipped (exit code 2)"
+    cat runtest.log
+    # Don't scrub artifacts here; killm trap stops ION and runtests cleans
+    # before the next test. (Initial ./cleanup above gives a manual-run slate.)
+    # ./cleanup
+    exit 2
+fi
+
+echo ""
+echo "--- Check 0: Verify runtest.py execution and bundle reception ---"
+if [ $RUNTEST_STATUS -eq 0 ]; then
+    echo "CHECK 0 PASSED: runtest.py executed successfully and verified block 255."
+else
+    echo "CHECK 0 FAILED: runtest.py failed with exit code $RUNTEST_STATUS"
+    RETVAL=1
+fi
+
+echo ""
+echo "--- Check 1: Verify no overflow error at node 2 ---"
+if grep -q "all block numbers 2-255 are in use" 2.ipn.udp/ion.log 2>/dev/null; then
+    echo "CHECK 1 FAILED: Overflow error found in node 2 ion.log"
+    RETVAL=1
+else
+    echo "CHECK 1 PASSED: No overflow error in node 2 ion.log."
+fi
+
+echo ""
+echo "--- Check 2: Verify forwarding succeeded at node 2 ---"
+# Check that node 2 forwarded the bundle (fwd stats)
+# 2 sleeps to ensure everything propagates properly
+cd 2.ipn.udp
+sleep 1
+bpstats
+sleep 1
+cd ..
+
+FWD_LINE=$(grep '\[x\] fwd ' 2.ipn.udp/ion.log | tail -1)
+if [ -z "$FWD_LINE" ]; then
+    echo "FAIL: No fwd stats found in node 2 ion.log"
+    RETVAL=1
+else
+    FWD_COUNT=$(echo "$FWD_LINE" | sed 's/.*(+) \([0-9]*\) .*/\1/')
+    echo "Forwarded bundle count at node 2: $FWD_COUNT"
+    if [ "$FWD_COUNT" -ge 1 ] 2>/dev/null; then
+        echo "CHECK 2 PASSED: Bundle was forwarded by node 2."
+    else
+        echo "CHECK 2 FAILED: Bundle was NOT forwarded by node 2."
+        RETVAL=1
+    fi
+fi
+
+# Final result
+echo ""
+if [ $RETVAL -eq 0 ]; then
+    echo "SUCCESS: Issue #37 test passed - block number 255 handled correctly."
+else
+    echo "FAIL: Issue #37 test failed."
+fi
+
+echo -e "\nStopping ION..."
+killm
+echo -e "...test terminated.\n"
+exit $RETVAL

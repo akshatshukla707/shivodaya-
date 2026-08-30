@@ -1,0 +1,347 @@
+#!/usr/bin/env bash
+#
+# Scott Burleigh
+# October 8, 2010
+#
+# Extended April 2025 to include iptables-based network disruption testing
+# for udplso resilience (requires sudo, Linux only).
+#
+
+# ------------------------------------------------------------------
+# Firewall/iptables helper functions (for network disruption test)
+# ------------------------------------------------------------------
+
+# UDP ports used by the test nodes
+NODE2_PORT=2113
+NODE3_PORT=3113
+
+# Function to detect OS and set firewall type
+detect_os_and_firewall() {
+    if [ -f /etc/os-release ]; then
+        source /etc/os-release
+        if [ "$ID" = "ol" ] || [ "$ID" = "rhel" ]; then
+            FIREWALL="nftables"
+        else
+            FIREWALL="iptables"
+        fi
+    else
+        FIREWALL="iptables"
+    fi
+}
+
+# Function to block UDP traffic
+block_udp_traffic() {
+    if [ "$FIREWALL" = "nftables" ]; then
+        echo "Blocking UDP traffic with nftables..."
+        $SUDO_CMD nft add table inet filter 2>/dev/null || true
+        $SUDO_CMD nft add chain inet filter input '{ type filter hook input priority 0 ; policy accept ; }' 2>/dev/null || true
+        $SUDO_CMD nft add rule inet filter input iif lo udp dport $NODE2_PORT drop
+        $SUDO_CMD nft add rule inet filter input iif lo udp dport $NODE3_PORT drop
+    else
+        echo "Blocking UDP traffic with iptables..."
+        $SUDO_CMD iptables -A INPUT -i lo -p udp --destination-port $NODE2_PORT -j DROP
+        $SUDO_CMD iptables -A INPUT -i lo -p udp --destination-port $NODE3_PORT -j DROP
+    fi
+}
+
+# Function to unblock UDP traffic
+unblock_udp_traffic() {
+    if [ "$FIREWALL" = "nftables" ]; then
+        echo "Unblocking UDP traffic with nftables..."
+        $SUDO_CMD nft flush ruleset 2>/dev/null || true
+    else
+        echo "Unblocking UDP traffic with iptables..."
+        $SUDO_CMD iptables -F -t filter 2>/dev/null || true
+    fi
+}
+
+# Check if we can run the network disruption test (requires sudo on Linux)
+check_network_disruption_capability() {
+    # Only supported on Linux
+    if [ "$(uname)" != "Linux" ]; then
+        echo "Network disruption test requires Linux (for iptables/nftables)"
+        return 1
+    fi
+
+    # Check for sudo capability
+    if [ "$(id -u)" -eq 0 ]; then
+        SUDO_CMD=""
+        return 0
+    fi
+
+    # Try non-interactive sudo
+    if sudo -n -v 2>/dev/null; then
+        SUDO_CMD="sudo -n"
+        return 0
+    fi
+
+    echo "Network disruption test requires sudo privileges"
+    return 1
+}
+
+# ------------------------------------------------------------------
+# Cleanup trap - ensure firewall rules are cleared
+# ------------------------------------------------------------------
+cleanup_all() {
+    # Clear any firewall rules we may have added
+    if [ "$NETWORK_DISRUPTION_ENABLED" = "1" ]; then
+        unblock_udp_traffic 2>/dev/null || true
+    fi
+    killm f
+}
+trap 'cleanup_all' EXIT INT TERM
+
+# ------------------------------------------------------------------
+# Documentation boilerplate
+# ------------------------------------------------------------------
+CONFIGFILES=" \
+./2.ipn.ltp/amroc.ltprc \
+./2.ipn.ltp/amroc.bprc \
+./2.ipn.ltp/amroc.ionconfig \
+./2.ipn.ltp/global.ionrc \
+./2.ipn.ltp/amroc.ionrc \
+./2.ipn.ltp/amroc.ionsecrc \
+./2.ipn.ltp/amroc.ipnrc \
+"
+
+CONFIGFILES=$CONFIGFILES"
+./3.ipn.ltp/amroc.ltprc \
+./3.ipn.ltp/amroc.bprc \
+./3.ipn.ltp/amroc.ionconfig \
+./3.ipn.ltp/global.ionrc \
+./3.ipn.ltp/amroc.ionrc \
+./3.ipn.ltp/amroc.ionsecrc \
+./3.ipn.ltp/amroc.ipnrc \
+"
+
+echo "########################################"
+echo
+pwd | sed "s/\/.*\///" | xargs echo "NAME: "
+echo
+echo "PURPOSE: Testing the functionality of issue 199.
+    Tests LTP block reassembly with out-of-order segment arrival caused
+    by segment retransmission.  By misaligning the contact plans
+    we swamp the receiving node's UDP buffer; the buffer congestion
+    results in the loss of some subset of the data segments
+    that were transmitted, causing LTP at the sender to send a selective
+    NAK report back to the sender requesting retransmission of specific
+    portions of one or more transmitted blocks.  We detect these
+    retransmissions by looking for '@' watch characters in stdout at
+    the sender.
+
+    EXTENDED: If running on Linux with sudo privileges, also tests
+    udplso resilience to network disruption (iptables/nftables blocking)
+    to verify the daemon survives temporary network outages."
+
+echo
+echo "CONFIG: 2 node custom:"
+echo
+for N in $CONFIGFILES
+do
+    echo "$N:"
+    cat $N
+    echo "# EOF"
+    echo
+done
+echo "OUTPUT: Terminal messages will relay results."
+echo
+echo "########################################"
+
+./cleanup
+sleep 1
+echo "Starting ION..."
+export ION_NODE_LIST_DIR=$PWD
+rm -f ./ion_nodes
+
+# Start nodes.
+cd 2.ipn.ltp
+./ionstart >& node2.stdout
+../../../system_up -i "p 30" -l "p 30" -b "p 30"
+
+if [ $? -eq 3 ]
+then
+    echo ""
+else
+    echo "Node 2 not started: Aborting Test"
+    exit 1
+fi
+
+cd ../3.ipn.ltp
+./ionstart >& node3.stdout
+../../../system_up -i "p 30" -l "p 30" -b "p 30"
+
+if [ $? -eq 3 ]
+then
+    echo ""
+else
+    echo "Node 3 not started: Aborting Test"
+    exit 1
+fi
+
+echo "Starting bpcounter on node 3..."
+sleep 1
+bpcounter ipn:3.1 100 &
+BPCOUNTER_PID=$!
+
+cd ../2.ipn.ltp
+echo "Sending bundles to ipn:3.1, should eventually be delivered..."
+bpdriver 100 ipn:2.1 ipn:3.1 -64000 &
+
+# Wait for transmission to finish.
+echo "Waiting for transmission to finish..."
+RUNNING=1
+TIMER=0
+while [ $RUNNING -eq 1 ]
+do
+    TIMER=$((++TIMER))
+    sleep 1
+    echo "...receiving..."
+    # some ps don't like -p syntax, most do.
+    if [ "$1" == "windows" ]
+    then
+        ps | grep "$BPCOUNTER_PID" >& /dev/null && RETURN_VALUE=1 || RETURN_VALUE=0
+    else
+        ps $BPCOUNTER_PID >& /dev/null && RETURN_VALUE=1 || ps -p $BPCOUNTER_PID >& /dev/null && RETURN_VALUE=1 || RETURN_VALUE=0
+    fi
+    if [ $RETURN_VALUE -eq 0 ]
+    then
+        echo "done running"
+        RUNNING=0
+    fi
+    if [ $TIMER -gt 600 ]
+    then
+        #infinite loop protection
+        echo "10 minutes passed; giving up."
+        RUNNING=0
+    fi
+done
+
+echo "Transmission finished.  Verifying results..."
+
+# Verify segments were retransmitted.
+RETVAL=0
+
+COUNT=`grep "@" node2.stdout | wc -l`
+if [ $COUNT -eq 0 ]
+then
+    echo "No retransmission of LTP segments detected."
+    RETVAL=1
+else
+    echo "LTP segments were retransmitted, and all bundles were received."
+fi
+
+# ------------------------------------------------------------------
+# Phase 2: Network Disruption Test (optional, requires sudo on Linux)
+# ------------------------------------------------------------------
+
+NETWORK_DISRUPTION_ENABLED=0
+
+if check_network_disruption_capability; then
+    echo ""
+    echo "########################################"
+    echo "Phase 2: Network Disruption Test (udplso resilience)"
+    echo "########################################"
+    echo ""
+
+    NETWORK_DISRUPTION_ENABLED=1
+    detect_os_and_firewall
+
+    # Clear any stale firewall rules
+    unblock_udp_traffic 2>/dev/null || true
+
+    # Start a new bpcounter on node 3
+    cd ../3.ipn.ltp
+    echo "Starting bpcounter on node 3 for disruption test..."
+    bpcounter ipn:3.1 50 &
+    BPCOUNTER_PID=$!
+    sleep 2
+
+    # Start sending bundles from node 2
+    cd ../2.ipn.ltp
+    echo "Sending bundles from node 2 to node 3..."
+    bpdriver 50 ipn:2.1 ipn:3.1 -64000 &
+    BPDRIVER_PID=$!
+
+    # Allow some bundles to be sent
+    sleep 2
+
+    # Block UDP traffic to simulate network outage
+    echo ""
+    echo ">>> Blocking UDP traffic (simulating network outage)..."
+    block_udp_traffic
+
+    # Wait with traffic blocked - udplso should NOT crash
+    echo ">>> Waiting 30 seconds with network blocked..."
+    echo ">>> (udplso should survive this and continue running)"
+    sleep 30
+
+    # Check that udplso is still running
+    UDPLSO_RUNNING=0
+    if pgrep -f "udplso.*localhost" > /dev/null 2>&1; then
+        echo ">>> udplso is still running (GOOD)"
+        UDPLSO_RUNNING=1
+    else
+        echo ">>> ERROR: udplso crashed during network outage!"
+        RETVAL=1
+    fi
+
+    # Restore network
+    echo ""
+    echo ">>> Unblocking UDP traffic (restoring network)..."
+    unblock_udp_traffic
+
+    if [ $UDPLSO_RUNNING -eq 1 ]; then
+        # Wait for transmission to complete after network restoration
+        echo ">>> Waiting for transmission to complete after network restoration..."
+        TIMER=0
+        while [ $TIMER -lt 120 ]; do
+            TIMER=$((++TIMER))
+            sleep 1
+            if ! kill -0 $BPCOUNTER_PID 2>/dev/null; then
+                echo ">>> bpcounter completed - all bundles received"
+                break
+            fi
+            if [ $((TIMER % 10)) -eq 0 ]; then
+                echo ">>> ...waiting ($TIMER seconds)..."
+            fi
+        done
+
+        if kill -0 $BPCOUNTER_PID 2>/dev/null; then
+            echo ">>> WARNING: bpcounter still running after 120 seconds"
+            echo ">>> Some bundles may not have been received (LTP retransmission may need more time)"
+            # Don't fail the test for this - the key point is udplso didn't crash
+        fi
+
+        # Check ion.log for the recovery message
+        if grep -q "network recovered" ../2.ipn.ltp/ion.log 2>/dev/null; then
+            echo ">>> Found 'network recovered' message in ion.log (GOOD)"
+        fi
+
+        if grep -q "network error" ../2.ipn.ltp/ion.log 2>/dev/null; then
+            echo ">>> Found 'network error' message in ion.log (expected during block)"
+        fi
+    fi
+
+    echo ""
+    echo "Network disruption test completed."
+else
+    echo ""
+    echo "(Skipping network disruption test - requires Linux with sudo)"
+fi
+
+# ------------------------------------------------------------------
+# Final Results
+# ------------------------------------------------------------------
+
+# Shut down ION processes.
+echo ""
+echo "Stopping ION..."
+#cd ../2.ipn.ltp
+#./ionstop &
+#cd ../3.ipn.ltp
+#./ionstop &
+
+# Give both nodes time to shut down, then clean up.
+#sleep 5
+echo "LTP retransmission test completed."
+exit $RETVAL

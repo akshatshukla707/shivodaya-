@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+trap 'killm f' EXIT
+
+FAIL=0
+
+# "which valgrind" that works with platform idiosyncracies.
+# Thanks to David for figuring this out.
+PROGRAMTEST="valgrind"
+
+RESULTS=`which ${PROGRAMTEST}`
+WHICHRETURN=$?
+echo "${RESULTS}" | grep "^no ${PROGRAMTEST} in"
+WHICHFAILMESSAGE=$?
+# which could return the proper fail condition, or the results could be
+# empty, or you're on solaris and your results will be "no netcat in $PATH".
+if [ $WHICHRETURN -ne 0 -o -z "${RESULTS}" -o $WHICHFAILMESSAGE -eq 0 ] ; then
+    echo "${PROGRAMTEST} is not present in this system; skipping..."
+    exit 2
+fi
+
+
+# Check if the test utility exists and is executable
+TESTUTIL="domtake"
+
+if [ ! -x "$TESTUTIL" ]; then
+    echo -e "\nWARNING: $TESTUTIL does not exist: Skipping test."
+    echo -e "Please run 'make test' in ION root to generate test binaries and scripts.\n"
+    sleep 3
+    exit 2
+fi
+
+
+echo "Starting ION..."
+# Config files are local to test directory; ion.log will be written here
+echo "ionstart -i loopback.ionrc -l loopback.ltprc -b loopback.bprc -p loopback.ipnrc -s loopback.ionsecrc"
+ionstart -i loopback.ionrc -l loopback.ltprc -b loopback.bprc -p loopback.ipnrc -s loopback.ionsecrc
+
+CURDIR="$( cd "$( dirname "$0" )" && pwd )"
+libtool --mode=execute valgrind --tool=memcheck $CURDIR/domtake 2> valgrind-output
+
+echo "Valgrind said..."
+cat valgrind-output
+
+echo -n "Verifying valgrind noticed the leaked block..."
+if grep -q "definitely lost: 128 bytes in 1 blocks" $CURDIR/valgrind-output; then
+    echo "OK"
+else
+    echo "FAIL"
+    FAIL=1
+fi
+
+echo "Stopping ion..."
+ionstop
+
+exit $FAIL

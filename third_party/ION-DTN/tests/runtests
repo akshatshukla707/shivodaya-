@@ -1,0 +1,1288 @@
+#!/usr/bin/env bash
+#
+# Copyright (c) 2009, Regents of the University of Colorado.
+# Written by Sebastian Kuzminsky <seb@highlab.com>
+# This script is released into the public domain.
+# Updated: September 2025, JPL
+# Modified: Added retest functionality for failed tests using existing "retest" file
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+. "$SCRIPT_DIR/test_utils.sh"
+
+# This file will contain the tests that failed.
+# --dyoung oct 2010
+FAILEDFILE="retest"
+
+# This file will contain intermediate progress.
+# --sdo oct 2023
+PROGRESSFILE="$SCRIPT_DIR/progress"
+echo "# Testing started by $0 `date`" > $PROGRESSFILE
+echo "# testing host: `hostname`" >> $PROGRESSFILE
+echo "# testing environment: `uname -a`" >> $PROGRESSFILE
+
+# Controls whether test artifacts (ion.log, staging files) are kept after passing tests.
+# When set to 1, logs from passing tests are preserved (useful for debugging).
+# By default (0/unset), cleanup runs after passing tests to reclaim disk space.
+# Failed test logs are ALWAYS preserved regardless of this setting.
+# Pre-test cleanup still runs unconditionally.
+: ${PRESERVE_TEST_LOGS:=0}
+
+# Controls whether failed tests are automatically retested at end of run.
+# When set to 1 (the default), runtests re-runs each failed test once
+# before reporting.  Set to 0 to skip the retest pass and see the true
+# first-run failure rate (e.g. when investigating flaky tests); the
+# retest file is still generated either way, so failed tests can be
+# replayed manually via `./runtests retest`.
+: ${ENABLE_RETEST:=1}
+
+# Allow core dumps so ion-diagnostics can extract stack traces from
+# crashed ION processes. Best-effort: a setrlimit-restricted environment
+# (e.g. container with hard limit 0) will simply leave the limit at 0
+# and ion-diagnostics will report "no cores found".
+ulimit -c unlimited 2>/dev/null || true
+
+# If this environment variable is set, and is an existing directory,
+# then output from each individual tests will go THERE instead
+# of to the screen.  File names are of the form:
+# RUNTESTS_OUTPUTDIR/results.testname
+# --sdo oct 2023
+# for example: export RUNTESTS_OUTPUTDIR="/tmp"
+# for example: export RUNTESTS_OUTPUTDIR="."
+if [[ -n "${RUNTESTS_OUTPUTDIR}" ]] ; then
+    if [[ -d "$RUNTESTS_OUTPUTDIR" ]] ; then
+        # it needs to be absolute (script changes directory)
+        if [[ "${RUNTESTS_OUTPUTDIR:0:1}" != "/" ]] ; then
+            RUNTESTS_OUTPUTDIR="`pwd`/${RUNTESTS_OUTPUTDIR}"
+        fi
+        echo "Saving individual results in directory ${RUNTESTS_OUTPUTDIR}/results..." 1>&2
+        echo "    To disable, type: unset RUNTESTS_OUTPUTDIR" 1>&2
+        rm -f ${RUNTESTS_OUTPUTDIR}/results.* > /dev/null 2>&1
+    else
+        echo "Ignoring envariable RUNTESTS_OUTPUTDIR, ${RUNTESTS_OUTPUTDIR} is not a directory" 1>&2
+        unset RUNTESTS_OUTPUTDIR
+    fi
+fi
+
+# Interrupt handler: without this, Ctrl-C only interrupts the current
+# `sleep 1` in the watchdog loop, leaving dotest running in the background
+# and ION daemons reparented to init.
+# Forward SIGTERM to the active dotest,
+# wait for it to exit cleanly,
+# escalate to SIGKILL if it times out,
+# and let killm f reap any ION processes
+# that may have detached from the test process tree.
+on_interrupt () {
+    echo "" >&2
+    echo "*** Interrupted — stopping current test and exiting ***" >&2
+    if [ -n "${DOTEST_PID:-}" ]; then
+        killAndWaitForPidToDie "$DOTEST_PID" TERM 3000 500
+        wait "$DOTEST_PID" 2>/dev/null
+    fi
+    killm f 2>/dev/null
+    exit 130
+}
+trap on_interrupt INT TERM
+
+
+# IONDIR and CONFIGSROOT are exported because tests reach source-tree
+# resources (configs, link graphs) through them.
+IONDIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+CONFIGSROOT="$IONDIR/configs"
+export IONDIR CONFIGSROOT
+
+# Record the environment the tests will actually run in.  These settings
+# otherwise die with this shell, leaving a finished run with no evidence of
+# which ION it exercised -- and a stale or shadowing binary then looks
+# exactly like a source regression.
+function report_test_environment () {
+    # Resolving one representative executable and library answers the
+    # question these search paths are usually consulted for: is this the
+    # installed ION, or something shadowing it?
+    local resolved real
+    resolved="$(command -v ionadmin 2>/dev/null)"
+    # A name that resolves into a build tree is a libtool wrapper script,
+    # not the executable; the real one is the like-named file under .libs/.
+    # This is a misconfiguration here, and is reported so it is visible.
+    real="$resolved"
+    if [ -n "$resolved" ] \
+        && [ -e "$(dirname "$resolved")/.libs/$(basename "$resolved")" ]; then
+        real="$(dirname "$resolved")/.libs/$(basename "$resolved")"
+    fi
+
+    echo "# IONDIR: ${IONDIR:-<unset>}"
+    echo "# CONFIGSROOT: ${CONFIGSROOT:-<unset>}"
+    echo "# PATH: $PATH"
+    echo "# LD_LIBRARY_PATH: ${LD_LIBRARY_PATH:-<unset>}"
+    echo "# ionadmin resolves to: ${resolved:-<not found>}"
+    if [ "$real" != "$resolved" ]; then
+        echo "# WARNING: ionadmin is a libtool wrapper for $real."
+        echo "#          A build tree precedes the install on PATH; tests that"
+        echo "#          match daemons by exact process name will fail.  Run"
+        echo "#          'make install' and drop the build tree from PATH."
+    fi
+    if [ -n "$real" ]; then
+        echo "# libici resolves to: $(ldd "$real" 2>/dev/null \
+            | awk '$1 ~ /^libici/ {print $3; found=1}
+                   END {if (!found) print "<not found>"}')"
+    else
+        echo "# libici resolves to: <not found>"
+    fi
+}
+
+report_test_environment | tee -a "$PROGRESSFILE" >&2
+
+
+function find_tests_in () {
+    # This function finds directories containing 'dotest' scripts.
+    # It now explicitly adds a trailing slash to any argument that is a
+    # directory or a symlink to a directory. This addresses the observed
+    # behavior where 'find' might not descend into symlinked directories
+    # unless a trailing slash is present in the initial path argument.
+    local paths_to_search=()
+    for arg in "$@"; do
+        # Check if the argument is a directory or a symbolic link to a directory.
+        # This will evaluate true for both 'bping' (the symlink) and 'bping/'
+        # if they point to valid directories.
+        if [[ -d "$arg" ]]; then
+            # Add a trailing slash if it's a directory or symlink to a directory
+            # and doesn't already have one. This ensures 'find' treats it
+            # as a path to descend into.
+            paths_to_search+=( "${arg%/}/" )
+        else
+            # For non-directory arguments (e.g., specific files, or if the
+            # path doesn't exist as a directory/symlink to directory),
+            # use the argument as is.
+            paths_to_search+=( "$arg" )
+        fi
+    done
+
+    # Now use the potentially modified 'paths_to_search' array with 'find'.
+    # find: Searches for files.
+    # "$@": The paths to search within (now potentially adjusted with trailing slashes).
+    # \( -type f -o -type l \): Match regular files OR symbolic links.
+    # -a -name 'dotest': AND match files named 'dotest'.
+    # grep -v "\.libs/": Exclude paths that contain '.libs/'.
+    # grep .: Filter out any empty lines that might still somehow appear (robustness).
+    # xargs -L 1 dirname: For each line (found 'dotest' path), get its parent directory.
+    # sed 's/\/\+$//': Remove any trailing slashes from the resulting directory names for consistency.
+    # sort: Sort the list of test directories alphabetically.
+    find "${paths_to_search[@]}" \( -type f -o -type l \) -a -name 'dotest' | \
+        grep -v "\.libs/" | \
+        grep . | \
+        xargs -L 1 dirname | \
+        sed 's/\/\+$//' | \
+        sort
+}
+
+
+function pass_test () {
+    NUM_PASSED=$((NUM_PASSED + 1))
+    TESTS_PASSED="$TESTS_PASSED $1"
+}
+
+
+function fail_test () {
+    NUM_FAILED=$((NUM_FAILED + 1))
+    TESTS_FAILED="$TESTS_FAILED $1"
+}
+
+
+function skip_test () {
+    NUM_SKIPPED=$((NUM_SKIPPED + 1))
+    TESTS_SKIPPED="$TESTS_SKIPPED $1"
+}
+
+
+function excludeOS_test () {
+    NUM_EXCLUDED_OS=$((NUM_EXCLUDED_OS + 1))
+    TESTS_EXCLUDED_OS="$TESTS_EXCLUDED_OS $1"
+}
+
+
+function excludeBPv_test () {
+    NUM_EXCLUDED_BPv=$((NUM_EXCLUDED_BPv + 1))
+    TESTS_EXCLUDED_BPv="$TESTS_EXCLUDED_BPv $1"
+}
+
+function excludeObsolete_test () {
+    NUM_EXCLUDED_OBSOLETE=$((NUM_EXCLUDED_OBSOLETE + 1))
+    TESTS_EXCLUDED_OBSOLETE="$TESTS_EXCLUDED_OBSOLETE $1"
+}
+
+function excludeBPSec_test () {
+    NUM_EXCLUDED_BPSEC=$((NUM_EXCLUDED_BPSEC + 1))
+    TESTS_EXCLUDED_BPSEC="$TESTS_EXCLUDED_BPSEC $1"
+}
+
+function pass_test_after_retest () {
+    NUM_PASSED_AFTER_RETEST=$((NUM_PASSED_AFTER_RETEST + 1))
+    TESTS_PASSED_AFTER_RETEST="$TESTS_PASSED_AFTER_RETEST $1"
+}
+
+function optional_pass_test () {
+    NUM_OPTIONAL_PASSED=$((NUM_OPTIONAL_PASSED + 1))
+    TESTS_OPTIONAL_PASSED="$TESTS_OPTIONAL_PASSED $1"
+}
+
+function optional_fail_test () {
+    NUM_OPTIONAL_FAILED=$((NUM_OPTIONAL_FAILED + 1))
+    TESTS_OPTIONAL_FAILED="$TESTS_OPTIONAL_FAILED $1"
+}
+
+
+# Helper function to get timestamp in consistent format
+function get_timestamp () {
+    date '+%Y-%m-%d %H:%M:%S'
+}
+
+# Locate the ion-diagnostics script (one directory up from tests/)
+ION_DIAGNOSTICS="$(cd "$SCRIPT_DIR/.." && pwd)/ion-diagnostics"
+
+# Compute per-test timeout: 4x .DURATION if available, capped at 2400s
+# (40 min) and floored at 60s. Falls back to 1200s when .DURATION is
+# missing or unparseable. Override with ION_TEST_TIMEOUT for manual runs.
+function compute_test_timeout () {
+    if [ -n "${ION_TEST_TIMEOUT:-}" ]; then
+        echo "$ION_TEST_TIMEOUT"
+        return
+    fi
+    if [ -f ".DURATION" ]; then
+        local dur
+        dur=$(head -1 .DURATION | tr -dc '0-9')
+        if [ -n "$dur" ] && [ "$dur" -gt 0 ] 2>/dev/null; then
+            local timeout_val=$((dur * 4))
+            [ "$timeout_val" -lt 60 ] && timeout_val=60
+            [ "$timeout_val" -gt 2400 ] && timeout_val=2400
+            echo "$timeout_val"
+            return
+        fi
+    fi
+    echo 1200
+}
+
+# Collect stack trace for the dotest process if it's a compiled C binary.
+# Also traces child processes (ION daemons launched by the test script).
+function collect_dotest_stack () {
+    local pid="$1"
+    local outfile="$2"
+
+    {
+        # Check dotest itself
+        local exe
+        exe=$(readlink "/proc/$pid/exe" 2>/dev/null || ps -p "$pid" -o comm= 2>/dev/null)
+        if file "$exe" 2>/dev/null | grep -q "ELF"; then
+            echo "=== Stack trace of dotest binary (PID $pid, $exe) ==="
+            if command -v gdb >/dev/null 2>&1; then
+                timeout 15 gdb -batch -ex "set pagination off" \
+                    -ex "thread apply all bt" -p "$pid" 2>&1
+            elif command -v eu-stack >/dev/null 2>&1; then
+                timeout 15 eu-stack -p "$pid" 2>&1
+            fi
+        fi
+
+        # Trace child processes (may include forked test helpers)
+        local child
+        for child in $(pgrep -P "$pid" 2>/dev/null); do
+            local child_exe
+            child_exe=$(readlink "/proc/$child/exe" 2>/dev/null || ps -p "$child" -o comm= 2>/dev/null)
+            if file "$child_exe" 2>/dev/null | grep -q "ELF"; then
+                echo "=== Stack trace of child PID $child ($child_exe) ==="
+                if command -v gdb >/dev/null 2>&1; then
+                    timeout 15 gdb -batch -ex "set pagination off" \
+                        -ex "thread apply all bt" -p "$child" 2>&1
+                elif command -v eu-stack >/dev/null 2>&1; then
+                    timeout 15 eu-stack -p "$child" 2>&1
+                fi
+            fi
+        done
+    } >> "$outfile" 2>&1
+}
+
+# Remove ION staging/bulk files to reclaim disk space after timeout/failure.
+# Preserves ion.log and ion-system.log for debugging, removes everything else
+# that ION creates at runtime (SDR heap files, ZCO staging, temp acquisitions).
+# Searches both the test directory (for tests without pathName) and /tmp
+# (for tests with pathName /tmp).
+function cleanup_staging_files () {
+    local test_dir="${1:-.}"
+    local patterns=(-name "*.sdr" -o -name "bpacq*" -o -name "ltpacq*" \
+        -o -name "bsspSegment*" -o -name "xnref*" -o -name "*.sdrlog" \
+        -o -name "core" -o -name "core.*")
+    find "$test_dir" -maxdepth 3 \( "${patterns[@]}" \) -type f \
+        -exec rm -f {} \; 2>/dev/null
+    # Also clean /tmp where many tests place SDR files via pathName
+    find /tmp -maxdepth 1 \( "${patterns[@]}" \) -type f \
+        -user "$(whoami)" -exec rm -f {} \; 2>/dev/null
+}
+
+# Check available disk space. Returns 0 if OK, 1 if below threshold.
+# Threshold: ION_MIN_DISK_MB env var, default 500 MB.
+function check_disk_space () {
+    local threshold_mb="${ION_MIN_DISK_MB:-500}"
+    local avail_kb
+    # df -P forces POSIX format (single header line, avail in column 4)
+    avail_kb=$(df -Pk . 2>/dev/null | awk 'NR==2 {print $4}')
+    if [ -z "$avail_kb" ] || ! [ "$avail_kb" -gt 0 ] 2>/dev/null; then
+        return 0
+    fi
+    local avail_mb=$((avail_kb / 1024))
+    if [ "$avail_mb" -lt "$threshold_mb" ]; then
+        echo "*** DISK SPACE CRITICAL: ${avail_mb}MB available (threshold: ${threshold_mb}MB) ***" >&2
+        return 1
+    fi
+    return 0
+}
+
+# runs one test, updates the test status counters
+function run_a_test () {
+    TEST=$1
+    CURRENT_TEST_NUM=${2:-0}  # Current test number (optional, defaults to 0)
+    TOTAL_TEST_COUNT=${3:-0}  # Total test count (optional, defaults to 0)
+
+    # see, you can make bash read like perl if you try
+    TEST=${TEST##./}
+    TEST=${TEST%%/}
+
+    # Check if this is an optional test
+    IS_OPTIONAL_TEST=""
+    if [ -f "$TEST/.optional" ]; then
+        IS_OPTIONAL_TEST="true"
+    fi
+
+    echo
+    echo "***"
+    if [ -n "$IS_OPTIONAL_TEST" ]; then
+        echo "*** OPTIONAL TEST: ${TEST}"
+    else
+        echo "*** ${TEST}"
+    fi
+    echo "***"
+
+    if [ -n "$IS_OPTIONAL_TEST" ]; then
+        echo "=== Processing OPTIONAL TEST: $TEST at time `date`" >> $PROGRESSFILE
+    else
+        echo "=== Processing $TEST at time `date`" >> $PROGRESSFILE
+    fi
+
+    # Output concise START message to stderr for real-time visibility
+    TEST_START_TIME=$(date +%s)
+    TEST_START_TIMESTAMP=$(get_timestamp)
+    if [ $TOTAL_TEST_COUNT -gt 0 ]; then
+        echo "[$TEST_START_TIMESTAMP] [$CURRENT_TEST_NUM/$TOTAL_TEST_COUNT] START: $TEST" >&2
+    else
+        echo "[$TEST_START_TIMESTAMP] START: $TEST" >&2
+    fi
+
+    # Helper to format progress counter
+    if [ $TOTAL_TEST_COUNT -gt 0 ]; then
+        PROGRESS_PREFIX="[$CURRENT_TEST_NUM/$TOTAL_TEST_COUNT] "
+    else
+        PROGRESS_PREFIX=""
+    fi
+
+    # Abort if disk space is critically low
+    if ! check_disk_space; then
+        echo "ABORTING: insufficient disk space before starting $TEST" | tee -a $PROGRESSFILE
+        echo "[$TEST_START_TIMESTAMP] ${PROGRESS_PREFIX}ABORT: $TEST (disk full)" >&2
+        ABORT_RUN=1
+        return
+    fi
+
+    # check if test is excluded because it is obsolete
+    if [ -f "$TEST/.exclude_obsolete" ]; then
+        echo "Test excluded because it is obsolete, skipping $TEST" | tee -a $PROGRESSFILE
+        cat "$TEST/.exclude_obsolete"
+        excludeObsolete_test "$TEST"
+        echo "[$(get_timestamp)] ${PROGRESS_PREFIX}SKIP: $TEST (obsolete)" >&2
+        return
+    fi
+
+    # check if test is excluded on all platforms
+    if [ -f "$TEST/.exclude_all" ]; then
+        echo "Test universally excluded, skipping $TEST" | tee -a $PROGRESSFILE
+        cat "$TEST/.exclude_all"
+        skip_test "$TEST"
+        echo "[$(get_timestamp)] ${PROGRESS_PREFIX}SKIP: $TEST (excluded)" >&2
+        return
+    fi
+
+    # check for environment variable to skip these
+    if [ -f "$TEST/.exclude_expert" ]; then
+        if [ -z "$ION_RUN_EXPERT" ]; then
+            echo "Test excluded by expertise class, skipping $TEST" | tee -a $PROGRESSFILE
+            cat "$TEST/.exclude_expert"
+            skip_test "$TEST"
+            echo "[$(get_timestamp)] ${PROGRESS_PREFIX}SKIP: $TEST (expert test)" >&2
+            return
+        fi
+    fi
+
+    # check for environment variable to skip these
+    if [ -f "$TEST/.exclude_cbased" ]; then
+        if [ -n "$ION_EXCLUDE_CBASED" ]; then
+            echo "Test excluded because of C code, skipping $TEST" | tee -a $PROGRESSFILE
+            cat "$TEST/.exclude_cbased"
+            skip_test "$TEST"
+            echo "[$(get_timestamp)] ${PROGRESS_PREFIX}SKIP: $TEST (C-based)" >&2
+            return
+        fi
+    fi
+
+    # check if test is excluded by OS version
+    if [ -f "$TEST/.exclude_$OS_VERSION" ]; then
+        echo "Test excluded by OS type, skipping $TEST" | tee -a $PROGRESSFILE
+        cat "$TEST/.exclude_$OS_VERSION"
+        excludeOS_test "$TEST"
+        echo "[$(get_timestamp)] ${PROGRESS_PREFIX}SKIP: $TEST (OS excluded)" >&2
+        return
+    fi
+
+    # check if test is excluded by BP version
+    if [ -f "$TEST/.exclude_$BP_VERSION" ]; then
+        echo "Test excluded by BP version, skipping $TEST" | tee -a $PROGRESSFILE
+        cat "$TEST/.exclude_$BP_VERSION"
+        excludeBPv_test "$TEST"
+        echo "[$(get_timestamp)] ${PROGRESS_PREFIX}SKIP: $TEST (BP version excluded)" >&2
+        return
+    fi
+
+    # check if test is excluded by BPSec implementation
+    if [ "$BPSEC_MODE" = "bsl" ] && [ -f "$TEST/.exclude_bsl" ]; then
+        echo "Test excluded for BSL build, skipping $TEST" | tee -a $PROGRESSFILE
+        cat "$TEST/.exclude_bsl"
+        excludeBPSec_test "$TEST"
+        echo "[$(get_timestamp)] ${PROGRESS_PREFIX}SKIP: $TEST (BSL excluded)" >&2
+        return
+    fi
+
+    if [ "$BPSEC_MODE" = "native_bpsec" ] && [ -f "$TEST/.exclude_native_bpsec" ]; then
+        echo "Test excluded for native BPSec build, skipping $TEST" | tee -a $PROGRESSFILE
+        cat "$TEST/.exclude_native_bpsec"
+        excludeBPSec_test "$TEST"
+        echo "[$(get_timestamp)] ${PROGRESS_PREFIX}SKIP: $TEST (native BPSec excluded)" >&2
+        return
+    fi
+
+    # check for existance of dotest script
+    if [ ! -d "$TEST" -o ! -e "$TEST/dotest" ]; then
+        echo "test $TEST does not exist!" | tee -a $PROGRESSFILE
+        NUM_FAILED=$((NUM_FAILED + 1))
+        TESTS_FAILED="$TESTS_FAILED $TEST"
+        echo "[$(get_timestamp)] ${PROGRESS_PREFIX}FAIL: $TEST (does not exist)" >&2
+        return
+    fi
+
+    # make sure dotest script is executable
+    if [ ! -x "$TEST/dotest" ]; then
+        echo "dotest script $TEST/dotest not executable, skipping" | tee -a $PROGRESSFILE
+        NUM_SKIPPED=$((NUM_SKIPPED + 1))
+        TESTS_SKIPPED="$TESTS_SKIPPED $TEST"
+        echo "[$(get_timestamp)] ${PROGRESS_PREFIX}SKIP: $TEST (not executable)" >&2
+        return
+    fi
+
+    # where to save results for THIS test, if requested
+    if [[ -n ${RUNTESTS_OUTPUTDIR} ]] ; then
+        TESTNAME=`basename "${TEST}"`
+        RESULTSFILE="${RUNTESTS_OUTPUTDIR}/results.${TESTNAME}"
+        if [[ -f ${RESULTSFILE} ]] ; then
+            # in case the same test is run multiple times
+            RESCOUNTER=$(( $RESCOUNTER + 1))
+            RESULTSFILE="${RESULTSFILE}.${RESCOUNTER}"
+        fi
+        echo "start time: `date`" > "${RESULTSFILE}"
+    fi
+
+    pushd "$TEST" > /dev/null
+
+    if [ -x "cleanup" ]; then
+        if [[ -n "${RESULTSFILE}" ]] ; then
+            ./cleanup "$OS_VERSION" >> "${RESULTSFILE}" 2>&1
+        else
+            ./cleanup "$OS_VERSION"
+        fi
+    fi
+
+    # Remove stale ion-system.log files from prior runs of this test.
+    # cleanup_staging_files preserves them by design, so without an
+    # explicit sweep here they accumulate across runs and get picked up
+    # by CI log-collection as if they belonged to the current run.
+    find . -maxdepth 3 -name "ion-system.log" -type f -delete 2>/dev/null
+
+    # Symmetric pre-test sweep of runtime staging files (bpacq/ltpacq/
+    # *.sdr/bsspSegment/xnref/*.sdrlog/core). The per-test ./cleanup
+    # only handles artifacts it knows about; a hard-killed prior run or
+    # a test without a cleanup script can leave these behind, and a
+    # stale .sdr or matching wmKey collision in /tmp can corrupt a
+    # fresh ION instance. Patterns are runtime-only so this never
+    # touches config files.
+    cleanup_staging_files "."
+
+    # Prefer X/Open Portable tools if Solaris
+    if [ -x "/usr/xpg4/bin" ]; then
+        PATH="/usr/xpg4/bin:$PATH"
+    fi
+
+    # Compute per-test timeout, and read .DURATION separately for
+    # the actual-vs-declared report shown at test conclusion.
+    TEST_TIMEOUT=$(compute_test_timeout)
+    TEST_DECLARED_DURATION=""
+    if [ -f ".DURATION" ]; then
+        TEST_DECLARED_DURATION=$(head -1 .DURATION | tr -dc '0-9')
+    fi
+
+    # Run the driver script for the test with timeout monitoring.
+    # We run dotest in the background so we can collect diagnostics
+    # BEFORE killing it on timeout (stack traces need a live process).
+    if [[ -n "${RESULTSFILE}" ]] ; then
+        ./dotest "$OS_VERSION" >> "${RESULTSFILE}" 2>&1 &
+    else
+        ./dotest "$OS_VERSION" &
+    fi
+    DOTEST_PID=$!
+
+    # Poll for completion or timeout.  We check every second whether
+    # dotest is still alive, and count up to TEST_TIMEOUT.
+    ELAPSED_WAIT=0
+    while [ $ELAPSED_WAIT -lt $TEST_TIMEOUT ]; do
+        if ! kill -0 "$DOTEST_PID" 2>/dev/null; then
+            break  # dotest exited
+        fi
+        sleep 1
+        ELAPSED_WAIT=$((ELAPSED_WAIT + 1))
+    done
+
+    if kill -0 "$DOTEST_PID" 2>/dev/null; then
+        # TIMEOUT — dotest is still alive. Collect diagnostics while alive.
+        echo ""
+        echo "*** TEST TIMED OUT after ${TEST_TIMEOUT}s — collecting diagnostics ***"
+        echo ""
+
+        DIAG_FILE="./ion-system.log"
+
+        # ion-diagnostics first: it truncates the output file before
+        # writing, so anything we put there beforehand would be lost.
+        # ION_DIAG_SINCE bounds the core-file scan to cores produced
+        # after this test started, avoiding stale cores from earlier
+        # tests on shared core_pattern directories.
+        if [ -x "$ION_DIAGNOSTICS" ]; then
+            ION_DIAG_SINCE="$TEST_START_TIME" \
+                "$ION_DIAGNOSTICS" --file "$DIAG_FILE" "$(pwd)" 2>/dev/null
+        else
+            : > "$DIAG_FILE"
+            echo "(ion-diagnostics not found at $ION_DIAGNOSTICS)" >> "$DIAG_FILE"
+        fi
+
+        # Now append the dotest-script stack trace; collect_dotest_stack
+        # opens its outfile in append mode (>>), so it won't clobber what
+        # ion-diagnostics just wrote.
+        collect_dotest_stack "$DOTEST_PID" "$DIAG_FILE"
+
+        # Now kill the test and clean up
+        kill -TERM "$DOTEST_PID" 2>/dev/null
+        sleep 2
+        kill -9 "$DOTEST_PID" 2>/dev/null
+        wait "$DOTEST_PID" 2>/dev/null
+        killm f 2>/dev/null
+
+        TEST_RETVAL=124
+    else
+        # dotest finished within the timeout — get its exit status
+        wait "$DOTEST_PID" 2>/dev/null
+        TEST_RETVAL=$?
+    fi
+
+    # Calculate test duration for concise output
+    TEST_END_TIME=$(date +%s)
+    TEST_END_TIMESTAMP=$(get_timestamp)
+    TEST_DURATION=$((TEST_END_TIME - TEST_START_TIME))
+    # Combined "actual / declared" suffix; if .DURATION wasn't present
+    # we just show the actual elapsed time.
+    if [ -n "$TEST_DECLARED_DURATION" ]; then
+        DURATION_INFO="${TEST_DURATION}s, declared ${TEST_DECLARED_DURATION}s"
+    else
+        DURATION_INFO="${TEST_DURATION}s"
+    fi
+
+    if [ $TEST_RETVAL -eq 0 ]; then
+        if [ -n "$IS_OPTIONAL_TEST" ]; then
+            echo "OPTIONAL TEST PASSED!"
+            optional_pass_test "$TEST"
+            echo "OPTIONAL TEST PASSED: ${TEST} (${DURATION_INFO})" >> "$PROGRESSFILE"
+            # Concise output to stderr
+            echo "[$TEST_END_TIMESTAMP] ${PROGRESS_PREFIX}PASS: $TEST (${DURATION_INFO})" >&2
+        else
+            echo "TEST PASSED!"
+            if [[ "$RETESTING" == "true" ]]; then
+                pass_test_after_retest "$TEST"
+                echo "PASSED AFTER RETEST: ${TEST} (${DURATION_INFO})" >> "$PROGRESSFILE"
+            else
+                pass_test "$TEST"
+                echo "PASSED: ${TEST} (${DURATION_INFO})" >> "$PROGRESSFILE"
+            fi
+            # Concise output to stderr
+            echo "[$TEST_END_TIMESTAMP] ${PROGRESS_PREFIX}PASS: $TEST (${DURATION_INFO})" >&2
+        fi
+        if [ "$PRESERVE_TEST_LOGS" != "1" ] && [ -x "cleanup" ]; then
+            ./cleanup
+            cleanup_staging_files "."
+        fi
+    elif [ $TEST_RETVAL -eq 1 ]; then
+        if [ -n "$IS_OPTIONAL_TEST" ]; then
+            echo "OPTIONAL TEST FAILED!"
+            optional_fail_test "$TEST"
+            echo "OPTIONAL TEST FAILED: ${TEST} (${DURATION_INFO})" >> "$PROGRESSFILE"
+            # Concise output to stderr
+            echo "[$TEST_END_TIMESTAMP] ${PROGRESS_PREFIX}FAIL: $TEST (${DURATION_INFO})" >&2
+        else
+            echo "TEST FAILED!"
+            fail_test "$TEST"
+            if [[ "$RETESTING" == "true" ]]; then
+                echo "FAILED AFTER RETEST: ${TEST} (${DURATION_INFO})" >> "$PROGRESSFILE"
+            else
+                echo "FAILED: ${TEST} (${DURATION_INFO})" >> "$PROGRESSFILE"
+            fi
+            # Concise output to stderr
+            echo "[$TEST_END_TIMESTAMP] ${PROGRESS_PREFIX}FAIL: $TEST (${DURATION_INFO})" >&2
+        fi
+        # Never run cleanup after failure — logs are preserved for debugging
+        echo "Preserving test logs (cleanup skipped after failure)" | tee -a $PROGRESSFILE
+        # Collect partial diagnostics (ION processes may still be alive,
+        # or may have crashed and left a core). ion-diagnostics
+        # truncates the output file itself, so we don't pre-truncate.
+        DIAG_FILE="./ion-system.log"
+        if [ -x "$ION_DIAGNOSTICS" ]; then
+            ION_DIAG_SINCE="$TEST_START_TIME" \
+                "$ION_DIAGNOSTICS" --file "$DIAG_FILE" "$(pwd)" 2>/dev/null
+        else
+            : > "$DIAG_FILE"
+            echo "(ion-diagnostics not found at $ION_DIAGNOSTICS)" >> "$DIAG_FILE"
+        fi
+        # Reclaim bulk staging files (preserves ion.log and ion-system.log,
+        # removes cores after diagnostics has extracted their stack traces)
+        cleanup_staging_files "."
+    elif [ $TEST_RETVAL -eq 2 ]; then
+        echo "TEST SKIPPED!"
+        skip_test "$TEST"
+        echo "SKIPPED: ${TEST} (${DURATION_INFO})" >> "$PROGRESSFILE"
+        # Concise output to stderr
+        echo "[$TEST_END_TIMESTAMP] ${PROGRESS_PREFIX}SKIP: $TEST (${DURATION_INFO})" >&2
+    elif [ $TEST_RETVAL -eq 124 ]; then
+        echo "TEST TIMED OUT! (limit: ${TEST_TIMEOUT}s)"
+        fail_test "$TEST"
+        echo "TIMEOUT: ${TEST} (${DURATION_INFO}, limit=${TEST_TIMEOUT}s)" >> "$PROGRESSFILE"
+        # Concise output to stderr
+        echo "[$TEST_END_TIMESTAMP] ${PROGRESS_PREFIX}TIMEOUT: $TEST (${DURATION_INFO})" >&2
+        # Diagnostics already collected; preserve logs but reclaim bulk staging files
+        echo "Preserving test logs and ion-system.log (timeout)" | tee -a $PROGRESSFILE
+        cleanup_staging_files "."
+    else
+        echo "test returned unknown value $TEST_RETVAL"
+        if [ -n "$IS_OPTIONAL_TEST" ]; then
+            optional_fail_test "$TEST"
+            echo "OPTIONAL TEST CONFUSED: ${TEST}: bad return value $TEST_RETVAL (${DURATION_INFO})" >> "$PROGRESSFILE"
+            # Concise output to stderr
+            echo "[$TEST_END_TIMESTAMP] ${PROGRESS_PREFIX}FAIL: $TEST (${DURATION_INFO}) [unknown return value $TEST_RETVAL]" >&2
+        else
+            fail_test "$TEST"
+            if [[ "$RETESTING" == "true" ]]; then
+                echo "CONFUSED AFTER RETEST: ${TEST}: bad return value $TEST_RETVAL (${DURATION_INFO})" >> "$PROGRESSFILE"
+            else
+                echo "CONFUSED: ${TEST}: bad return value $TEST_RETVAL (${DURATION_INFO})" >> "$PROGRESSFILE"
+            fi
+            # Concise output to stderr
+            echo "[$TEST_END_TIMESTAMP] ${PROGRESS_PREFIX}FAIL: $TEST (${DURATION_INFO}) [unknown return value $TEST_RETVAL]" >&2
+        fi
+    fi
+
+    if [[ -n "${RESULTSFILE}" ]] ; then
+        echo "dotest exit value: $TEST_RETVAL" >> "${RESULTSFILE}"
+        echo "end time: `date`" >> "${RESULTSFILE}"
+    fi
+
+    # Allow some extra time for ION to fully shutdown on Solaris
+    if [[ "$OS_VERSION" == "solaris" ]] ; then
+        sleep 15
+    fi
+
+    popd > /dev/null
+
+}
+
+
+# cleans up one test
+function cleanup_a_test () {
+    TEST=$1
+
+    # see, you can make bash read like perl if you try
+    TEST=${TEST##./}
+    TEST=${TEST%%/}
+
+    if [ ! -d "$TEST" -o ! -e "$TEST/dotest" ]; then
+        echo "test $TEST doesnt exist!"
+        return
+    fi
+
+    pushd "$TEST" > /dev/null
+
+    # Test's own cleanup (if present) — handles named config artifacts
+    # that only the test knows about.
+    if [ -x "./cleanup" ]; then
+        ./cleanup
+    fi
+
+    # Generic runtime artifacts (bpacq/ltpacq/*.sdr/bsspSegment/xnref/
+    # *.sdrlog/core), plus the /tmp sweep for tests that use pathName /tmp.
+    cleanup_staging_files "."
+
+    # Diagnostic logs — `runtests cleanup` is an explicit reset request,
+    # so wipe ion.log and ion-system.log too (the in-run sweeps deliberately
+    # preserve them).
+    find . -maxdepth 3 \( -name "ion.log" -o -name "ion-system.log" \) \
+        -type f -delete 2>/dev/null
+
+    popd > /dev/null
+}
+
+
+# run all tests listed in $@
+function run_tests () {
+    # Count total number of tests
+    local TOTAL_TESTS=$#
+    local CURRENT_NUM=0
+    ABORT_RUN=0
+
+    for TEST in "$@"; do
+        [ "$ABORT_RUN" -eq 1 ] && break
+        CURRENT_NUM=$((CURRENT_NUM + 1))
+        run_a_test "$TEST" "$CURRENT_NUM" "$TOTAL_TESTS"
+    done
+}
+
+
+# cleanup all tests listed in $@
+function cleanup_tests () {
+    # Kill any leftover ION daemons ONCE up-front. Running it per-test
+    # would be wasteful (most tests share IPC namespace via wmKey), but
+    # we need at least one pass so the per-test artifact sweeps aren't
+    # racing a live process that still holds those files open.
+    killm f 2>/dev/null
+
+    for TEST in "$@"; do
+        cleanup_a_test "$TEST"
+    done
+
+    # Wipe runtests' own bookkeeping files — this is a full reset.
+    rm -f "$FAILEDFILE" "$PROGRESSFILE" 2>/dev/null
+}
+
+# Reset all test counters for stress test iterations
+function reset_test_counters () {
+    NUM_PASSED=0
+    NUM_FAILED=0
+    NUM_SKIPPED=0
+    NUM_EXCLUDED_OS=0
+    NUM_EXCLUDED_BPv=0
+    NUM_EXCLUDED_OBSOLETE=0
+    NUM_EXCLUDED_BPSEC=0
+    NUM_PASSED_AFTER_RETEST=0
+    NUM_OPTIONAL_PASSED=0
+    NUM_OPTIONAL_FAILED=0
+    TESTS_PASSED=""
+    TESTS_FAILED=""
+    TESTS_SKIPPED=""
+    TESTS_EXCLUDED_OS=""
+    TESTS_EXCLUDED_BPv=""
+    TESTS_EXCLUDED_OBSOLETE=""
+    TESTS_EXCLUDED_BPSEC=""
+    TESTS_PASSED_AFTER_RETEST=""
+    TESTS_OPTIONAL_PASSED=""
+    TESTS_OPTIONAL_FAILED=""
+}
+
+# Function to generate initial summary and retest file
+function generate_initial_summary () {
+    echo
+    echo "passed: $NUM_PASSED"
+    for TEST in $TESTS_PASSED; do
+        echo "    $TEST"
+    done
+
+    echo
+    echo "failed: $NUM_FAILED"
+    RIGHTNOW=`date`
+    echo "# Generated by $0 $RIGHTNOW" > "$FAILEDFILE"
+    for TEST in $TESTS_FAILED; do
+        echo "    $TEST"
+        echo "$TEST" >> "$FAILEDFILE"
+    done
+
+    echo
+    echo "skipped: $NUM_SKIPPED"
+    for TEST in $TESTS_SKIPPED; do
+        echo "    $TEST"
+    done
+
+    echo
+    echo "excluded by OS type: $NUM_EXCLUDED_OS"
+    for TEST in $TESTS_EXCLUDED_OS; do
+        echo "    $TEST"
+    done
+
+    echo
+    echo "excluded by BP version: $NUM_EXCLUDED_BPv"
+    for TEST in $TESTS_EXCLUDED_BPv; do
+        echo "    $TEST"
+    done
+
+    echo
+    echo "obsolete tests: $NUM_EXCLUDED_OBSOLETE"
+    for TEST in $TESTS_EXCLUDED_OBSOLETE; do
+        echo "    $TEST"
+    done
+
+    echo
+    echo "excluded by BPSec mode: $NUM_EXCLUDED_BPSEC"
+    for TEST in $TESTS_EXCLUDED_BPSEC; do
+        echo "    $TEST"
+    done
+
+    # Show optional test results in a separate section
+    echo
+    echo "=== Optional Tests ==="
+    echo "optional tests passed: $NUM_OPTIONAL_PASSED"
+    for TEST in $TESTS_OPTIONAL_PASSED; do
+        echo "    $TEST"
+    done
+
+    echo
+    echo "optional tests failed: $NUM_OPTIONAL_FAILED"
+    for TEST in $TESTS_OPTIONAL_FAILED; do
+        echo "    $TEST"
+    done
+}
+
+# Function to generate final summary after retests
+function generate_final_summary () {
+    echo
+    echo "passed: $NUM_PASSED"
+    for TEST in $TESTS_PASSED; do
+        echo "    $TEST"
+    done
+
+    # Show tests that passed after retest with special notation
+    if [ $NUM_PASSED_AFTER_RETEST -gt 0 ]; then
+        echo
+        echo "passed after retest: $NUM_PASSED_AFTER_RETEST"
+        for TEST in $TESTS_PASSED_AFTER_RETEST; do
+            echo "    $TEST (after retest)"
+        done
+    fi
+
+    echo
+    echo "failed: $NUM_FAILED"
+    RIGHTNOW=`date`
+    echo "# Generated by $0 $RIGHTNOW" > "$FAILEDFILE"
+    for TEST in $TESTS_FAILED; do
+        echo "    $TEST"
+        echo "$TEST" >> "$FAILEDFILE"
+    done
+
+    echo
+    echo "skipped: $NUM_SKIPPED"
+    for TEST in $TESTS_SKIPPED; do
+        echo "    $TEST"
+    done
+
+    echo
+    echo "excluded by OS type: $NUM_EXCLUDED_OS"
+    for TEST in $TESTS_EXCLUDED_OS; do
+        echo "    $TEST"
+    done
+
+    echo
+    echo "excluded by BP version: $NUM_EXCLUDED_BPv"
+    for TEST in $TESTS_EXCLUDED_BPv; do
+        echo "    $TEST"
+    done
+
+    echo
+    echo "obsolete tests: $NUM_EXCLUDED_OBSOLETE"
+    for TEST in $TESTS_EXCLUDED_OBSOLETE; do
+        echo "    $TEST"
+    done
+
+    echo
+    echo "excluded by BPSec mode: $NUM_EXCLUDED_BPSEC"
+    for TEST in $TESTS_EXCLUDED_BPSEC; do
+        echo "    $TEST"
+    done
+
+    # Show optional test results in a separate section
+    echo
+    echo "=== Optional Tests ==="
+    echo "optional tests passed: $NUM_OPTIONAL_PASSED"
+    for TEST in $TESTS_OPTIONAL_PASSED; do
+        echo "    $TEST"
+    done
+
+    echo
+    echo "optional tests failed: $NUM_OPTIONAL_FAILED"
+    for TEST in $TESTS_OPTIONAL_FAILED; do
+        echo "    $TEST"
+    done
+}
+
+# these track how much of the test suite is passing/failing/skipped
+NUM_PASSED=0
+NUM_FAILED=0
+NUM_SKIPPED=0
+NUM_EXCLUDED_OS=0
+NUM_EXCLUDED_BPv=0
+NUM_EXCLUDED_OBSOLETE=0
+NUM_EXCLUDED_BPSEC=0
+NUM_UNKNOWN=0
+NUM_PASSED_AFTER_RETEST=0
+NUM_OPTIONAL_PASSED=0
+NUM_OPTIONAL_FAILED=0
+
+# these track the names of the tests passed/failed/skipped
+# each is a string consisting of the names of all the tests in that category, separated by spaces
+TESTS_PASSED=''
+TESTS_FAILED=''
+TESTS_SKIPPED=''
+TESTS_EXCLUDED_OS=''
+TESTS_EXCLUDED_BPv=''
+TESTS_EXCLUDED_OBSOLETE=''
+TESTS_EXCLUDED_BPSEC=''
+TESTS_PASSED_AFTER_RETEST=''
+TESTS_OPTIONAL_PASSED=''
+TESTS_OPTIONAL_FAILED=''
+
+# Flag to indicate when we're retesting
+RETESTING="false"
+
+# Stress test mode variables
+STRESS_MODE=""
+STRESS_ITERATION=0
+MAX_ITERATIONS=100
+
+# Help function
+function show_help () {
+    cat << 'EOF'
+Usage: runtests [OPTIONS] [TEST_PATHS...]
+
+Run ION test suite.
+
+OPTIONS:
+    -h, --help          Show this help message and exit
+    --exclude PATTERN   Exclude tests matching PATTERN (substring match).
+                        Can be specified multiple times.
+    --stress            Run tests repeatedly until failure or max iterations
+    --max-iterations N  Set maximum iterations for stress mode (default: 100)
+    --from NAME         Start from test NAME (inclusive, alphabetical)
+    --to NAME           Stop after test NAME (inclusive, alphabetical)
+    cleanup             Clean up test artifacts without running tests
+
+TEST_PATHS:
+    Paths to specific test directories or parent directories containing tests.
+    If no paths are specified, runs all tests in ../demos/ and current directory.
+
+ENVIRONMENT VARIABLES:
+    RUNTESTS_OUTPUTDIR  Directory to save individual test output files
+                        (e.g., export RUNTESTS_OUTPUTDIR="/tmp")
+    PRESERVE_TEST_LOGS  When set to 1, preserve logs from passing tests
+                        (default: 0, clean up after passing tests to save disk).
+                        Failed test logs are always preserved regardless.
+                        To keep all logs: export PRESERVE_TEST_LOGS=1
+
+EXAMPLES:
+    ./runtests                              Run all tests
+    ./runtests req-0022-reversibility       Run a specific test
+    ./runtests --stress req-0022-reversibility
+                                            Stress test until failure
+    ./runtests --stress --max-iterations 50 req-0022-reversibility
+                                            Stress test with 50 max iterations
+    ./runtests --exclude bpsec               Exclude all tests matching "bpsec"
+    ./runtests --exclude bpsec --exclude nm  Exclude bpsec and nm tests
+    ./runtests --from issue-324              Run all tests from issue-324 onward
+    ./runtests --from issue-324 --to issue-400
+                                            Run tests between issue-324 and issue-400
+    ./runtests --from admin_public_api/ltp_loopback
+                                            Run from a nested test onward
+    ./runtests cleanup                      Clean up all test artifacts
+    ./runtests cleanup req-0022-reversibility
+                                            Clean up specific test
+
+OUTPUT FILES:
+    retest              List of failed tests (can be used for retesting)
+    progress            Intermediate progress log
+
+EOF
+    exit 0
+}
+
+# Parse --help flag early
+if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+    show_help
+fi
+
+# Determine OS version for exclusion of tests
+OS_VERSION=''
+version=`uname -a`
+if [[ "$version" == *"raspberrypi"* ]]
+then
+    OS_VERSION=raspberrypi;
+elif [[ "$version" == *"Linux"* ]] || [[ "$version" == *"LINUX"* ]]
+then
+    OS_VERSION=linux;
+elif [[ "$version" == *"Mac"* ]] || [[ "$version" == *"MAC"* ]] || [[ "$version" == *"Darwin"* ]]
+then
+    OS_VERSION=mac;
+elif [[ "$version" == *"Solaris"* ]] || [[ "$version" == *"SunOS"* ]]
+then
+    OS_VERSION=solaris;
+elif [[ "$version" == *"FreeBSD"* ]] || [[ "$version" == *"OpenBSD"* ]]
+then
+    OS_VERSION=freebsd;
+else
+    echo "runtests: Unknown OS type, cannot run tests."
+    exit 1
+fi
+
+#Determine BP version for exclustion of tests
+BP_VERSION="bpv7"
+
+# Determine BPSec implementation (BSL vs native BPSec)
+if pkg-config --cflags ion 2>/dev/null | grep -q 'USING_BSL'; then
+    BPSEC_MODE="bsl"
+elif ! command -v bpsecadmin >/dev/null 2>&1; then
+    BPSEC_MODE="bsl"
+else
+    BPSEC_MODE="native_bpsec"
+fi
+
+# Parse options
+STRESS_MODE=""
+FROM_TEST=""
+TO_TEST=""
+CLEANUP=""
+EXCLUDE_PATTERNS=()
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --stress)
+            STRESS_MODE="1"
+            PRESERVE_TEST_LOGS=1
+            shift
+            ;;
+        --max-iterations)
+            shift
+            MAX_ITERATIONS="$1"
+            shift
+            ;;
+        --from)
+            shift
+            FROM_TEST="${1%/}"
+            shift
+            ;;
+        --to)
+            shift
+            TO_TEST="${1%/}"
+            shift
+            ;;
+        --exclude)
+            shift
+            EXCLUDE_PATTERNS+=("$1")
+            shift
+            ;;
+        cleanup)
+            CLEANUP="cleanup"
+            shift
+            ;;
+        --)
+            shift
+            break
+            ;;
+        --*)
+            echo "Unknown option: $1" >&2
+            show_help
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
+
+if [ $# -eq 0 ]; then
+    TESTS=$(find_tests_in ../demos/)" "$(find_tests_in .)
+else
+    TESTS=$(find_tests_in "$@")
+fi
+
+# Filter by --from / --to using alphabetical comparison on test path
+if [ -n "$FROM_TEST" ] || [ -n "$TO_TEST" ]; then
+    FILTERED=""
+    for T in $TESTS; do
+        NAME="${T#./}"
+        if [ -n "$FROM_TEST" ] && [[ "$NAME" < "$FROM_TEST" ]] && [[ "$NAME" != "$FROM_TEST" ]]; then
+            continue
+        fi
+        if [ -n "$TO_TEST" ] && [[ "$NAME" > "$TO_TEST" ]] && [[ "$NAME" != "$TO_TEST" ]]; then
+            continue
+        fi
+        FILTERED="$FILTERED $T"
+    done
+    TESTS="$FILTERED"
+fi
+
+# Filter by --exclude patterns (substring match on test path)
+if [ ${#EXCLUDE_PATTERNS[@]} -gt 0 ]; then
+    FILTERED=""
+    NUM_EXCLUDED_BY_FLAG=0
+    for T in $TESTS; do
+        NAME="${T#./}"
+        EXCLUDED=""
+        for PAT in "${EXCLUDE_PATTERNS[@]}"; do
+            if [[ "$NAME" == *"$PAT"* ]]; then
+                EXCLUDED=1
+                break
+            fi
+        done
+        if [ -n "$EXCLUDED" ]; then
+            NUM_EXCLUDED_BY_FLAG=$((NUM_EXCLUDED_BY_FLAG + 1))
+        else
+            FILTERED="$FILTERED $T"
+        fi
+    done
+    TESTS="$FILTERED"
+    if [ $NUM_EXCLUDED_BY_FLAG -gt 0 ]; then
+        echo "Excluded $NUM_EXCLUDED_BY_FLAG test(s) by --exclude flag" >&2
+    fi
+fi
+
+if [ -z "$TESTS" ]; then
+    echo "no tests found!"
+    exit 1
+fi
+
+
+# The suite runs the installed ION, so refuse to start without one rather
+# than letting every test fail for a reason no single test can explain.
+# Cleanup mode is exempt: tearing down leftover state must work regardless.
+if [ -z "$CLEANUP" ] && ! command -v ionadmin > /dev/null 2>&1; then
+    echo "runtests: ionadmin not found on PATH." >&2
+    echo "runtests: the test suite runs the installed ION; run 'make install' first." >&2
+    exit 1
+fi
+
+if [ -z "$CLEANUP" ]; then
+    if [ -n "$STRESS_MODE" ]; then
+        # Stress test mode: repeat tests until failure or max iterations
+        echo "=== STRESS TEST MODE: max $MAX_ITERATIONS iterations ==="
+        echo "# Stress test mode started at `date`" >> $PROGRESSFILE
+
+        while [ $STRESS_ITERATION -lt $MAX_ITERATIONS ]; do
+            STRESS_ITERATION=$((STRESS_ITERATION + 1))
+            echo
+            echo "=========================================="
+            echo "=== STRESS TEST ITERATION $STRESS_ITERATION / $MAX_ITERATIONS ==="
+            echo "=========================================="
+            echo "=== Stress iteration $STRESS_ITERATION started at `date`" >> $PROGRESSFILE
+
+            # Reset counters for this iteration
+            reset_test_counters
+
+            # Run the tests (no retest in stress mode)
+            run_tests $TESTS
+
+            # In stress mode, treat optional test failures as failures too
+            if [ $NUM_FAILED -gt 0 ] || [ $NUM_OPTIONAL_FAILED -gt 0 ]; then
+                echo
+                echo "=========================================="
+                echo "=== STRESS TEST FAILED on iteration $STRESS_ITERATION ==="
+                if [ $NUM_OPTIONAL_FAILED -gt 0 ]; then
+                    echo "=== (includes $NUM_OPTIONAL_FAILED optional test failure(s)) ==="
+                fi
+                echo "=========================================="
+                generate_initial_summary
+                echo "# Stress test FAILED on iteration $STRESS_ITERATION at `date`" >> $PROGRESSFILE
+                echo "Logs preserved. Exiting."
+                exit 1
+            fi
+
+            echo "=== Iteration $STRESS_ITERATION passed, cleaning up... ==="
+            cleanup_tests $TESTS
+        done
+
+        # Completed all iterations without failure
+        echo
+        echo "=========================================="
+        echo "=== STRESS TEST COMPLETE: $MAX_ITERATIONS iterations passed ==="
+        echo "=========================================="
+        echo "# Stress test completed $MAX_ITERATIONS iterations at `date`" >> $PROGRESSFILE
+        exit 0
+    else
+        # Normal mode: run all tests initially
+        run_tests $TESTS
+
+        # Generate initial summary and create retest file
+        generate_initial_summary
+
+        # Check if retest file exists and has content (meaning there were failures)
+        if [ -f "$FAILEDFILE" ] && [ -s "$FAILEDFILE" ]; then
+            # Read the failed tests from the retest file (skip comment line)
+            RETEST_TESTS=$(grep -v '^#' "$FAILEDFILE")
+
+            if [ -n "$RETEST_TESTS" ] && [ "$ENABLE_RETEST" = "1" ]; then
+                echo
+                echo "=== RETESTING FAILED TESTS ==="
+                echo "=== Retesting failed tests at time `date`" >> $PROGRESSFILE
+
+                # Reset failed test tracking for retest
+                TESTS_FAILED=""
+                NUM_FAILED=0
+
+                # Set retest flag
+                RETESTING="true"
+
+                # Retest only the failed tests from the retest file
+                run_tests $RETEST_TESTS
+
+                # Reset retest flag
+                RETESTING="false"
+
+                # Update final passed count (initial passed + passed after retest)
+                NUM_PASSED=$((NUM_PASSED + NUM_PASSED_AFTER_RETEST))
+                TESTS_PASSED="$TESTS_PASSED $TESTS_PASSED_AFTER_RETEST"
+
+                # Generate final summary
+                (generate_final_summary) | tee -a "$PROGRESSFILE"
+            else
+                # No tests to retest, just append initial summary to progress file
+                (generate_initial_summary) | tee -a "$PROGRESSFILE"
+            fi
+        else
+            # No failures, just append initial summary to progress file
+            (generate_initial_summary) | tee -a "$PROGRESSFILE"
+        fi
+    fi
+else
+    cleanup_tests $TESTS
+    if [ $? -eq 0 ]; then
+        exit 0
+    else
+        echo "some tests failed to clean up"
+        exit 1
+    fi
+fi
+
+echo "# Testing ended by $0 `date`" >> "$PROGRESSFILE"
+cp "${PROGRESSFILE}" "${PROGRESSFILE}.`date | sed 's/ /_/g'`"
+
+if [[ $NUM_FAILED == 0 ]]; then
+    exit 0
+else
+    exit 1
+fi

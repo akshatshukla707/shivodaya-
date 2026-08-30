@@ -1,0 +1,276 @@
+#!/usr/bin/env bash
+trap 'killm f' EXIT
+# Issue 352 - BPCP
+# Samuel Jero
+# April 15, 2012
+
+
+# documentation boilerplate
+CONFIGFILES=" \
+./1.ipn.cfdp.bp.stcp/host1.ionrc \
+./1.ipn.cfdp.bp.stcp/host1.ionconfig \
+./1.ipn.cfdp.bp.stcp/host1.ipnrc \
+./1.ipn.cfdp.bp.stcp/host1.cfdprc \
+./1.ipn.cfdp.bp.stcp/host1.bprc \
+./1.ipn.cfdp.bp.stcp/host1.ionsecrc \
+"
+
+CONFIGFILES=$CONFIGFILES"
+./3.ipn.cfdp.bp.stcp/host3.ipnrc \
+./3.ipn.cfdp.bp.stcp/host3.bprc \
+./3.ipn.cfdp.bp.stcp/host3.ionsecrc \
+./3.ipn.cfdp.bp.stcp/host3.ionrc \
+./3.ipn.cfdp.bp.stcp/host3.cfdprc \
+./3.ipn.cfdp.bp.stcp/host3.ionconfig \
+"
+
+CONFIGFILES=$CONFIGFILES"
+./2.ipn.cfdp.bp.stcp/host2.ionrc \
+./2.ipn.cfdp.bp.stcp/host2.ionsecrc \
+./2.ipn.cfdp.bp.stcp/host2.ionconfig \
+./2.ipn.cfdp.bp.stcp/host2.ipnrc \
+./2.ipn.cfdp.bp.stcp/host2.bprc \
+./2.ipn.cfdp.bp.stcp/host2.cfdprc \
+"
+
+echo "########################################"
+echo
+pwd | sed "s/\/.*\///" | xargs echo "NAME: "
+echo
+echo "PURPOSE: To test that bpcp works correctly in local to remote,"
+echo "           remote to local, and remote to remote copies."
+echo
+echo "CONFIG: 3 node custom configuration:"
+echo
+for N in $CONFIGFILES
+do
+    echo "$N:"
+    cat $N
+    echo "# EOF"
+    echo
+done
+echo "OUTPUT: Terminal messages will relay results."
+echo
+echo "########################################"
+
+./cleanup
+#rm -rf ./ion_nodes
+
+echo "Starting ION..."
+export ION_NODE_LIST_DIR=$PWD
+
+
+# Start nodes.
+cd 1.ipn.cfdp.bp.stcp
+./ionstart
+../../../system_up -i "p 30" -c "p 30" -b "p 30"
+
+if [ $? -eq 3 ]
+then
+    echo ""
+else
+    echo "Node 1 not started: Aborting Test"
+    exit 1
+fi
+cd ../2.ipn.cfdp.bp.stcp
+./ionstart
+../../../system_up -i "p 30" -c "p 30" -b "p 30"
+
+if [ $? -eq 3 ]
+then
+    echo ""
+else
+    echo "Node 2 not started: Aborting Test"
+    exit 1
+fi
+cd ../3.ipn.cfdp.bp.stcp
+./ionstart
+../../../system_up -i "p 30" -c "p 30" -b "p 30"
+
+if [ $? -eq 3 ]
+then
+    echo ""
+else
+    echo "Node 3 not started: Aborting Test"
+    exit 1
+fi
+
+cd ..
+
+#Test 1 L2R
+sleep 12
+echo "Test 1 --- Local to Remote Copy"
+
+# PRE-CHECK AND DELETE
+cd ./3.ipn.cfdp.bp.stcp || { echo "ERROR: Cannot change to 3.ipn.cfdp.bp.stcp for pre-check."; exit 1; }
+if [ -e ./test1 ]; then
+    echo "Found existing test1 on Node 3. Deleting for a clean test."
+    rm ./test1
+    if [ $? -ne 0 ]; then
+        echo "ERROR: Failed to delete existing test1 on Node 3."
+        exit 1
+    fi
+fi
+cd ../1.ipn.cfdp.bp.stcp || { echo "ERROR: Cannot change back to 1.ipn.cfdp.bp.stcp."; exit 1; }
+
+
+echo "Starting bpcp..."
+bpcp ../dotest 3:test1
+BPCP_EXIT_STATUS=$?
+
+# Ensure we're in the correct directory for file check
+cd ../3.ipn.cfdp.bp.stcp || { echo "ERROR: Cannot change to 3.ipn.cfdp.bp.stcp for post-check."; exit 1; }
+
+# Check bpcp's exit status first
+if [ $BPCP_EXIT_STATUS -ne 0 ]; then
+    echo "ERROR: bpcp command for Local to Remote failed to execute successfully. Exit status: $BPCP_EXIT_STATUS"
+    exit 1
+fi
+
+# wait for the file to appear with a timeout
+MAX_WAIT_TIME=15 # seconds
+WAIT_INTERVAL=1  # seconds
+ELAPSED_TIME=0
+FILE_COPIED=0
+
+while [ $ELAPSED_TIME -lt $MAX_WAIT_TIME ]; do
+    if [ -e ./test1 ]; then
+        TEST=$(diff ../dotest test1)
+        if [ -z "$TEST" ]; then
+            FILE_COPIED=1
+            break
+        fi
+    fi
+    sleep $WAIT_INTERVAL
+    ELAPSED_TIME=$((ELAPSED_TIME + WAIT_INTERVAL))
+done
+
+if [ $FILE_COPIED -eq 0 ]; then
+    echo "ERROR: Local to Remote Copy Failed. File not found or content mismatch after timeout. FAILED!!"
+    echo "$TEST"
+    exit 1
+else
+    echo "OK: Local to Remote Copy Successful"
+fi
+
+#Test 2 R2L
+echo "Test 2 --- Remote to Local Copy"
+sleep 1
+
+# PRE-CHECK AND DELETE
+cd ../1.ipn.cfdp.bp.stcp || { echo "ERROR: Cannot change to 1.ipn.cfdp.bp.stcp for pre-check."; exit 1; }
+if [ -e ./test2 ]; then
+    echo "Found existing test2 on Node 1. Deleting for a clean test."
+    rm ./test2
+    if [ $? -ne 0 ]; then
+        echo "ERROR: Failed to delete existing test2 on Node 1."
+        exit 1
+    fi
+fi
+# No need to cd back, as bpcp will run from here
+
+echo "Starting bpcp..."
+bpcp 3:../dotest test2
+BPCP_EXIT_STATUS=$?
+
+# Check bpcp's exit status first
+if [ $BPCP_EXIT_STATUS -ne 0 ]; then
+    echo "ERROR: bpcp command for Remote to Local failed to execute successfully. Exit status: $BPCP_EXIT_STATUS"
+    exit 1
+fi
+
+# wait for the file to appear, with a timeout
+MAX_WAIT_TIME=15 # seconds
+WAIT_INTERVAL=1  # seconds
+ELAPSED_TIME=0
+FILE_COPIED=0
+
+while [ $ELAPSED_TIME -lt $MAX_WAIT_TIME ]; do
+    if [ -e ./test2 ]; then
+        TEST=$(diff ../dotest test2)
+        if [ -z "$TEST" ]; then
+            FILE_COPIED=1
+            break
+        fi
+    fi
+    sleep $WAIT_INTERVAL
+    ELAPSED_TIME=$((ELAPSED_TIME + WAIT_INTERVAL))
+done
+
+
+if [ $FILE_COPIED -eq 0 ]; then
+    echo "ERROR: Remote to Local Copy Failed. File not found or content mismatch after timeout. FAILED!!"
+    echo "$TEST"
+    exit 1
+else
+    echo "OK: Remote to Local Copy Successful"
+fi
+
+#Test 3 R2R
+echo "Test 3 --- Remote to Remote Copy"
+sleep 1
+
+# PRE-CHECK AND DELETE
+# Target file for R2R is on node 2
+cd ../2.ipn.cfdp.bp.stcp || { echo "ERROR: Cannot change to 2.ipn.cfdp.bp.stcp."; exit 1; }
+if [ -e ./test3 ]; then
+    echo "Found existing test3 on Node 2. Deleting for a clean test."
+    rm ./test3
+    if [ $? -ne 0 ]; then
+        echo "ERROR: Failed to delete existing test3 on Node 2."
+        exit 1
+    fi
+fi
+cd ../1.ipn.cfdp.bp.stcp || { echo "ERROR: Cannot change back to 1.ipn.cfdp.bp.stcp."; exit 1; } # bpcp runs from here
+
+echo "Starting bpcp..."
+bpcp 3:../dotest 2:./test3
+BPCP_EXIT_STATUS=$? # Capture bpcp's exit status immediately
+
+# Ensure we're in the correct directory for file check
+cd ../2.ipn.cfdp.bp.stcp || { echo "ERROR: Cannot change to 2.ipn.cfdp.bp.stcp for post-check."; exit 1; }
+
+# Check bpcp's exit status first
+if [ $BPCP_EXIT_STATUS -ne 0 ]; then
+    echo "ERROR: bpcp command for Remote to Remote failed to execute successfully. Exit status: $BPCP_EXIT_STATUS"
+    exit 1
+fi
+
+# wait for the file to appear, with a timeout
+MAX_WAIT_TIME=15 # seconds
+WAIT_INTERVAL=1  # seconds
+ELAPSED_TIME=0
+FILE_COPIED=0
+
+while [ $ELAPSED_TIME -lt $MAX_WAIT_TIME ]; do
+    if [ -e ./test3 ]; then
+        TEST=$(diff ../dotest test3)
+        if [ -z "$TEST" ]; then
+            FILE_COPIED=1
+            break
+        fi
+    fi
+    sleep $WAIT_INTERVAL
+    ELAPSED_TIME=$((ELAPSED_TIME + WAIT_INTERVAL))
+done
+
+
+if [ $FILE_COPIED -eq 0 ]; then
+    echo "ERROR: Remote to Remote Copy Failed. File not found or content mismatch after timeout. FAILED!!"
+    echo "$TEST"
+    exit 1
+else
+    echo "OK: Remote to Remote Copy Successful. SUCCESS!"
+fi
+
+RETVAL=0
+
+#cd ../1.ipn.cfdp.bp.stcp
+#./ionstop &
+#cd ../2.ipn.cfdp.bp.stcp
+#./ionstop &
+#cd ../3.ipn.cfdp.bp.stcp
+#./ionstop &
+#cd ..
+sleep 3
+exit $RETVAL

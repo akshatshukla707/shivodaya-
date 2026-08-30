@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+trap 'killm f' EXIT
+#
+# Nate Richard
+# JPL
+# Janurary 29, 2026
+
+CONFIGFILES=" \
+./global.ionrc \
+./3.ipn.udp/amroc.bprc \
+./3.ipn.udp/amroc.ionconfig \
+./3.ipn.udp/amroc.ionrc \
+./3.ipn.udp/amroc.ionsecrc \
+./3.ipn.udp/amroc.ipnrc \
+"
+
+echo "########################################"
+echo
+pwd | sed "s/\/.*\///" | xargs echo "NAME: "
+echo
+echo "PURPOSE: To determine if bundle status reports are generated."
+echo
+echo "CONFIG: 3 node custom configuration (only node 3 is an ION node):"
+echo
+for N in $CONFIGFILES
+do
+    echo "$N:"
+    cat $N
+    echo "# EOF"
+    echo
+done
+echo "OUTPUT: Terminal messages will relay results."
+echo
+echo "########################################"
+
+# Find the latest available Python 3 version >= 3.10
+PYTHON_CMD="python3"
+
+if command -v "$PYTHON_CMD" &> /dev/null; then
+    py_maj=$("$PYTHON_CMD" -c 'import sys; print(sys.version_info[0])' 2>/dev/null)
+    py_min=$("$PYTHON_CMD" -c 'import sys; print(sys.version_info[1])' 2>/dev/null)
+
+    if [ "$py_maj" = "3" ] && [ "$py_min" -ge 10 ]; then
+        PYTHON_VERSION="3.$py_min"
+    else
+        PYTHON_CMD=""
+    fi
+else
+    PYTHON_CMD=""
+fi
+
+if [ -z "$PYTHON_CMD" ]; then
+    echo "SKIP: Python 3.10 or higher is required but not found."
+    exit 2
+fi
+
+echo "Using Python $PYTHON_VERSION (via $PYTHON_CMD)"
+echo
+
+./cleanup
+RETVAL=1
+
+echo "Starting ION..."
+export ION_NODE_LIST_DIR=$PWD
+cd 3.ipn.udp
+./ionstart > node.stdout
+
+echo "Starting bpsink on ipn:3.1 ..."
+sleep 1
+bpsink ipn:3.1 >/dev/null &
+SINKPID=$!
+
+cd ../
+echo "Running bespokebpv7 status report test..."
+# First Bundle: Sent to ipn:3.1 (should be delivered)
+# Second Bundle: Sent to ipn:5.1 (should be forwarded)
+# Third Bundle: Sent to ipn:3.3 (should be deleted)
+$PYTHON_CMD runtest.py -p parms.json -r 5115 -s 3113
+RETVAL=$?
+
+if [ $RETVAL -eq 0 ]; then
+    echo "SUCCESS: All status report scenarios passed."
+else
+    echo "ERROR: One or more status report scenarios failed."
+fi
+
+echo
+echo "Stopping ION..."
+kill $SINKPID
+sleep 1
+cd 3.ipn.udp
+timeout 30 ionexit  # use ionexit preserve log files for capture
+echo "Status reports test completed."
+exit $RETVAL

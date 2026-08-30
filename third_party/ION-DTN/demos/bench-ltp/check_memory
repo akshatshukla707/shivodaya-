@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+# Author: Robert Martin, Ohio University
+# Checks system variables to see if they are large enough
+# to handle the shared memory requirements for ION
+
+# ION bench-ltp needs at least two 150 MB shared-memory segments
+# (one per node) plus SDR heap segments.  The per-segment maximum
+# (shmmax) must be at least 150000000 bytes.
+MIN_SHMMAX=150000000
+
+case $OSTYPE in
+    *darwin*)
+        VAR_LIST=('kern.sysv.shmmax' 'kern.sysv.shmmin' 'kern.sysv.shmmni'
+                  'kern.sysv.shmseg' 'kern.sysv.shmall' 'net.inet.udp.maxdgram'
+                  'kern.sysv.semmns' 'kern.sysv.semmni' 'net.inet.udp.recvspace')
+    ;;
+    *freebsd*)
+        VAR_LIST=('kern.ipc.shmmax' 'kern.ipc.shmmin' 'kern.ipc.shmmni'
+                  'kern.ipc.shmseg' 'kern.ipc.shmall' 'net.inet.udp.maxdgram'
+                  'kern.ipc.semmns' 'kern.ipc.semmni' 'net.inet.udp.recvspace')
+    ;;
+    solaris*)
+        # Solaris/illumos: check project-level shared memory limits via prctl
+        CHANGE=0
+        SHM_LIMIT=$(prctl -n project.max-shm-memory -i process $$ 2>/dev/null \
+            | awk '/privileged/{print $2}')
+        if [ -n "$SHM_LIMIT" ]; then
+            # prctl may report "deny" for unlimited; treat non-numeric as OK
+            if [[ "$SHM_LIMIT" =~ ^[0-9]+$ ]] && [ "$SHM_LIMIT" -lt $MIN_SHMMAX ]; then
+                echo "project.max-shm-memory=${MIN_SHMMAX}"
+                CHANGE=1
+            fi
+        else
+            # Fallback: try sysdef for kernel SHMMAX
+            KERN_SHMMAX=$(sysdef -i 2>/dev/null | awk '/SHMMAX/{print $1}')
+            if [ -n "$KERN_SHMMAX" ] && [ "$KERN_SHMMAX" -lt $MIN_SHMMAX ]; then
+                echo "shmsys:shminfo_shmmax=${MIN_SHMMAX}"
+                CHANGE=1
+            fi
+        fi
+        if [ $CHANGE -eq 0 ]; then
+            echo "This system is ready to run ION."
+            exit 0
+        else
+            echo
+            echo "Your system's shared memory limits are too low for this demo."
+            echo "ION needs at least ${MIN_SHMMAX} bytes per shared-memory segment."
+            echo
+            echo "To increase the limit, either:"
+            echo "  1) Set the project resource control:"
+            echo "       prctl -n project.max-shm-memory -r -v ${MIN_SHMMAX} -i project \$(id -p | awk '{print \$NF}')"
+            echo "  2) Or add to /etc/system and reboot:"
+            echo "       set shmsys:shminfo_shmmax=${MIN_SHMMAX}"
+            exit 1
+        fi
+    ;;
+    *)
+        # Linux and other platforms: check kernel.shmmax if available
+        if [ -f /proc/sys/kernel/shmmax ]; then
+            KERN_SHMMAX=$(cat /proc/sys/kernel/shmmax 2>/dev/null)
+            if [ -n "$KERN_SHMMAX" ] && [ "$(awk -v k="$KERN_SHMMAX" -v min="$MIN_SHMMAX" 'BEGIN { print (k < min ? 1 : 0) }')" -eq 1 ]; then
+                echo
+                echo "kernel.shmmax is ${KERN_SHMMAX}, need at least ${MIN_SHMMAX}."
+                echo "Run:  sudo sysctl -w kernel.shmmax=${MIN_SHMMAX}"
+                exit 1
+            fi
+        fi
+        echo "No need to update sysctl variables."
+        exit 0
+    ;;
+esac
+
+VAR_VALUE=(2147483648 1 32 32 1048576 65536 32000 128 168320)
+CUR_VALUE=0
+I=0
+CHANGE=0
+
+while [[ $I -lt ${#VAR_LIST[@]} ]]; do
+    CUR_VALUE=`sysctl ${VAR_LIST[$I]} | awk '{ print $2 }'`
+    if [[ $CUR_VALUE -lt ${VAR_VALUE[$I]} ]]; then
+        echo "${VAR_LIST[$I]}=${VAR_VALUE[I]}"
+        let CHANGE=1
+    fi
+    let I=$I+1
+done
+
+if [[ $CHANGE == 0 ]]; then
+    echo "This system is ready to run ION."
+    exit 0
+else
+    echo
+    echo "Your system's sysctl configuration needs be updated in order to"
+    echo "run this demo. This is usually done by copying the above assignments into"
+    echo "/etc/sysctl.conf or /boot/loader.conf and rebooting."
+    exit 1
+fi

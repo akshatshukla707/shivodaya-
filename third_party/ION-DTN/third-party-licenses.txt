@@ -1,0 +1,66 @@
+THIRD-PARTY SOFTWARE LICENSES
+==============================
+
+ION (Interplanetary Overlay Network) is licensed under the BSD 3-Clause
+License (see license.txt). However, ION includes the following third-party
+components, each with their own licensing terms:
+
+================================================================================
+Jerasure - Reed-Solomon Erasure Coding Library
+================================================================================
+
+Location: tc/jerasure/
+License: BSD 3-Clause License
+Source: https://github.com/tsuraan/Jerasure
+Commit: 414c96ef2b9934953b6facb31d803d79b1dd1405 (2015-01-08)
+
+Copyright (c) 2013, James S. Plank and Kevin Greenan
+All rights reserved.
+
+The full license text is available in:
+  - tc/jerasure/License.txt
+
+================================================================================
+GF-Complete - Galois Field Arithmetic Library
+================================================================================
+
+Location: tc/gf-complete/
+License: BSD 3-Clause License
+Source: https://github.com/ceph/gf-complete
+Commit: a6862d1018b5916ec8c3d7e7893095e3e0fa5368 (2017-04-10)
+
+Copyright (c) 2013, James S. Plank, Ethan L. Miller, Kevin M. Greenan,
+Benjamin A. Arnold, John A. Googie, William B. Houston, and Pamela L. Tisdale
+All rights reserved.
+
+GF-Complete is required by Jerasure for Galois Field arithmetic operations.
+
+The full license text is available in:
+  - tc/gf-complete/License.txt
+
+================================================================================
+libbloom - Bloom Filter Library
+================================================================================
+
+Location: ici/libbloom-master/
+License: BSD 2-Clause License
+
+Copyright (c) 2012, Jyri J. Virkki
+All rights reserved.
+
+The full license text is available in:
+  - ici/libbloom-master/LICENSE
+
+================================================================================
+Unity Test Framework
+================================================================================
+
+Location: contrib/Unity/
+License: MIT License
+
+Copyright (c) 2007-14 Mike Karlesky, Mark VanderVoord, Greg Williams
+
+The full license text is available in:
+  - contrib/Unity/LICENSE.txt
+
+================================================================================

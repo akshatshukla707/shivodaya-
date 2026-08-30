@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+trap 'killm f' EXIT
+#
+# Tests that bpchat sends and receives bundles and behaves well.
+#
+
+# documentation boilerplate
+CONFIGFILES=" \
+./config/host1.rc \
+"
+echo "########################################"
+echo
+pwd | sed "s/\/.*\///" | xargs echo "NAME: "
+echo
+echo "PURPOSE: Testing the basic functionality of the bpchat application.
+    Described in issue 192, bpchat is a simple utility which sends and
+    receives bundles on the terminal."
+echo
+echo "CONFIG: Custom loopback configuration: "
+echo
+for N in $CONFIGFILES
+do
+    echo "$N:"
+    cat $N
+    echo "# EOF"
+    echo
+done
+echo "OUTPUT: Bpchat and bpecho are used to ensure that bpchat can send and
+    receive text messages in bundles.  The time required to close the
+    bpchat program is also tested. ERROR messages are given on failure.
+    No explicit PASS messages are given, but the overall test return
+    value will reflect test success."
+echo
+echo "########################################"
+
+FAIL=0
+
+echo "Killing old ION..."
+./cleanup
+sleep 1
+
+# Prepare for test start
+rm -f ion.log bpchatoutput bpchatinfifo
+
+echo "Starting ION..."
+srcdir=`pwd`
+CONFIGDIR="config"
+"ionstart" -I "${CONFIGDIR}/host1.rc"
+
+echo "Start a bpecho."
+bpecho ipn:1.1 & BPECHOPID=$!
+
+echo "Start a bpchat, and send it the bpchatinput file without closing bpchat's
+STDIN.  This allows bpchat to wait to receive some bundles before closing."
+mkfifo bpchatinfifo
+bpchat ipn:1.2 ipn:1.1 < bpchatinfifo > bpchatoutput & BPCHATPID=$!
+
+exec 7> bpchatinfifo   # Open file descriptor 7 to the fifo
+cat bpchatinput >&7    # Send the input. Keep file descriptor 7 open so bpchat won't quit.
+
+echo "Checking if bpecho and bpchat are running..."
+ps aux | grep bpecho | grep -v grep
+ps aux | grep bpchat | grep -v grep
+
+echo "Wait for bpchatoutput to contain the expected data (polling with timeout)."
+
+# Total budget needs to cover slow CI runners; locally bpchat delivers all 40
+# lines in ~1s, but loaded ARC runners have been seen progressing at ~1
+# line/sec, so 30s was on the edge and produced intermittent u20/u22
+# failures with 27-32/40 delivered before timeout. Bump the overall budget
+# but also bail early when delivery has actually stalled (no new lines for
+# STALL_BUDGET seconds) so a real hang still fails fast.
+
+MAX_WAIT_TIME=90
+STALL_BUDGET=20
+POLL_INTERVAL=1
+
+EXPECTED_LINES=$(wc -l < bpchatinput)
+WAIT_START_TIME=$SECONDS
+LAST_PROGRESS_TIME=$SECONDS
+LAST_LINE_COUNT=0
+while true; do
+    if diff bpchatinput bpchatoutput > /dev/null; then
+        echo "Bpchat output matches bpchatinput. Bundles received."
+        break
+    fi
+
+    CURRENT_LINE_COUNT=$(wc -l < bpchatoutput 2>/dev/null || echo 0)
+    CURRENT_WAIT_TIME=$((SECONDS - WAIT_START_TIME))
+
+    if [ "$CURRENT_LINE_COUNT" -gt "$LAST_LINE_COUNT" ]; then
+        LAST_LINE_COUNT=$CURRENT_LINE_COUNT
+        LAST_PROGRESS_TIME=$SECONDS
+    fi
+    STALL_TIME=$((SECONDS - LAST_PROGRESS_TIME))
+
+    if [ $CURRENT_WAIT_TIME -ge $MAX_WAIT_TIME ]; then
+        echo "ERROR: Overall timeout waiting for bpchatoutput to match bpchatinput."
+        echo "       Reached $CURRENT_LINE_COUNT/$EXPECTED_LINES lines in ${CURRENT_WAIT_TIME}s."
+        FAIL=1
+        break
+    fi
+
+    if [ $STALL_TIME -ge $STALL_BUDGET ] && [ "$CURRENT_LINE_COUNT" -gt 0 ]; then
+        echo "ERROR: Delivery stalled at $CURRENT_LINE_COUNT/$EXPECTED_LINES lines"
+        echo "       (no progress for ${STALL_TIME}s, exceeding ${STALL_BUDGET}s stall budget)."
+        FAIL=1
+        break
+    fi
+
+    echo "Waiting for bundles... ${CURRENT_LINE_COUNT}/${EXPECTED_LINES} lines (${CURRENT_WAIT_TIME}/${MAX_WAIT_TIME}s elapsed, ${STALL_TIME}s since last progress)"
+    sleep $POLL_INTERVAL
+done
+
+# Wait until the end of polling to send EOF to bpchat's stdin
+exec 7>&-
+
+echo "Close bpchat and bpecho.  Time how long it takes bpchat to close."
+SECONDS=0
+# Give bpchat a small moment to process the EOF and exit gracefully
+sleep 1
+kill $BPECHOPID $BPCHATPID 2>/dev/null # Killing bpchat is a backup in case it hangs
+wait $BPCHATPID 2>/dev/null
+FINISHSECONDS=$SECONDS
+wait $BPECHOPID 2>/dev/null
+
+# Verify results.
+if [ $FINISHSECONDS -ge 30 ]; then
+    echo "ERROR: bpchat took $FINISHSECONDS seconds to finish, too long."
+    FAIL=1
+fi
+
+if ! diff bpchatinput bpchatoutput > /dev/null; then
+    echo "ERROR: Bpchat didn't give expected output after waiting."
+    diff bpchatinput bpchatoutput
+    FAIL=1
+fi
+
+ionstop
+
+exit $FAIL

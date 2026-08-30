@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+#
+# Samuel Jero
+# Ohio University
+# October 3, 2012
+
+export ION_NODE_LIST_DIR=$PWD
+killm f
+echo "Cleaning up old ION..."
+rm -f ion_nodes ion.log bpdriverAduFile

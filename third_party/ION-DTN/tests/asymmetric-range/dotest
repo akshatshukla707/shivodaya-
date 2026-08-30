@@ -1,0 +1,235 @@
+#!/usr/bin/env bash
+trap 'killm f' EXIT
+. ../test_utils.sh
+#
+# Scott Burleigh
+# April 21, 2010
+# documentation boilerplate
+CONFIGFILES=" \
+./amroc.ltprc \
+./amroc.bprc \
+./global.ionrc \
+./amroc.ionrc \
+./amroc.ionsecrc \
+./amroc.ipnrc \
+"
+
+echo "########################################"
+echo
+pwd | sed "s/\/.*\///" | xargs echo "NAME: "
+echo
+echo "PURPOSE: Test out behavior using asymmetrically configured ranges in the
+    contact graph.  Bundle forwarding, reforwarding, and expiration are
+    expected."
+echo
+echo "CONFIG: A contact graph with asymmetric delay between nodes.
+    Only one node is actually configured and run in this network:"
+echo
+for N in $CONFIGFILES
+do
+    echo "$N:"
+    cat $N
+    echo "# EOF"
+    echo
+done
+echo "OUTPUT: Searching for bundle forwarding messages in ion.log to ensure
+    that the CGR engine can make correct decisions with asymmetric ranges.
+    The terminal output should also contain a variety of 'watch' characters
+    for further debugging."
+echo
+echo "########################################"
+
+echo "Cleaning up old ION..."
+rm -f ion.log cgrfetch_error.log
+killm f
+sleep 1
+
+echo "Starting ION..."
+export ION_NODE_LIST_DIR=$PWD
+rm -f ./ion_nodes
+
+./ionstart
+
+# bpadmin's 's' command starts the BP daemons asynchronously, so on a
+# heavily loaded host they can still be initializing when the first
+# bptrace below runs.  Any lag between a bundle's creation and ipnfw's
+# route computation erodes that bundle's delivery-before-expiration
+# margin, so wait until the forwarder and both LTP outducts report in
+# before starting the clock on the timed bundles.
+echo "Waiting for BP daemons to start..."
+i=0
+while [ $i -lt 30 ]
+do
+    if grep -q "ipnfw is running" ion.log \
+    && grep -q "ltpclo is running, rengine = 5" ion.log \
+    && grep -q "ltpclo is running, rengine = 9" ion.log
+    then
+        break
+    fi
+    sleep 1
+    i=`expr $i + 1`
+done
+sleep 1
+
+echo "Sending bundle with 10-second lifetime from ipn:9.1 to ipn:6.1."
+# Send a bundle destined for (nonexistent) node 6 with lifetime = 10.
+echo "Should be put into limbo: no current route, but might be opportunistic."
+bptrace ipn:9.1 ipn:6.1 dtn:none 10 0.1 "Hi"
+sleep 1
+echo ""
+echo "Watch characters should be 'aj'."
+
+echo "Sending bundle with 45-second lifetime from ipn:9.1 to ipn:6.1."
+# Send a bundle destined for (nonexistent) node 6 with lifetime = 45.
+# CGR's best-case delivery estimate for this bundle is about 21 seconds
+# (1 second to node 5, then 20 seconds on to node 6), so the lifetime
+# must comfortably exceed that estimate.  The original lifetime of 25
+# left only ~4 seconds of margin: forwarding lag on a loaded host made
+# CGR project expiration before delivery and put the bundle into limbo
+# instead of forwarding it, and once in limbo the bundle could never
+# recover, because by the time bpclock's limbo flush (at most one every
+# 4 seconds) re-presented it for forwarding, its remaining lifetime was
+# below the 21-second delivery estimate.  A 45-second lifetime leaves
+# enough margin for the bundle to be forwarded successfully even when
+# it is transiently sent to limbo and only re-forwarded 20+ seconds
+# after sending.
+echo "Should be forwarded and transmitted but never acknowledged."
+echo "Expires before delivery; may be reforwarded if the LTP"
+echo "retransmission limit is reached before it expires."
+bptrace ipn:9.1 ipn:6.1 dtn:none 45 0.1 "Hi"
+# Wait 3 seconds for LTP block aggregation to time out, generating 'efg' chars."
+sleep 3
+echo ""
+echo "Watch characters should be 'abcdefg'."
+
+echo "Sending bundle with 180-second lifetime from ipn:9.1 to ipn:6.1."
+# Send a bundle destined for (nonexistent) node 6 with lifetime = 120.
+echo "Should be forwarded and transmitted, but never acknowledged."
+echo "So reforwarded upon reaching retransmission limit."
+bptrace ipn:9.1 ipn:6.1 dtn:none 180 0.1 "Hi"
+sleep 1
+echo ""
+echo "Watch characters should be 'abcdefg'."
+
+# Wait for retransmission limits to be reached.
+echo "Waiting for 10-second bundle to expire and retransmission limits"
+echo "to be reached."
+sleep 24
+echo ""
+echo "Watch characters should include '=g' retransmissions and '!'"
+echo "session cancellations."
+
+# Wait for contact to terminate.
+echo "Note: new dynamic computation of retransmission limits affects"
+echo "session cancellation behavior."
+echo "Reforwarding the 180-second bundle; session canceled at end of contact."
+echo "Waiting for contact to terminate..."
+sleep 35
+echo ""
+echo "Contact has terminated.  Verifying results..."
+
+# Verify bundle was forwarded.
+RETVAL=0
+
+# Verification reads the cumulative "(+)" tallies in ion.log's "[x]"
+# stat lines.  Two robustness measures:
+#
+#   1. The "[x]" stat lines are written to ion.log only when bpclock
+#      emits them (on contact start/end events), not on a fixed timer, so
+#      we must force a fresh dump with bpstats rather than depend on
+#      catching an event-driven one.
+#   2. The exact tally counts vary from run to run: depending on how
+#      quickly LTP reaches its retransmission limit relative to bundle
+#      expiration and the end of the 9<->5 contact, the 45-second and
+#      180-second bundles may each be reforwarded (and so re-counted in
+#      'fwd' and 'rfw') one or more extra times.  So compare the latest
+#      cumulative counts numerically against required minimums instead
+#      of grepping for exact values.
+#
+# Note that node 9 has no egress plan to node 6, so the 9<->6 contact
+# opening at t+90 cannot yield any additional forwarding; the final
+# 'fwd' tally is settled shortly after the 9<->5 contact ends at t+60.
+# The generous poll window below only covers stat-dump and LTP-timer
+# lag on heavily loaded hosts.
+
+lastTally()
+{
+    lastBpTally "$1"
+}
+
+i=0
+while [ $i -lt 55 ]
+do
+    bpstats
+    sleep 2
+    FWD=`lastTally fwd`
+    if [ "${FWD:-0}" -ge 3 ]
+    then
+        break
+    fi
+    i=`expr $i + 1`
+done
+
+echo "Checking ion.log for at least 3 bundles sourced..."
+COUNT=`lastTally src`
+if [ "${COUNT:-0}" -ge 3 ]
+then
+    echo "OK: All bundles sourced."
+else
+    echo "ERROR: Bundles not sourced."
+    RETVAL=1
+fi
+
+echo "Checking ion.log for at least 3 bundle forwarding attempts..."
+COUNT=`lastTally fwd`
+if [ "${COUNT:-0}" -ge 3 ]
+then
+    echo "OK: At least three bundle forwarding attempts including reforward."
+else
+    echo "ERROR: Bundle forwarding is incomplete."
+    RETVAL=1
+fi
+
+echo "Checking ion.log for at least 2 bundle expirations..."
+COUNT=`lastTally exp`
+if [ "${COUNT:-0}" -ge 2 ]
+then
+    echo "OK: Two bundles expired."
+else
+    echo "ERROR: Bad bundle expiration count."
+    RETVAL=1
+fi
+
+echo "Checking ion.log for at least 1 bundle reforwarding..."
+COUNT=`lastTally rfw`
+if [ "${COUNT:-0}" -ge 1 ]
+then
+    echo "OK: At least one bundle presented for reforwarding."
+else
+    echo "ERROR: Bundle not reforwarded."
+    RETVAL=1
+fi
+
+# Generate CGR visualization data (diagnostic only).  This is run AFTER
+# the forwarding checks: cgrfetch's run time is variable, and when it ran
+# before the bundles were sourced it shifted the sends later relative to
+# the fixed contact schedule (the 9<->5 contact ends at t+60s), which
+# intermittently squeezed the reforwarding window and made the test flaky.
+echo "Generating CGR visualization data with cgrfetch..."
+echo "This creates JSON files for use with contrib/cgr-viewer tool."
+if cgrfetch -d ltp:9 -e 86400 -o cgr_to_node5.json 5 2>cgrfetch_error.log; then
+    rm -f cgrfetch_error.log
+else
+    echo "    Warning: cgrfetch failed for node 5. See cgrfetch_error.log for details."
+fi
+if cgrfetch -d ltp:9 -e 86400 -o cgr_to_node6.json 6 2>cgrfetch_error.log; then
+    rm -f cgrfetch_error.log
+else
+    echo "    Warning: cgrfetch failed for node 6. See cgrfetch_error.log for details."
+fi
+
+# Shut down ION processes.
+echo "Stopping ION..."
+#./ionstop &
+echo "Asymmetric range test completed."
+exit $RETVAL

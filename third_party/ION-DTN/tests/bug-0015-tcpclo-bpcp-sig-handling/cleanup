@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+#
+# James Swaro
+# April 25, 2012
+
+export ION_NODE_LIST_DIR=$PWD
+killm f
+echo "Cleaning up old ION ..."
+rm -f ion_nodes
+rm -f 1.ipn.tcp/ion.log 1.ipn.tcp/dpdriverAduFile
+rm -f 2.ipn.tcp/ion.log 2.ipn.tcp/testfile* 2.ipn.tcp/bpacq*

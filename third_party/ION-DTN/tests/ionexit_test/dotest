@@ -1,0 +1,421 @@
+#!/usr/bin/env bash
+trap 'killm f' EXIT
+#
+# Tests that the ionexit utility cleans up ION processes and shared resources.
+#
+# Note: The only OS that this test currently supports is Linux. The
+# verification approach depends on Linux-only utilities, so this test needs to
+# be skipped on other platforms, until additional verification methods are
+# added for the non-Linux platforms, or some platform-agnostic verification
+# approach is found.
+
+#Check for the test binary (skips if not present)
+if ! [ -e ./checksemaphores ]; then
+    echo
+    echo "The checksemaphores test program is not present!"
+    sleep 1 # delay for user feedback
+    echo ">>> Please run 'make test' to build test binaries <<<"
+    echo
+    sleep 1 # delay for user feedback
+    exit 2
+fi
+
+# Self-timeout: re-exec under a 2-minute timeout if not already.
+# This prevents the test from hanging indefinitely if ionstart or ionexit
+# gets stuck. Exit code 124 from timeout signals failure to runtests.
+IONEXIT_TIMEOUT=${IONEXIT_TIMEOUT:-120}
+if [ -z "$IONEXIT_TEST_UNDER_TIMEOUT" ]; then
+    export IONEXIT_TEST_UNDER_TIMEOUT=1
+    exec timeout "$IONEXIT_TIMEOUT" "$0" "$@"
+fi
+
+OS=$1
+echo "OS is $OS"
+echo
+
+# TODO Might need to check shared resources differently on each platform, either
+#      due to different formatting of ipcs output or different utility entirely
+function getSharedResources() {
+    memory_lines=()
+    semaphore_lines=()
+
+    if [ "$OS" == "linux" ]; then
+
+        ipcs > ipcs.txt
+
+        local section=""
+        while IFS="" read -r line || [ -n "$line" ]; do
+            if [[ -n $(echo $line | grep "Shared Memory Segments") ]]; then
+                section="memory"
+                read -r # Skip column header line
+            elif [[ -n $(echo "$line" | grep "Semaphore Arrays") ]]; then
+                section="semaphore"
+                read -r # Skip column header line
+            elif [[ -n $(echo "$line" | grep "\-\-\-\-\-\-") ]]; then
+                section=""
+            elif [[ -n ${line//[ \t]/} ]]; then
+                if [[ $section == "memory" ]]; then
+                    memory_lines[${#memory_lines[@]}]=$line
+                elif [[ $section == "semaphore" ]]; then
+                    semaphore_lines[${#semaphore_lines[@]}]=$line
+                fi
+            fi
+        done < ipcs.txt
+
+    elif [ "$OS" == "mac" ]; then
+        # Use another method
+        echo "$0: Unsupported OS: mac"
+    else
+        # Fail outright, or try and probably fail some default method
+        echo "$0: Unsupported OS: $1"
+    fi
+}
+
+# Given the name of two arrays of shared resources (memory regions XOR semaphores), produce the set
+# of resources that exist in the 2nd array and do not exist in the 1st array
+#	If a resource R exists in the 2nd array that does not exist in the 1st array,
+#	then R will be in the produced "diff" array.
+function diffResourceLists() {
+    local list_before_name=$1['@']
+    local list_after_name=$2['@']
+
+    local list_before=("${!list_before_name}")
+    local list_after=("${!list_after_name}")
+
+    # DEBUG
+    ### echo "diffResourceLists(): list_before(${#list_before[@]}) ="
+    ### for (( l=0 ; $l < ${#list_before[@]} ; l=$l+1 )); do
+    ###     echo ${list_before[$l]}
+    ### done
+    ### echo
+    ### echo "diffResourceLists(): list_after(${#list_after[@]}) ="
+    ### for (( l=0 ; $l < ${#list_after[@]} ; l=$l+1 )); do
+    ###     echo ${list_after[$l]}
+    ### done
+    ### echo
+
+    resource_list_diff=()
+
+    if [ "$OS" == "linux" ]; then
+
+        for (( a=0 ; $a < ${#list_after[@]}; a=$a+1 )); do
+            local found=0
+            for (( b=0 ; $b < ${#list_before[@]}; b=$b+1 )); do
+                local id_after=$(echo ${list_after[$a]} | awk '{ print $2 }')
+                local id_before=$(echo ${list_before[$b]} | awk '{ print $2 }')
+                if [[ "$id_after" == "$id_before" ]]; then
+                    found=1
+                fi
+            done
+            if [[ $found -eq 0 ]]; then
+                resource_list_diff[${#resource_list_diff[@]}]=${list_after[$a]}
+            fi
+        done
+
+    elif [ "$OS" == "mac" ]; then
+        # Use another method
+        echo "$0: Unsupported OS: mac"
+    else
+        # Fail outright, or try and probably fail some default method
+        echo "$0: Unsupported OS: $1"
+    fi
+}
+
+function printArray() {
+    local array_name=$1['@']
+    local array=("${!array_name}")
+
+    for (( l=0 ; $l < ${#array[@]} ; l=$l+1 )); do
+        echo ${array[$l]}
+    done
+    if [[ ${#array[@]} -eq 0 ]]; then
+        echo "(None)"
+    fi
+}
+
+
+# Start with a known clean slate
+./cleanup
+echo
+
+# Create a non-ION shared memory region & SVR4 semaphore during ION operation
+# (to verify that test can identify specifically the destruction of ION memory segments & semaphores)
+ipcmk_shm_output=$(ipcmk --shmem 1024)
+ipcmk_sem_output=$(ipcmk --semaphore 1)
+
+# FPAT is a GNU extension (only in gawk): not portable
+#extra_before_shmid=$(echo "$ipcmk_shm_output" | awk -v FPAT='[0-9]+' '{ print $1 }')
+# and, grep -o does not exist on Solaris...
+#extra_before_shmid=$(echo "$ipcmk_shm_output" | grep -o '[0-9]\+')
+# TODO sed script is broken for an input line with multiple (separated) groups of digits
+#      That doesn't occur in this context (always a single group of digits), but I'm unsatisfied.
+extra_before_shmid=$(echo "$ipcmk_shm_output" | sed 's/[^0-9]*\([0-9]\+\)[^0-9]*/\1/;t matched;d;:matched')
+extra_before_semid=$(echo "$ipcmk_sem_output" | sed 's/[^0-9]*\([0-9]\+\)[^0-9]*/\1/;t matched;d;:matched')
+
+echo "Created non-ION shared memory region before starting ION: shmid=$extra_before_shmid"
+echo "Created non-ION SVR4 semaphore before starting ION: semid=$extra_before_semid"
+echo
+
+
+# Store the shared memory regions & SVR4 semaphores that the system already has outside of ION
+getSharedResources
+memory_lines_prior=("${memory_lines[@]}")
+semaphore_lines_prior=("${semaphore_lines[@]}")
+
+echo "Shared memory regions prior to starting ION:"
+printArray "memory_lines_prior"
+echo
+
+echo "SVR4 semaphores prior to starting ION:"
+printArray "semaphore_lines_prior"
+echo
+
+
+echo "Starting ION..."
+export ION_NODE_LIST_DIR=$PWD
+
+
+# Start nodes.
+pushd 1.ipn.ltp >& /dev/null
+./ionstart
+echo
+
+
+# Store the shared memory regions & SVR4 semaphores that the system has now, including ION
+getSharedResources
+memory_lines_during=("${memory_lines[@]}")
+semaphore_lines_during=("${semaphore_lines[@]}")
+
+# Find the shared memory regions that have been added since before ION started
+# (presumably due to ION, as long as no other processes allocated shared memory during this time)
+diffResourceLists "memory_lines_prior" "memory_lines_during"
+memory_lines_ion=("${resource_list_diff[@]}")
+
+echo "Shared memory regions after starting ION:"
+printArray "memory_lines_during"
+echo
+
+echo "Shared memory regions attributed to ION:"
+printArray "memory_lines_ion"
+echo
+
+# Do the same for SVR4 semaphores
+diffResourceLists "semaphore_lines_prior" "semaphore_lines_during"
+semaphore_lines_ion=("${resource_list_diff[@]}")
+
+echo "SVR4 semaphores after starting ION:"
+printArray "semaphore_lines_during"
+echo
+
+echo "SVR4 semaphores attributed to ION:"
+printArray "semaphore_lines_ion"
+echo
+
+
+# Create another non-ION shared memory region & SVR4 semaphore during ION operation
+# (to verify that test can identify specifically the destruction of ION memory segments & semaphores)
+ipcmk_shm_output=$(ipcmk --shmem 1024)
+ipcmk_sem_output=$(ipcmk --semaphore 1)
+
+# TODO sed script is broken for an input line with multiple (separated) groups of digits
+#      That doesn't occur in this context (always a single group of digits), but I'm unsatisfied.
+extra_during_shmid=$(echo "$ipcmk_shm_output" | sed 's/[^0-9]*\([0-9]\+\)[^0-9]*/\1/;t matched;d;:matched')
+extra_during_semid=$(echo "$ipcmk_sem_output" | sed 's/[^0-9]*\([0-9]\+\)[^0-9]*/\1/;t matched;d;:matched')
+
+echo "Created non-ION shared memory region while ION is running: shmid=$extra_during_shmid"
+echo "Created non-ION SVR4 semaphore while ION is running: semid=$extra_during_semid"
+echo
+
+getSharedResources
+echo "Shared memory regions before running ionexit:"
+printArray "memory_lines"
+echo
+echo "SVR4 semaphores before running ionexit:"
+printArray "semaphore_lines"
+echo
+
+
+echo "Running ionexit..."
+
+retval=0
+
+# Unit under test
+ionexit
+ionexit_retval=$?
+
+echo
+if [[ $ionexit_retval -ne 0 ]]; then
+    echo "ERROR: Unexpected return code ($ionexit_retval) from ionexit (expecting 0)"
+    echo
+    retval=1
+fi
+
+# Return from node directory
+popd >& /dev/null
+
+
+# Get the shared memory regions & SVR4 semaphores now after ionexit
+getSharedResources
+memory_lines_after=("${memory_lines[@]}")
+semaphore_lines_after=("${semaphore_lines[@]}")
+
+echo "Shared memory regions after ionexit:"
+printArray "memory_lines_after"
+echo
+
+echo "SVR4 semaphores after ionexit:"
+printArray "semaphore_lines_after"
+echo
+
+# Compare shared memory regions to verify that ION shared memory regions have been deallocated.
+#
+# In other words, verify that none of the ION shared memory segments exist in the set of segments
+# after ionexit.
+#
+# To compute this, diffResourceLists can be used: the difference between the segments after ionexit
+# and the segments attributed to ION should be the segments attributed to ION (implying that none of
+# the ION segments are in the set of segments after ionexit).
+#
+diffResourceLists "memory_lines_after" "memory_lines_ion"
+memory_lines_ion_destroyed=("${resource_list_diff[@]}")
+
+# Set equality is equivalent to the diffResourceLists of the two sets being the empty set AND the
+# operands having the same number of elements
+diffResourceLists "memory_lines_ion_destroyed" "memory_lines_ion"
+memory_lines_ion_didnt_destroy=("${resource_list_diff[@]}")
+
+if [[    ${#memory_lines_ion_didnt_destroy[@]} -eq 0
+      && ${#memory_lines_ion_destroyed[@]} -eq ${#memory_lines_ion[@]} ]]; then
+    echo "Success: All ION shared memory regions were destroyed."
+    echo
+else
+    echo "ERROR: Not all ION shared memory regions were destroyed."
+    echo
+    retval=1
+fi
+
+echo "Remaining ION shared memory regions (${#memory_lines_ion_didnt_destroy[@]}):"
+printArray "memory_lines_ion_didnt_destroy"
+echo
+
+
+# Also compare SVR4 semaphores to verify that ION SVR4 semaphores have been destroyed.
+#
+# In other words, verify that none of the ION SVR4 semaphores exist in the set of semaphores
+# after ionexit.
+#
+# To compute this, diffResourceLists can be used: the difference between the semaphores after
+# ionexit and the semaphores attributed to ION should be the semaphores attributed to ION (implying
+# that none of the ION semaphores are in the set of semaphores after ionexit).
+#
+diffResourceLists "semaphore_lines_after" "semaphore_lines_ion"
+semaphore_lines_ion_destroyed=("${resource_list_diff[@]}")
+
+# Set equality is equivalent to the diffResourceLists of the two sets being the empty set AND the
+# operands having the same number of elements
+diffResourceLists "semaphore_lines_ion_destroyed" "semaphore_lines_ion"
+semaphore_lines_ion_didnt_destroy=("${resource_list_diff[@]}")
+
+if [[    ${#semaphore_lines_ion_didnt_destroy[@]} -eq 0
+      && ${#semaphore_lines_ion_destroyed[@]} -eq ${#semaphore_lines_ion[@]} ]]; then
+    echo "Success: All ION SVR4 semaphores were destroyed."
+    echo
+else
+    echo "ERROR: Not all ION SVR4 semaphores were destroyed."
+    echo
+    retval=1
+fi
+
+echo "Remaining ION SVR4 semaphores (${#semaphore_lines_ion_didnt_destroy[@]}):"
+printArray "semaphore_lines_ion_didnt_destroy"
+echo
+
+
+# Verify that no ION POSIX named semaphores exist
+echo "Checking if ION POSIX named semaphores no longer exist..."
+
+./checksemaphores
+checksemaphores_retval=$?
+
+if [[ $checksemaphores_retval -ne 0 ]]; then
+    echo "ERROR: Some POSIX named semaphores still exist after ionexit"
+    echo
+    retval=1
+else
+    echo "Success: No ION POSIX named semaphores exist after ionexit."
+    echo
+fi
+
+
+# Verify also that ION processes are gone. Borrowed from killm
+echo "Checking if all ION processes ended..."
+
+# Load IONPROCESSLIST from ionprocesses.txt (in ION root directory)
+PROCESS_FILE="../../ionprocesses.txt"
+if [ -f "$PROCESS_FILE" ]; then
+    IONPROCESSLIST=$(grep -v '^#' "$PROCESS_FILE" | grep -v '^[[:space:]]*$' | tr '\n' ' ')
+else
+    echo "Error: ionprocesses.txt not found at $PROCESS_FILE" >&2
+    exit 1
+fi
+
+OSNAME=`uname`
+if [ "$OSNAME" = "SunOS" ]; then
+    PS="/usr/bin/ps"
+    PS_ARGS="-fe"
+elif [[ "$OSNAME" == "MINGW"* ]]; then
+    PS="tasklist"
+    PS_ARGS=""
+else
+    PS="ps"
+    PS_ARGS="-fe"
+fi
+
+PSFILE="/tmp/ps.$$"
+# grab all running processes
+${PS} ${PS_ARGS} > ${PSFILE}
+
+# DEBUG: show the PSFILE
+#echo "Current running processes:"
+#cat ${PSFILE}
+#ps -eo pid,ppid,state,cmd
+
+# see if any of those still-running processes belong to ION
+processes_running=0
+for PROC in ${IONPROCESSLIST}; do
+    #grep "[^-a-zA-Z]${PROC}$" "${PSFILE}" | grep -v "defunct" | \
+    #    awk '{printf("  *** Unknown error: process %s not killed...try rebooting\n", $NF);}'
+    # Exclude runtests that are running test names that include ION process names
+    processline=$(grep -w "${PROC}" "${PSFILE}" | grep -v "defunct" | grep -v "runtests" | grep -v "benchmark-batch")
+    if [ -n "$processline" ]; then
+        echo "ERROR: process $PROC not killed..."
+        processes_running=$(($processes_running + 1))
+    fi
+done
+if [ $processes_running -eq 0 ]; then
+    echo "Success: All ION processes were stopped by ionexit."
+else
+    retval=1
+fi
+rm -f ${PSFILE}
+echo
+
+
+# Destroy the shared memory region allocated by this script.
+# killm destroys all shared memory regions under current user, but do this anyway in case killm is
+# changed to play nice
+echo "Destroying test script's non-ION shared memory regions... \
+(shmids=$extra_before_shmid,$extra_during_shmid)"
+ipcrm --shmem-id $extra_before_shmid --shmem-id $extra_during_shmid
+
+echo "Destroying test script's non-ION SVR4 semaphores... \
+(semids=$extra_before_semid,$extra_during_semid)"
+ipcrm --semaphore-id $extra_before_semid --semaphore-id $extra_during_semid
+
+echo
+
+# Use big-hammer method to make sure ION is stopped (in case unit under test didn't work)
+echo ""
+echo "ionexit test completed."
+
+exit $retval

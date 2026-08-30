@@ -1,0 +1,597 @@
+=head1 NAME
+
+cfdptest - CFDP test shell for ION
+
+=head1 SYNOPSIS
+
+B<cfdptest> [ I<commands_filename> ]
+
+=head1 DESCRIPTION
+
+B<cfdptest> provides a mechanism for testing CFDP file transmission.  It can
+be used in either scripted or interactive mode.  All bundles containing CFDP
+PDUs are sent with custody transfer requested and with all bundle status
+reporting disabled.
+
+When scripted with I<commands_filename>, B<cfdptest> operates in response to
+CFDP management commands contained in the provided commands file.  Each line
+of text in the file is interpreted as a single command comprising several
+tokens: a one-character command code and, in most cases, one or more command
+arguments of one or more characters.  The commands configure and initiate
+CFDP file transmission operations.
+
+If no file is specified, B<cfdptest> instead offers the user an interactive
+"shell" for command entry.  B<cfdptest> prints a prompt string (": ") to
+stdout, accepts strings of text from stdin, and interprets each string as
+a command.
+
+=head2 Transaction Modes
+
+B<cfdptest> supports two transaction modes:
+
+=over 4
+
+=item B<Unacknowledged mode> (closure latency = 0)
+
+The sender does not wait for a Finished PDU from the receiver.  The transaction
+completes immediately after EOF is sent.  Status is "Unreported" since the
+sender doesn't know if the receiver successfully received the file.
+
+=item B<Closure-requested mode> (closure latency > 0)
+
+The sender waits for a Finished PDU acknowledgment from the receiver within
+the specified closure latency period.  The transaction completes only after
+receiving the Finished PDU (or timing out).  Status indicates actual delivery
+success.
+
+=back
+
+Note: Both modes operate within CFDP Class 1 (Unacknowledged) service class
+as defined in the CFDP Blue Book.  The closure latency parameter adds an
+acknowledgment mechanism within that class.
+
+=head1 COMMANDS
+
+The supported B<cfdptest> commands (whether interactive or scripted) are as
+follows:
+
+=over 4
+
+=item B<?>
+
+The B<help> command.  This will display a listing of the commands and their
+formats.  It is the same as the B<h> command.
+
+=item B<h>
+
+An alternate form of the B<help> command.
+
+=item B<v>
+
+The B<toggle verbose mode> command.  When enabled, automatically displays detailed
+transaction summary upon completion, including event history and final outcome.
+
+=item B<s> [<sourceEntity.transactionNbr>]
+
+The B<show summary> command.  Without arguments, displays a summary table of all
+tracked transactions.  With a transaction ID (e.g., s 1.5), displays detailed
+event history and status for that specific transaction.
+
+=item B<w>
+
+The B<view active transactions> command.  This command lists all active CFDP
+transactions (both outbound and inbound) with their current state (Active,
+Suspended, or Canceled), progress (bytes transferred / total file size), and
+associated filenames.  This is useful for monitoring multiple concurrent file
+transfers.
+
+=item B<z> [<number of seconds to pause>]
+
+The B<pause> command.  When B<cfdptest> is running in interactive mode,
+this command causes the console input processing thread to pause the
+indicated number of seconds (defaulting to 1) before processing the next
+command.  This is provided for use in test scripting.
+
+=item B<d> <destination CFDP entity ID number>
+
+The B<destination> command.  This command establishes the CFDP entity
+to which the next file transmission operation will be directed.  CFDP entity
+numbers in ION are, by convention, the same as BP fully qualified node numbers.
+
+=item B<f> <source file path name>
+
+The B<from> command.  This command identifies the file that will be
+transmitted when the next file transmission operation is commanded.
+
+=item B<t> <destination file path name>
+
+The B<to> command.  This command provides the name for the file that will be
+created at the receiving entity when the next file transmission operation
+is commanded.
+
+=item B<R>
+
+The B<reset filenames> command.  This command resets both the source file name
+(B<f>) and destination file name (B<t>) to NULL.  This is useful for sending
+metadata-only transactions or for clearing previously set filenames before
+starting a new configuration.
+
+=item B<l> <lifetime in seconds>
+
+The B<time-to-live> command.  This command establishes the time-to-live for
+all subsequently issued bundles containing CFDP PDUs.  If not specified, the
+default value 86400 (1 day) is used.
+
+=item B<p> <priority>
+
+The B<priority> command.  This command establishes the priority (class of
+service) for all subsequently issued bundles containing CFDP PDUs.  Valid
+values are 0, 1, and 2.  If not specified, priority is 1.
+
+=item B<o> <ordinal>
+
+The B<ordinal> command.  This command establishes the "ordinal" (sub-priority
+within priority 2) for all subsequently issued bundles containing CFDP PDUs.
+Valid values are 0-254.  If not specified, ordinal is 0.
+
+=item B<m> <mode>
+
+The B<mode> command.  B<NOTE: This command is a prototype feature.>
+Currently the only supported value is the default value of 0.  This command
+establishes the transmission mode ("best-effort" or assured) for all
+subsequently issued bundles containing CFDP PDUs.  Valid values are
+0 (assured, reliable, with reliability provided by a reliable DTN
+convergence layer protocol), 1 (best-effort, unreliable), and 2 (assured,
+reliable, but with reliability provided by BP custody transfer).
+If not specified, transmission mode is 0.  For mode 0, the BP agent will hold
+the bundle until it receives successful delivery confirmation from the underlying
+convergence layer protocol (e.g., LTP).  For mode 1, the BP agent will send the
+bundle and release it without waiting for underlying convergence layer's delivery
+confirmation it is best effort.  B<For mode 2, NOTE: this option is NOT YET
+FUNCTIONAL.>  BPv7 does not include an official custody transfer mechanism.
+While ION contains an experimental custody transfer implementation for BPv7,
+it has not been confirmed to integrate correctly with CFDP.  Until this
+integration is validated, mode 2 should not be used.  It is recommended to use
+mode 0 for assured delivery and mode 1 for best-effort delivery.
+
+=item B<a> <latency in seconds>
+
+The B<closure latency> command.  This command establishes the transaction
+closure latency for all subsequent file transmission operations.  When it is
+set to zero, the file transmission is "open loop" and the CFDP transaction
+at the sending entity finishes when the EOF is sent.  Otherwise, the
+receiving CFDP entity is being asked to send a "Finished" PDU back to the
+sending CFDP entity when the transaction finishes at the receiving entity.
+Normally the transaction finishes at the sending entity only when that
+Finished PDU is received.  However, when I<closure latency> seconds elapse
+following transmission of the EOF PDU prior to receipt of the Finished PDU,
+the transaction finishes immediately with a Check Timer fault.
+
+=item B<n> { 0 | 1 }
+
+The B<segment metadata> command.  This command controls the insertion of
+sample segment metadata -- a string representation of the current time --
+in every file data segment PDU.  A value of 1 enables segment metadata
+insertion, while a value of 0 disables it.
+
+=item B<g> <srrflags>
+
+B<NOTE: This command is NOT YET FUNCTIONAL and requires further development.>
+While this command sets BP status report request flags on bundles containing
+CFDP PDUs, the status reporting mechanism is not operational for CFDP for
+the following reasons: (1) there is no processing logic to receive and
+interpret BP status reports at the CFDP admin endpoint, and (2) there is
+no clear mapping between individual CFDP files (which may span multiple
+bundles) and the per-bundle status reports that BP generates.  Until these
+gaps are addressed, B<users should rely on CFDP closure> (the B<a> command
+with a non-zero closure latency) to determine delivery status, or use other
+out-of-band methods to confirm file delivery.
+
+The B<srrflags> command.  This command establishes the BP status reporting
+that will be requested for all subsequently issued bundles containing
+CFDP PDUs.  I<srrflags> must be a status reporting flags string as defined
+for bptrace(1): a sequence of status report flags, separated by commas,
+with no embedded whitespace.  Each status report flag must be one of the
+following: rcv, ct, fwd, dlv, del.
+
+=item B<c> <criticality>
+
+The B<criticality> command.  This command establishes the criticality
+for all subsequently issued bundles containing CFDP PDUs.  Valid values
+are 0 (not critical) and 1 (critical).  If not specified, criticality is 0.
+Critical bundles are handled specially by the BP agent to minimize delay.
+A bundle agent can forward multiple copies of a critical bundle to improve
+the chance of the bundle reaching the destination as soon as possible.  Critical
+bundles are never placed in limbo, reforwarded, fragmented, status reported,
+or suspended in order to reduce processing time and delay.  The criticality status
+of a bundle is indicated in a prototype Quality-of-Service extension block
+implemented in ION.
+
+=item B<r> <action code> <first path name> [<second path name>]
+
+The B<filestore request> command.  This command adds a filestore request to
+the metadata that will be issued when the next file transmission operation
+is commanded.  Multiple filestore requests may be added to a single file
+transfer and will be executed B<sequentially> in the order specified,
+B<after> the file transfer has completed successfully.  These filestore
+requests operate on the B<remote> destination.
+
+B<IMPORTANT:> Filestore operations require a non-empty carrier file to be
+transmitted.  Empty files or /dev/null may not reliably trigger filestore
+execution.  Use a small file (even 1 byte) as the carrier.  The carrier
+file can be deleted automatically by including a delete file command in the
+set of filestore actions.
+
+B<Action code numbers and syntax:>
+
+=over 4
+
+=item 0 = create file
+
+B<Syntax:> r 0 <filename>
+
+Creates an empty file with the specified name.
+
+=item 1 = delete file
+
+B<Syntax:> r 1 <filename>
+
+Deletes the specified file.  Fails if the file does not exist.
+
+=item 2 = rename file
+
+B<Syntax:> r 2 <old_filename> <new_filename>
+
+Renames a file from old_filename to new_filename.
+
+=item 3 = append file
+
+B<Syntax:> r 3 <destination_file> <source_file>
+
+Appends the contents of source_file to the end of destination_file.
+Both files must exist.
+
+=item 4 = replace file
+
+B<Syntax:> r 4 <target_file> <source_file>
+
+Replaces the contents of target_file with the contents of source_file
+(truncates target_file and copies source_file into it).  Both files must exist.
+
+=item 5 = create directory
+
+B<Syntax:> r 5 <directory_name>
+
+Creates a directory with the specified name.
+
+=item 6 = remove directory
+
+B<Syntax:> r 6 <directory_name>
+
+Removes the specified directory (must be empty). Fails if the directory does
+not exist.
+
+=item 7 = deny file
+
+B<Syntax:> r 7 <filename>
+
+Ensures the specified file is deleted if it exists.
+
+=item 8 = deny directory
+
+B<Syntax:> r 8 <directory_name>
+
+Ensures the specified directory is removed if it exists.
+
+=back
+
+B<Size Limitations:>
+
+Each individual filestore request is limited to 255 bytes total, including
+overhead (3 bytes) plus the length of both filenames.  All filestore requests
+for a single transfer must fit within the metadata PDU size limit of 65,535
+bytes (64KB).  With typical filename lengths of 30 characters each, approximately
+1,000 filestore requests can be included in a single transfer.  Longer filenames
+reduce this limit proportionally.
+
+B<Execution Behavior:>
+
+Filestore requests execute sequentially after successful file transfer completion.
+If any request fails, subsequent requests may be skipped with status code 15
+(request aborted).  Use relative paths when possible to minimize metadata size.
+All paths are resolved relative to the ION working directory unless specified
+as absolute paths.
+
+B<Example Usage:>
+
+  r 2 old_config.txt old_config.backup    # Backup existing file
+  r 4 old_config.txt new_config.txt       # Replace with new content
+  r 1 new_config.txt                      # Clean up source file
+  &                                       # Execute transfer with operations
+
+=item B<u> '<message text>'
+
+The B<user message> command.  This command adds a user message to the
+metadata that will be issued when the next file transmission operation
+is commanded.
+
+=item B<x> [<directory_path_or_pattern>]
+
+The B<list local directory> command.  This command lists the contents of the
+specified local directory.  If no argument is given, lists the current
+working directory.  Supports shell glob wildcards (C<*>, C<?>, C<[...]>);
+when a wildcard is detected the argument is expanded as a glob pattern and
+all matching paths are displayed.  This is a convenience command for browsing
+the local filesystem without leaving the cfdptest shell.
+
+B<Example Usage:>
+
+  x                  # List current working directory
+  x /tmp             # List /tmp directory
+  x /tmp/*.log       # List all .log files in /tmp
+  x *.txt            # List .txt files in current directory
+
+=item B<L> <remote directory path> <local temp filename>
+
+The B<list remote directory> command (ION extension).  This command requests
+a directory listing from the remote CFDP entity specified by the most recent
+B<d> command.  The directory contents will be stored in the specified local
+temporary file.  Upon successful completion, the directory contents are
+automatically displayed.
+
+B<IMPORTANT:> This feature requires the remote CFDP entity to support the
+ION directory listing extension.  The remote node must be running either
+B<bpcpd> (CFDP remote copy daemon) or an enhanced version of B<cfdptest>
+that includes directory listing server capabilities.  Standard CFDP daemons
+(such as the basic ION CFDP implementation) do not support this extension
+and will ignore directory listing requests.
+
+B<Example Usage:>
+
+  d 2                           # Set destination entity
+  L /etc /tmp/etc_listing.txt   # Request /etc directory listing
+  # Directory contents will be auto-displayed upon completion
+
+=item B<D> <local directory listing filename>
+
+The B<display directory listing> command (ION extension).  This command
+displays the contents of a previously received directory listing file.
+The file should contain directory entries in the format produced by the
+B<L> command.
+
+B<Example Usage:>
+
+  D /tmp/etc_listing.txt        # Display contents of directory listing file
+
+=item B<&>
+
+The B<send> command.  This command initiates file transmission as configured
+by the most recent preceding B<d>, B<f>, B<t>, and B<a> commands.  If a remote
+file exists with the same filename as specified in the B<t> command, the
+delivered file is stored as a temporary file typically named B<cfdp.x.y> where
+B<x.y> is the transaction number.
+
+For closure-requested mode (non-zero closure latency), this will lead to
+failure on the receiving side due to timeout, which is controlled by the
+B<maxtimeouts> and B<ckperiod> configuration parameters in the .cfdprc
+configuration file.  The sender side will not receive a CFDP FINISHED PDU, even
+if the file transfer has completed without error.  The temporary file could
+contain a complete file and still be viable.  However, it is advised that if one
+must replace the remote file, use the filestore command to replace the file
+after initially transmitting under a temporarily different name.
+
+=item B<|>
+
+The B<get> command.  This command causes a request for file transmission to
+the local node, subject to the parameters provided by the most recent preceding
+B<f>, B<t>, and B<a> commands, to be sent to the entity identified by the
+most recent preceding B<d> command.
+
+B<NOTE> that 'get' in CFDP is implemented very differently from 'send'.  The
+'send' operation is a native element of the CFDP protocol.  The 'get' operation
+is implemented by sending to the responding entity a standardized sequence of
+message-to-user messages in a Metadata PDU - the I<user application> at the
+responding entity receives those messages and initiates a 'send' to accomplish
+transmission of the file.  This means that 'send' can succeed even if no user
+application is running at the remote node, but 'get' cannot.
+
+=item B<^> [<sourceEntity.transactionNbr>]
+
+The B<cancel> command.  This command cancels a file transmission.
+
+With no arguments (B<^>), cancels the most recently initiated file transmission.
+
+When a transaction ID is specified in the format I<sourceEntity.transactionNbr>
+(e.g., B<^ 1.42>), cancels the specified transaction.  This works for both
+outbound and inbound transactions.
+
+=item B<%> [<sourceEntity.transactionNbr>]
+
+The B<suspend> command.  This command suspends a file transmission.
+
+With no arguments (B<%>), suspends the most recently initiated file transmission.
+
+When a transaction ID is specified in the format I<sourceEntity.transactionNbr>
+(e.g., B<% 1.42>), suspends the specified transaction.
+
+B<IMPORTANT:> Suspend only works for locally-initiated (outbound) transactions.
+Attempting to suspend a remotely-initiated (inbound) transaction will result
+in an error.
+
+=item B<$> [<sourceEntity.transactionNbr>]
+
+The B<resume> command.  This command resumes a previously suspended file transmission.
+
+With no arguments (B<$>), resumes the most recently initiated file transmission.
+
+When a transaction ID is specified in the format I<sourceEntity.transactionNbr>
+(e.g., B<$ 1.42>), resumes the specified transaction.
+
+B<IMPORTANT:> Resume only works for locally-initiated (outbound) transactions.
+Attempting to resume a remotely-initiated (inbound) transaction will result
+in an error.
+
+=item B<#> [<sourceEntity.transactionNbr>]
+
+The B<report> command.  This command generates a status report for a file transmission.
+
+With no arguments (B<#>), reports on the most recently initiated file transmission.
+
+When a transaction ID is specified in the format I<sourceEntity.transactionNbr>
+(e.g., B<# 1.42>), reports on the specified transaction.  This works for both
+outbound and inbound transactions.
+
+=item B<q>
+
+The B<quit> command.  Terminates the cfdptest program.
+
+=back
+
+=head1 DIRECTORY LISTING EXTENSION
+
+The directory listing functionality (B<L> and B<D> commands) is an ION-specific
+extension to the CFDP protocol and is not part of the standard CFDP specification.
+This extension uses CFDP's "messages to user" mechanism to implement remote
+directory operations.
+
+B<Server Requirements:>
+
+For directory listing to work, the remote CFDP entity must support the ION
+directory listing extension by running one of the following:
+
+=over 4
+
+=item *
+
+B<bpcpd> - The CFDP remote copy daemon, which includes full directory listing
+server capabilities.
+
+=item *
+
+An enhanced version of B<cfdptest> or another application that implements the
+directory listing message handlers.
+
+=back
+
+Standard CFDP daemons (such as the basic ION CFDP implementation) will ignore
+directory listing requests, resulting in empty or invalid directory listing files.
+
+B<Protocol Details:>
+
+Directory listing requests are sent as special "messages to user" with a
+specific format.  The remote entity processes these messages, executes the
+directory listing operation, and responds with both the directory contents
+(as a file transfer) and a status message indicating success or failure.
+
+=head1 EXAMPLES
+
+=over 4
+
+=item Sending a file and managing the transaction
+
+  d 2                    # Set destination entity to 2
+  f /tmp/test.txt        # Set source file
+  t /tmp/received.txt    # Set destination file
+  &                      # Send the file
+  v                      # View all active transactions
+  % 1.5                  # Suspend transaction 1.5
+  $ 1.5                  # Resume transaction 1.5
+  # 1.5                  # Get status report for transaction 1.5
+
+=item Sending metadata-only (no file)
+
+  d 2                    # Set destination entity
+  R                      # Reset filenames to NULL
+  u 'Status check'       # Add user message
+  &                      # Send metadata only
+
+=item Getting a file from a remote entity
+
+  d 2                         # Set remote entity (node 2)
+  f /tmp/data.log             # File on the REMOTE node to retrieve
+  t /home/user/received.log   # Where to save it LOCALLY
+  a 60                        # Set closure latency (optional)
+  |                           # Get the file from entity 2
+
+Note: The remote entity must be running a user application (such as bpcpd
+or cfdptest) to process the get request.
+
+=item Managing multiple concurrent transfers
+
+  d 2
+  f /tmp/file1.txt
+  t /tmp/dest1.txt
+  &                      # Start transfer 1
+  f /tmp/file2.txt
+  t /tmp/dest2.txt
+  &                      # Start transfer 2
+  v                      # View both transactions
+  ^ 1.100                # Cancel specific transaction by ID
+
+=back
+
+=head1 EXIT STATUS
+
+=over 4
+
+=item "0"
+
+B<cfdptest> has terminated.  Any problems encountered during operation
+will be noted in the B<ion.log> log file.
+
+=back
+
+=head1 FILES
+
+See above for details on valid I<commands_filename> commands.
+
+=head1 ENVIRONMENT
+
+No environment variables apply.
+
+=head1 DIAGNOSTICS
+
+Diagnostic messages produced by B<cfdptest> are written to the ION log
+file I<ion.log>.
+
+=over 4
+
+=item Can't open command file...
+
+The file identified by I<commands_filename> doesn't exist.
+
+=item cfdptest can't initialize CFDP.
+
+B<cfdpadmin> has not yet initialized CFDP operations.
+
+=item Can't put FDU.
+
+The attempt to initiate file transmission failed.  See the ION log for
+additional diagnostic messages from the CFDP library.
+
+=item Failed getting CFDP event.
+
+The attempt to retrieve a CFDP service indication failed.  See the ION log for
+additional diagnostic messages from the CFDP library.
+
+=item Can't request directory listing.
+
+The attempt to initiate a directory listing request failed.  This may indicate
+that the ION installation was compiled without directory listing support
+(NO_DIRLIST defined) or that required libraries are missing.
+
+=item Cannot open directory listing file...
+
+The specified directory listing file could not be opened for display.  This
+may indicate that the file doesn't exist, the directory listing request failed,
+or there are insufficient permissions to read the file.
+
+=back
+
+=head1 BUGS
+
+Report bugs to <https://github.com/nasa-jpl/ION-DTN/issues>
+
+=head1 SEE ALSO
+
+bpcp(1), bpcpd(1), cfdpadmin(1), cfdp(3)

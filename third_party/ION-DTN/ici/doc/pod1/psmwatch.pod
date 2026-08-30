@@ -1,0 +1,174 @@
+=head1 NAME
+
+psmwatch - PSM memory partition activity monitor
+
+=head1 SYNOPSIS
+
+B<psmwatch> [ I<interval> [ I<count> [ verbose ]]]
+
+B<psmwatch> I<shared_memory_key> I<memory_size> I<partition_name> I<interval> I<count> [ verbose ]
+
+B<psmwatch> B<-d> [ I<interval_minutes> [ I<percent_threshold> [ I<warn_pct> [ I<warn_cadence_sec> ] ] ] ] [ I<shared_memory_key> I<memory_size> I<partition_name> ]
+
+=head1 DESCRIPTION
+
+For I<count> interations, B<psmwatch> sleeps I<interval> seconds and then
+invokes the psm_print_trace() function (see psm(3)) to report on PSM dynamic
+memory management activity in the PSM-managed shared memory partition
+identified by I<shared_memory_key> (hexadecimal or decimal) during that interval.
+If the optional B<verbose> parameter is specified, the printed PSM activity trace will be
+verbose as described in psm(3).
+
+If I<shared_memory_key>, I<memory_size>, and I<partition_name> are omitted,
+B<psmwatch> will auto-detect these parameters from the ION configuration.
+
+To prevent confusion, when explicit parameters are specified, the I<memory_size>
+and I<partition_name> are compared to those declared when this shared memory
+partition was initially managed; if they don't match, B<psmwatch> immediately
+terminates.
+
+If I<interval> is zero, B<psmwatch> merely prints a current usage summary
+for the indicated shared-memory partition and terminates.  If negative, B<psmwatch>
+will repeat with intervals of -I<interval> seconds until interrupted but
+will disable any memory tracing.
+
+B<psmwatch> is helpful for detecting and diagnosing memory leaks.  For
+debugging the ION protocol stack:
+
+=head2 Daemon Mode
+
+When invoked with the B<-d> flag, B<psmwatch> runs as a background daemon
+that periodically reports PSM partition usage percentage to B<ion.log>.
+No memory allocation tracing is performed in this mode, minimizing overhead.
+
+The daemon reports usage when either:
+
+=over 4
+
+=item *
+
+The reporting interval elapses (default: 10 minutes)
+
+=item *
+
+The usage percentage crosses a threshold boundary (default: 5%, meaning
+reports occur when usage crosses 5%, 10%, 15%, etc.)
+
+=back
+
+If I<shared_memory_key>, I<memory_size>, and I<partition_name> are omitted,
+B<psmwatch> will attach to ION and use the default working memory partition
+parameters from the ION configuration.
+
+=over 8
+
+=item I<interval_minutes>
+
+Reporting interval in minutes.  Default is 10.
+
+=item I<percent_threshold>
+
+Percentage threshold for change reporting.  Default is 5, meaning a report
+is generated whenever usage crosses any multiple of 5%.
+
+=item I<warn_pct>
+
+High-water warning threshold as a percentage of memory used.  Default is 90.
+When usage exceeds this threshold, B<psmwatch> logs a C<[!] WARNING>
+message to B<ion.log>.  When usage drops back below the threshold, a
+C<[i] ... recovered> message is logged.  Set to 0 to disable warnings.
+
+=item I<warn_cadence_sec>
+
+While usage remains above the warning threshold, repeated warnings are
+logged at this interval (in seconds).  Default is 60.
+
+=back
+
+The daemon can be stopped by sending SIGTERM or SIGINT to the process.
+
+=head2 Trace Lifecycle
+
+When B<psmwatch> starts a trace episode (in standard mode with a positive
+I<interval>), it allocates a shared memory region for trace operations.
+The size of this region defaults to 20 MB but can be configured via the
+I<traceShmSize> parameter in the B<.ionconfig> file (see ionconfig(5)).
+
+ION processes that perform PSM operations automatically join an active
+trace episode and log their allocation and deallocation events.  When
+B<psmwatch> stops the trace (or is terminated), it sets a global flag
+that signals all participant processes to detach from the trace shared
+memory.
+
+A I<traceCount> mechanism tracks trace episodes.  When a new episode starts,
+the global episode counter is incremented.  Participant processes detect the
+new episode and cleanly stop the old trace before joining the new one.
+This prevents shared memory leaks that would otherwise occur when processes
+hold stale references to ended trace episodes.
+
+=head2 Standard Mode
+
+For debugging the ION protocol stack:
+
+=over 8
+
+=item I<shared_memory_key>
+
+Normally "65281", but might be overridden by the value of wmKey in the
+.ionconfig file used to configure the node under study.
+
+=item I<memory_size>
+
+As given by the value of wmKey in the .ionconfig file used to configure the
+node under study.  If this value is not stated in the .ionconfig file, the
+default value is "5000000".
+
+=item I<partition_name>
+
+Always "ionwm".
+
+=back
+
+=head1 EXIT STATUS
+
+=over 4
+
+=item "0"
+
+B<psmwatch> has terminated.
+
+=back
+
+=head1 FILES
+
+No configuration files are needed.
+
+=head1 ENVIRONMENT
+
+No environment variables apply.
+
+=head1 DIAGNOSTICS
+
+The following diagnostics may be issued to the B<ion.log> log file:
+
+=over 4
+
+=item Can't attach to psm.
+
+ION system error.  One possible cause is that ION has not yet been
+initialized on the local computer; run ionadmin(1) to correct this.
+
+=item Can't start trace.
+
+Insufficient ION working memory to contain trace information.  Reinitialize
+ION with more memory.
+
+=back
+
+=head1 BUGS
+
+Report bugs to <https://github.com/nasa-jpl/ION-DTN/issues>
+
+=head1 SEE ALSO
+
+sdrwatch(1), psm(3)

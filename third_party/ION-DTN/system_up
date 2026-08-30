@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+#
+# system_up
+# Patricia Lindner
+# Aug 4, 2014
+#
+# This program checks whether the entire ION system or individual subsystems are running.
+
+function USAGE {
+    echo
+    echo "System_Up: Interplanetary Overlay Network system status script"
+    echo "USAGE:"
+    echo "  system_up [-A] [-W [time]] [-i \"{p|w} [ion]\"] [-b \"{p|w} [bp]\"] [-l \"{p|w} [ltp]\"] [-D \"{p|w} [dtpc]\"] [-c \"{p|w} [cfdp]\"]"
+    echo
+    echo "  -A                Run all checks without polling"
+    echo "  -W [time]         Run all checks with polling and optional timeout (in seconds)"
+    echo
+    echo "  -i \"{p|w} [ion]\"  Check ion subsystem (p=polling, w=wait, optional timeout)"
+    echo "  -b \"{p|w} [bp]\"   Check bp subsystem (p=polling, w=wait, optional timeout)"
+    echo "  -l \"{p|w} [ltp]\"  Check ltp subsystem (p=polling, w=wait, optional timeout)"
+    echo "  -D \"{p|w} [dtpc]\" Check dtpc subsystem (p=polling, w=wait, optional timeout)"
+    echo "  -c \"{p|w} [cfdp]\" Check cfdp subsystem (p=polling, w=wait, optional timeout)"
+    echo "  -h                Display this help message"
+    exit 1
+}
+
+function CHECK_ARGS {
+    local optarg="$1"
+    local opt="$2"
+    # Split OPTARG into mode and optional timeout
+    read -r mode timeout <<< "$optarg"
+    if [[ ! "$mode" =~ ^(p|w)$ ]]; then
+        echo "Error: Invalid mode '$mode' for option -$opt. Must be 'p' or 'w'."
+        USAGE
+    fi
+    if [[ -n "$timeout" && ! "$timeout" =~ ^[0-9]+$ ]]; then
+        echo "Error: Invalid timeout '$timeout' for option -$opt. Must be a number."
+        USAGE
+    fi
+}
+
+function CHECK_COMMAND {
+    local cmd="$1"
+    if ! command -v "$cmd" &>/dev/null; then
+        echo "Error: Command '$cmd' not found."
+        exit 1
+    fi
+}
+
+# Collect checks to run
+# Checks are separated by \n
+# Format of a check is "admin_cmd|t_args"
+checks=""
+
+while getopts ":AW:i:b:l:D:c:h" opt; do
+    case $opt in
+        A)
+            for cmd in "ionadmin" "bpadmin" "ltpadmin" "dtpcadmin" "cfdpadmin"; do
+                CHECK_COMMAND "$cmd"
+                checks="${checks}${cmd}|t w\n"
+            done
+            ;;
+        W)
+            if [ -n "$OPTARG" ] && ! echo "$OPTARG" | grep -Eq '^[0-9]+$'; then
+                echo "Error: Invalid timeout '$OPTARG' for -W. Must be a number."
+                USAGE
+            fi
+            for cmd in "ionadmin" "bpadmin" "ltpadmin" "dtpcadmin" "cfdpadmin"; do
+                CHECK_COMMAND "$cmd"
+                checks="${checks}${cmd}|t p ${OPTARG}\n"
+            done
+            ;;
+        i)
+            CHECK_ARGS "$OPTARG" "i"
+            CHECK_COMMAND "ionadmin"
+            checks="${checks}ionadmin|t ${OPTARG}\n"
+            ;;
+        b)
+            CHECK_ARGS "$OPTARG" "b"
+            CHECK_COMMAND "bpadmin"
+            checks="${checks}bpadmin|t ${OPTARG}\n"
+            ;;
+        l)
+            CHECK_ARGS "$OPTARG" "l"
+            CHECK_COMMAND "ltpadmin"
+            checks="${checks}ltpadmin|t ${OPTARG}\n"
+            ;;
+        D)
+            CHECK_ARGS "$OPTARG" "D"
+            CHECK_COMMAND "dtpcadmin"
+            checks="${checks}dtpcadmin|t ${OPTARG}\n"
+            ;;
+        c)
+            CHECK_ARGS "$OPTARG" "c"
+            CHECK_COMMAND "cfdpadmin"
+            checks="${checks}cfdpadmin|t ${OPTARG}\n"
+            ;;
+        h)
+            USAGE
+            ;;
+        \?)
+            echo "Invalid option: -$OPTARG"
+            USAGE
+            ;;
+    esac
+done
+
+if [ -z "$checks" ]; then
+    USAGE
+fi
+
+# Run all checks in parallel, collect PIDs
+pids=""
+
+while IFS='|' read -r admin_cmd t_args; do
+    [ -z "$admin_cmd" ] && continue
+    label="${admin_cmd%admin}"  # ionadmin -> ion, bpadmin -> bp
+    echo "Checking $label"
+    echo "$t_args" | $admin_cmd &
+    pids="$pids $!"
+done <<EOF
+$(printf "$checks")
+EOF
+
+# Wait for all and sum exit codes (each admin returns 1=up, 0=down)
+ret_val=0
+for pid in $pids; do
+    wait "$pid"
+    ret_val=$((ret_val + $?))
+done
+
+echo
+echo "ION system status check completed."
+exit $ret_val

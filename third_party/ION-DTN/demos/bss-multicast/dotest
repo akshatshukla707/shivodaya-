@@ -1,0 +1,239 @@
+#!/usr/bin/env bash
+
+# Scott Burleigh
+# September 11, 2012
+
+set -e  # Exit immediately if a command exits with a non-zero status.
+
+# Cleanup function to ensure orphaned processes are killed on exit
+cleanup_processes() {
+    pkill -f "sleep 86400" 2>/dev/null || true
+    pkill bssrecv 2>/dev/null || true
+}
+
+trap 'echo "An error occurred. Exiting."; cleanup_processes; exit 1;' ERR
+trap 'cleanup_processes; killm f' EXIT
+
+# Portable timeout function (works on macOS, FreeBSD, and Linux)
+run_with_timeout() {
+    local timeout_sec=$1
+    shift
+
+    # Try native timeout first (Linux)
+    if command -v timeout >/dev/null 2>&1; then
+        timeout "$timeout_sec" "$@"
+        return $?
+    fi
+
+    # macOS/BSD fallback using background process
+    "$@" &
+    local cmd_pid=$!
+
+    ( sleep "$timeout_sec"; kill -TERM $cmd_pid 2>/dev/null ) &
+    local sleep_pid=$!
+
+    wait $cmd_pid 2>/dev/null
+    local exit_code=$?
+
+    # Clean up the sleep/kill process if command finished first
+    kill $sleep_pid 2>/dev/null
+    wait $sleep_pid 2>/dev/null
+
+    return $exit_code
+}
+
+# Documentation boilerplate
+CONFIGFILES=" \
+./global.ionrc \
+./1.ipn.bss/node.ionconfig \
+./1.ipn.bss/node.ionrc \
+./1.ipn.bss/node.ionsecrc \
+./1.ipn.bss/node.bprc.1 \
+./1.ipn.bss/node.ltprc \
+./1.ipn.bss/node.owltsim \
+./2.ipn.bss/node.ionconfig \
+./2.ipn.bss/node.ionrc \
+./2.ipn.bss/node.ionsecrc \
+./2.ipn.bss/node.bprc.1 \
+./2.ipn.bss/node.ltprc \
+./3.ipn.bss/node.ionconfig \
+./3.ipn.bss/node.ionrc \
+./3.ipn.bss/node.ionsecrc \
+./3.ipn.bss/node.bprc.1 \
+./3.ipn.bss/node.ltprc \
+./3.ipn.bss/node.bprc.2 \
+./4.ipn.bss/node.ionconfig \
+./4.ipn.bss/node.ionrc \
+./4.ipn.bss/node.ionsecrc \
+./4.ipn.bss/node.bprc.1 \
+./4.ipn.bss/node.ltprc \
+./4.ipn.bss/node.bprc.2 \
+"
+
+echo "########################################"
+echo
+pwd | sed "s/\/.*\///" | xargs echo "NAME: "
+echo
+echo "PURPOSE: Demonstrate the functionality of Bundle Streaming Service.
+Demonstrates BSS multicast:
+
+This demo simulates the multicast streaming by sending a stream
+of bundles from node 1 to multicast group 19 for 30 seconds. The network
+is a tree with the following edges all running LTP: (1,2), (2,3) and (2,4).
+Node 3 and 4 are part of multicast group 19."
+
+echo
+echo "CONFIG: 4 node custom BSS:"
+echo
+for N in $CONFIGFILES
+do
+    echo "$N:"
+    cat "$N"
+    echo "# EOF"
+    echo
+done
+echo "OUTPUT: Terminal messages will relay results."
+echo
+echo "########################################"
+
+# Establish absolute base directory for reliable pathing
+BASE_DIR="$PWD"
+
+./cleanup
+echo "Starting ION..."
+export ION_NODE_LIST_DIR="$BASE_DIR"
+rm -f ./ion_nodes
+sleep 1
+
+# Start nodes
+cd "$BASE_DIR/1.ipn.bss"
+echo "Starting node 1..."
+./ionstart >& node1.stdout &
+sleep 5
+
+cd "$BASE_DIR/2.ipn.bss"
+echo "Starting node 2..."
+./ionstart >& node2.stdout &
+sleep 1
+
+cd "$BASE_DIR/3.ipn.bss"
+echo "Starting node 3..."
+./ionstart >& node3.stdout &
+sleep 1
+
+cd "$BASE_DIR/4.ipn.bss"
+echo "Starting node 4..."
+./ionstart >& node4.stdout &
+
+# Wait for all nodes to be configured
+sleep 10
+
+# Register node 3 and 4 in imc:19.0
+cd "$BASE_DIR/3.ipn.bss"
+echo "Register node 3 into multicast group imc:19.0"
+bpadmin node.bprc.2
+
+cd "$BASE_DIR/4.ipn.bss"
+echo "Register node 4 into multicast group imc:19.0"
+bpadmin node.bprc.2
+
+sleep 5
+
+# Start BSS receiver on nodes 3 and 4
+echo
+echo "Starting bssrecv application..."
+cd "$BASE_DIR/3.ipn.bss"
+sleep 86400 | bssrecv 3 bssDB ./ imc:19.0 > /dev/null 2>&1 &
+BSSRECV3_PID=$!
+cd "$BASE_DIR/4.ipn.bss"
+sleep 86400 | bssrecv 3 bssDB ./ imc:19.0 > /dev/null 2>&1 &
+BSSRECV4_PID=$!
+
+# Wait for all nodes to be fully initialized before streaming
+sleep 10
+
+cd "$BASE_DIR/1.ipn.bss"
+echo
+echo "Sending a stream of bundles from node 1 to group 19 for 30 seconds..."
+echo "bssStreamingApp started at $(date +"%Y/%m/%d-%T")"
+bssStreamingApp ipn:1.2 imc:19.0 > /dev/null 2>&1 &
+BSSSTREAM_PID=$!
+sleep 30
+
+# Silenced Solaris permission warnings
+pkill -INT bssStreamingApp 2>/dev/null || true
+TOTIME=$(date +"%Y/%m/%d-%T")
+echo
+
+# Give nodes enough time to receive all the reforwarded frames from node 1
+echo "Wait 15 seconds to ensure the complete reception of the stream from node 2..."
+sleep 15
+pkill bssrecv 2>/dev/null || true
+sleep 1
+pkill -f "sleep 86400" 2>/dev/null || true
+
+# Check that data was actually received in the database
+cd "$BASE_DIR/3.ipn.bss"
+if [ ! -s bssDB.dat ]; then
+    echo "Node 3 did not receive data, test failed."
+    exit 1
+fi
+
+cd "$BASE_DIR/4.ipn.bss"
+if [ ! -s bssDB.dat ]; then
+    echo "Node 4 did not receive data, test failed."
+    exit 1
+fi
+
+echo
+echo "Replaying the received stream."
+cd "$BASE_DIR/3.ipn.bss"
+run_with_timeout 65 bssrecv 1 bssDB ./ imc:19.0 2000/01/01-00:00:01 "$TOTIME" < /dev/null > node3_replay.stdout 2>&1 &
+REPLAY3_PID=$!
+
+cd "$BASE_DIR/4.ipn.bss"
+run_with_timeout 65 bssrecv 1 bssDB ./ imc:19.0 2000/01/01-00:00:01 "$TOTIME" < /dev/null > node4_replay.stdout 2>&1 &
+REPLAY4_PID=$!
+echo
+sleep 70
+
+pkill bssrecv 2>/dev/null || true
+sleep 1
+pkill -f "sleep 86400" 2>/dev/null || true
+
+# Check that data was replayed
+cd "$BASE_DIR/3.ipn.bss"
+if ! grep -qF "**********10" node3_replay.stdout ; then
+    echo "Replay failed in node 3."
+    exit 1
+fi
+
+cd "$BASE_DIR/4.ipn.bss"
+if ! grep -qF "**********10" node4_replay.stdout ; then
+    echo "Replay failed in node 4."
+    exit 1
+fi
+
+# Removed the redundant cd call here
+if [ ! -s bssDB.dat ]; then
+    echo "Node 4 did not receive data, test failed."
+    exit 1
+fi
+
+# Shut down ION processes
+echo
+echo "Stopping ION..."
+
+# Give all nodes time to shut down, then clean up
+sleep 15
+
+# Bypass graceful shutdown (ionstop is flaky on Solaris)
+cd "$BASE_DIR"
+
+echo "BSS multicast demo completed."
+echo "Output logs available:"
+echo "  - Node 1 streaming app: 1.ipn.bss/node1_bssStreamingApp.stdout"
+echo "  - Node 3 receiver: 3.ipn.bss/node3_bssrecv.stdout"
+echo "  - Node 3 replay: 3.ipn.bss/node3_replay.stdout"
+echo "  - Node 4 receiver: 4.ipn.bss/node4_bssrecv.stdout"
+echo "  - Node 4 replay: 4.ipn.bss/node4_replay.stdout"

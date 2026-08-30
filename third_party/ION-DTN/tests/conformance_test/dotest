@@ -1,0 +1,128 @@
+#!/usr/bin/env bash
+trap 'killm f' EXIT
+#
+# Nate Richard
+# 2026-01-12
+
+CONFIGFILES=" \
+./2.ipn.udp/ipn.bprc \
+./2.ipn.udp/ipn.bpsecrc \
+./2.ipn.udp/ipn.ionconfig \
+./2.ipn.udp/ipn.ionrc \
+./2.ipn.udp/ipn.ionsecrc \
+./2.ipn.udp/ipn.ipnrc \
+./3.ipn.udp/ipn.bprc \
+./3.ipn.udp/ipn.bpsecrc \
+./3.ipn.udp/ipn.ionconfig \
+./3.ipn.udp/ipn.ionrc \
+./3.ipn.udp/ipn.ionsecrc \
+./3.ipn.udp/ipn.ipnrc \
+"
+
+echo "########################################"
+echo
+pwd | sed "s/\/.*\///" | xargs echo "NAME: "
+echo
+echo "PURPOSE: Verify several bundles are handled correctly to ensure ION
+    conformance with RFC 9171.
+"
+
+sleep 3
+
+echo
+echo "CONFIG: 2 node custom:"
+echo
+for N in $CONFIGFILES
+do
+    echo "$N:"
+    cat "$N"
+    echo "# EOF"
+    echo
+done
+echo "OUTPUT: Terminal messages will relay results."
+echo
+echo "########################################"
+echo
+
+# Find the latest available Python 3 version >= 3.9
+PYTHON_CMD=""
+MAX_MINOR=-1
+
+check_python_version() {
+    local py_exec=$1
+    if command -v "$py_exec" &> /dev/null; then
+        local py_maj=$("$py_exec" -c 'import sys; print(sys.version_info[0])' 2>/dev/null)
+        local py_min=$("$py_exec" -c 'import sys; print(sys.version_info[1])' 2>/dev/null)
+        if [ "$py_maj" = "3" ] && [ "$py_min" -ge 9 ]; then
+            if [ "$py_min" -gt "$MAX_MINOR" ]; then
+                MAX_MINOR=$py_min
+                PYTHON_CMD="$py_exec"
+            fi
+        fi
+    fi
+}
+
+# Check standard python3 first
+check_python_version python3
+
+i=20
+while [ $i -ge 9 ]; do
+    check_python_version "python3.$i"
+    i=$((i - 1))
+done
+
+if [ -z "$PYTHON_CMD" ]; then
+    echo "SKIP: Python 3.9 or higher is required but not found."
+    exit 2
+fi
+
+PYTHON_VERSION="3.$MAX_MINOR"
+echo "Using Python $PYTHON_VERSION (via $PYTHON_CMD)"
+
+./cleanup
+sleep 1
+echo "Starting ION..."
+export ION_NODE_LIST_DIR=$PWD
+rm -f ./ion_nodes
+RETVAL=0
+
+# Start nodes.
+cd 2.ipn.udp
+./ionstart
+cd ../3.ipn.udp
+./ionstart
+
+# give the buffer time to clear
+echo "Sleeping for 30 seconds to clear buffer"
+sleep 30
+
+bpsink ipn:3.1 >/dev/null &
+BPSINKPID=$!
+cd ../
+
+# pause for bpsink
+sleep 5
+
+echo "Sending bundles..."
+$PYTHON_CMD runtest.py bundles.txt
+STATCHECK=$?
+
+# bpsink does not self-terminate, so send it SIGINT
+echo "Stopping bpsink..."
+kill -2 $BPSINKPID >/dev/null 2>&1
+sleep 1
+kill -9 $BPSINKPID >/dev/null 2>&1
+
+if [ $STATCHECK -eq 0 ]; then
+    echo "SUCCESS: Conformance test passed!"
+else
+    echo "FAIL: A conformance bundle failed."
+    RETVAL=1
+fi
+
+echo -e "\nStopping ION..."
+# End-of-test cleanup removed so logs survive failures; runtests cleans on
+# pass and the initial ./cleanup above gives a clean slate for manual runs.
+# ./cleanup
+echo -e "...test terminated.\n"
+exit $RETVAL

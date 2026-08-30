@@ -1,0 +1,151 @@
+#!/usr/bin/env bash
+trap 'killm f' EXIT
+#
+# Scott Burleigh
+# May 23, 2012
+#
+# Modified March, 28, 2025
+#
+
+# documentation boilerplate
+CONFIGFILES=" \
+./2.node.tcp/node.bprc \
+./2.node.tcp/node.ionconfig \
+./2.node.tcp/node.ionrc \
+./2.node.tcp/node.ionsecrc \
+./2.node.tcp/node.ipnrc \
+./2.node.tcp/config1 \
+./2.node.tcp/config2 \
+./2.node.tcp/config3 \
+./2.node.tcp/config4 \
+./2.node.tcp/config5 \
+./2.node.tcp/config6 \
+./2.node.tcp/config7
+"
+
+echo "########################################"
+echo
+pwd | sed "s/\/.*\///" | xargs echo "NAME: "
+echo
+echo "PURPOSE: exercise congestion forecasting in various configurations
+    to demonstrate that it is working properly."
+echo
+echo "CONFIG: 2 node custom:"
+echo
+for N in $CONFIGFILES
+do
+    echo "$N:"
+    cat $N
+    echo "# EOF"
+    echo
+done
+echo "OUTPUT: Terminal messages will relay results."
+echo
+echo "########################################"
+
+./cleanup
+killm
+
+echo "Starting ION..."
+export ION_NODE_LIST_DIR=$PWD
+RETVAL=0
+
+# Start nodes.
+cd 2.node.tcp
+./ionstart
+../../../system_up -i "p 30" -b "p 30"
+
+if [ "$?" -eq 2 ]
+then
+    echo ""
+else
+    echo "Node not started: Aborting Test"
+    exit 1
+fi
+
+echo "0. ION started, no congestion forecasted."
+echo ""
+
+# Verify each step by checking the last forecast entry in ion.log
+# after each ionadmin command. This avoids race conditions with
+# bpclock's periodic congestion checks producing duplicate entries.
+FORECAST_PATTERN="No congestion collapse predicted|Congestion collapse forecast|No congestion forecast; horizon reached"
+
+check_last_forecast() {
+    local step=$1
+    local expected=$2
+    local last_entry
+    last_entry=$(grep -E "$FORECAST_PATTERN" ion.log | tail -1)
+    if echo "$last_entry" | grep -q "$expected"; then
+        echo "PASS step $step: $expected"
+    else
+        echo "FAIL step $step: expected '$expected'"
+        echo "  got: $last_entry"
+        RETVAL=1
+    fi
+}
+
+echo "Now running all test configurations... "
+echo ""
+
+ionadmin config1
+echo "1. Initial state: compute and prints predicted usage. No horizon, but huge capacity (default), growth rate zero."
+echo "Expect no congestion."
+sleep 10
+check_last_forecast 1 "No congestion collapse predicted"
+
+echo ""
+ionadmin config2
+echo "2. Limiting occupancy, net growth still zero."
+echo "Expect no congestion."
+sleep 10
+check_last_forecast 2 "No congestion collapse predicted"
+
+echo ""
+ionadmin config3
+echo "3. Adding imbalanced contacts, growth rate 100000."
+echo "Expect congestion forecasted."
+sleep 10
+check_last_forecast 3 "Congestion collapse forecast"
+
+echo ""
+ionadmin config4
+echo "4. Limiting horizon to current time."
+echo "Expect no congestion due to shortened horizon."
+sleep 10
+check_last_forecast 4 "No congestion forecast; horizon reached"
+
+echo ""
+ionadmin config5
+echo "5. Extending forecast horizon to 1000 seconds."
+echo "Still expect no congestion at 1000 sec horizon."
+sleep 10
+check_last_forecast 5 "No congestion collapse predicted"
+
+echo ""
+ionadmin config6
+echo "6. Extending horizon to 200000 seconds."
+echo "Expect congestion to be forecasted."
+sleep 10
+check_last_forecast 6 "Congestion collapse forecast"
+
+echo ""
+ionadmin config7
+echo "7. Increasing filesystem occupancy limit."
+echo "Expect no congestion due to higher buffer."
+sleep 10
+check_last_forecast 7 "No congestion collapse predicted"
+
+echo -e "\nStopping ION...\n"
+echo ""
+
+if [ "$RETVAL" -eq 0 ]; then
+    echo "SUCCESS: All congestion forecast steps produced expected results."
+else
+    echo "FAILURE: One or more steps did not match expected forecast."
+    echo "Contents of ion.log matching criteria:"
+    grep -E "$FORECAST_PATTERN" ion.log
+fi
+
+echo -e "...congestion forecasting test terminated.\n"
+exit $RETVAL

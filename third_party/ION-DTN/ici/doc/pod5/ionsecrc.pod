@@ -1,0 +1,126 @@
+=head1 NAME
+
+ionsecrc - ION security database management commands file
+
+=head1 DESCRIPTION
+
+ION security database management commands are passed to B<ionsecadmin>
+either in a file of text lines or interactively at B<ionsecadmin>'s command
+prompt (:).  Commands are interpreted line-by-line, with exactly one command per
+line.  The formats and effects of the ION security database management
+commands are described below.
+
+=head1 COMMANDS
+
+=over 4
+
+=item B<?>
+
+The B<help> command.  This will display a listing of the commands and their
+formats.  It is the same as the B<h> command.
+
+=item B<#>
+
+Comment line.  Lines beginning with B<#> are not interpreted.
+
+=item B<e> { 1 | 0 }
+
+Echo control.  Setting echo to 1 causes all output printed by ionsecadmin to
+be logged as well as sent to stdout.  Setting echo to 0 disables this behavior.
+
+=item B<v>
+
+Version number.  Prints out the version of ION currently installed.  HINT:
+combine with B<e 1> command to log the version number at startup.
+
+=item B<1>
+
+The B<initialize> command.  Until this command is executed, the local ION
+node has no security database and most I<ionsecadmin> commands will fail.
+
+=item B<a key> I<key_name> I<file_name> [I<key_length>]
+
+The B<add key> command.  This command adds a named key value to the
+security database.  The content of I<file_name> is taken as the
+value of the key.
+
+If the optional I<key_length> argument is provided, the file is treated as a
+raw binary stream and exactly I<key_length> bytes are read.  This bypasses
+standard text/hex parsing and is required for ingesting raw keys from
+temporary files or pipes.
+
+Named keys can be referenced by other elements of the security database.
+
+=item B<a pubkey> I<node> I<effective_time> I<assertion_time> I<key_length> I<key_text>
+
+The B<add public key> command.  This command adds to the security database a
+public key for the indicated node.  I<effective_time> and I<assertion_ time>
+are counts of seconds from the UNIX epoch time; I<key_text> is hexadecimal.
+This command is normally expected to be issued automatically by the DTKA system.
+
+=item B<c key> I<key_name> I<file_name> [I<key_length>]
+
+The B<change key> command.  This command changes the value of the named
+key, obtaining the new key value from the content of I<file_name>.
+Like the B<add key> command, an optional I<key_length> can be provided to
+force raw binary ingestion of a specific byte count.
+
+=item B<d key> I<key_name>
+
+The B<delete key> command.  This command deletes the key identified by I<name>.
+
+=item B<d pubkey> I<node> I<effective_time>
+
+The B<delete public key> command.  This command deletes the public key for
+I<node> that is identified by I<effective_time>, a count of seconds
+from the UNIX epoch time.
+
+=item B<i key> I<key_name>
+
+This command will print information about the named key, i.e., the length of
+its current value.
+
+=item B<i pubkey> I<node_number> I<effective_time>
+
+This command will print information (e.g., key length and text) about the
+public key for I<node_number> that is identified by I<effective_time>, a
+count of seconds from the UNIX epoch time.
+
+=item B<l key>
+
+This command lists all named keys in the security database.
+
+=item B<l pubkey>
+
+This command lists all public keys in the security database.
+
+=item B<h>
+
+The B<help> command.  This will display a listing of the commands and their
+formats.  It is the same as the B<?> command.
+
+=item B<q>
+
+The B<quit> command.  Terminates the program immediately.
+
+=back
+
+=head1 EXAMPLES
+
+=over 4
+
+=item a key BABKEY ./babkey.txt
+
+Adds a new key named "BABKEY" whose value is the content of the file
+"./babkey.txt", parsed using standard text/hex rules.
+
+=item a key SESSION_KEY /tmp/key_export.dat 32
+
+Adds a new key named "SESSION_KEY" by reading exactly 32 bytes of raw
+binary data from "/tmp/key_export.dat".
+
+=back
+
+=head1 SEE ALSO
+
+ionsecadmin(1)

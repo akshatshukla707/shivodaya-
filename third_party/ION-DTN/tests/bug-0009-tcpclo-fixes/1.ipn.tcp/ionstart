@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+ionadmin	config.ionrc
+
+ionsecadmin	config.ionsecrc &
+
+bpadmin		config.bprc &

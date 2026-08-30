@@ -1,0 +1,4 @@
+#!/bin/sh
+
+echo "Removing all symbolic links from arch-rtems directory (preserving rtems_waf)"
+find ./ -maxdepth 1 -type l ! -name rtems_waf -exec rm {} \;

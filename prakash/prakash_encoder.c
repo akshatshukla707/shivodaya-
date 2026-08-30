@@ -19,8 +19,8 @@
 #include <math.h>
 #include <time.h>
 
-// #include "zco.h"
-// #include "bp.h"
+#include "zco.h"
+#include "bp.h"
 
 #define RING_BUFFER_CAPACITY 4096
 #define RING_BUFFER_MASK (RING_BUFFER_CAPACITY - 1)

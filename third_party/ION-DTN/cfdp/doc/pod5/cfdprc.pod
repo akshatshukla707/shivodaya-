@@ -1,0 +1,267 @@
+=head1 NAME
+
+cfdprc - CCSDS File Delivery Protocol management commands file
+
+=head1 DESCRIPTION
+
+CFDP management commands are passed to B<cfdpadmin> either in a file of
+text lines or interactively at B<cfdpadmin>'s command prompt (:).  Commands
+are interpreted line-by-line, with exactly one command per line.  The formats
+and effects of the CFDP management commands are described below.
+
+=head1 COMMANDS
+
+=over 4
+
+=item B<?>
+
+The B<help> command.  This will display a listing of the commands and their
+formats.  It is the same as the B<h> command.
+
+=item B<#>
+
+Comment line.  Lines beginning with B<#> are not interpreted.
+
+=item B<e> { 1 | 0 }
+
+Echo control.  Setting echo to 1 causes all output printed by cfdpadmin to be
+logged as well as sent to stdout.  Setting echo to 0 disables this behavior.
+
+=item B<v>
+
+Version number.  Prints out the version of ION currently installed.  HINT:
+combine with B<e 1> command to log the version number at startup.
+
+=item B<1>
+
+The B<initialize> command.  Until this command is executed, CFDP is not
+in operation on the local ION node and most I<cfdpadmin> commands will fail.
+
+=item B<a entity> <entity nbr> <UT protocol name> <UT endpoint name> <rtt> <incstype> <outcstype>
+
+The B<add entity> command.  This command will add a new remote CFDP entity to
+the CFDP management information base.  Valid UT protocol names are bp and
+tcp.  Endpoint name is EID for bp, socket spec (I<IP address>:I<port number>)
+for tcp.  RTT is round-trip time, used to set acknowledgement timers.  incstype
+is the type of checksum to use when validating data received from this entity;
+valid values are 0 (modular checksum), 2 (CRC32C), and 15 (the null checksum).
+outcstype is the type of checksum to use when computing the checksum for
+transmitting data to this entity.
+
+=item B<c entity>> <entity nbr> <UT protocol name> <UT endpoint name> <rtt> <incstype> <outcstype>
+
+The B<change entity> command.  This command will change information associated
+with an existing entity in the CFDP management information base.
+
+=item B<d entity>> <entity nbr>
+
+The B<delete entity> command.  This command will delete an existing entity from
+the CFDP management information base.
+
+=item B<i> [B<entity> <entity nbr>]
+
+The B<info> command.  This command displays CFDP configuration information.
+
+With no arguments (B<i>), displays information about the current state of the
+local CFDP entity, including the current settings of all parameters that can
+be managed as described below.
+
+When B<entity> <entity nbr> is specified (e.g., B<i entity 1>), displays
+detailed information about the indicated remote CFDP entity, including its
+protocol, endpoint, RTT, and checksum types.
+
+=item B<s> 'I<UTA command>'
+
+The B<start> command.  Starts the CFDP UT adapter task and the
+CFDP clock task for the local CFDP entity.
+
+The I<UTA command> can be:
+  'bputa'        - Start BP-based UT adapter only
+  'bputa proxy'  - Start BP-based UT adapter with bpcpd proxy daemon
+  'tcputa'       - Start TCP-based UT adapter
+
+When 'proxy' is specified with bputa, the bpcpd daemon is also started
+to handle incoming proxy operations (get requests from remote nodes).
+Note: bpcpd and bpcp cannot run simultaneously on the same node.
+
+=item B<m discard> { 0 | 1 }
+
+The B<manage discard> command.  This command enables or disables the
+discarding of partially received files upon cancellation of a file reception.
+The default value is 1;
+
+=item B<m requirecrc> { 0 | 1 }
+
+The B<manage CRC data integrity> command.  This command enables or disables the
+attachment of CRCs to all PDUs issued by the local CFDP entity.  The default
+value is 0;
+
+=item B<m fillchar> I<file_fill_character>
+
+The B<manage fill character> command.  This command establishes the fill
+character to use for the portions of an incoming file that have not yet
+been received.  The fill character is normally expressed in hex, e.g.,
+the default value is 0xaa.
+
+=item B<m ckperiod> I<check_cycle_period>
+
+The B<manage check interval> command.  This command establishes the number
+of seconds following reception of the EOF PDU -- or following expiration
+of a prior check cycle -- after which the local CFDP will check for
+completion of a file that is being received.  Default value is 86400 (i.e.,
+one day).
+
+=item B<m maxtimeouts> I<check_cycle_limit>
+
+The B<manage check limit> command.  This command establishes the number
+of check cycle expirations after which the local CFDP entity will invoke
+the check cycle expiration fault handler upon expiration of a check cycle.
+Default value is 7.
+
+=item B<m maxevents> I<event_queue_limit>
+
+The B<manage event queue limit> command.  This command establishes the
+maximum number of unread service indications (CFDP "events") that may be
+queued up for delivery at any time.  When the events queue length exceeds
+this figure, events are simply deleted (in decreasing age order, oldest
+first) until the limit is no longer exceeded; each such deletion is
+noted by a "[?] CFDP event queue overflow" message in the ION log.
+Applications that must observe every service indication (e.g., transfer
+monitoring tools awaiting Transaction-Finished) should drain events
+promptly and/or raise this limit.  Default value is 100.
+
+=item B<m maxtrnbr> I<max_transaction_number>
+
+The B<manage transaction numbers> command.  This command establishes the
+largest possible transaction number used by the local CFDP entity for file
+transmission transactions.  After this number has been used, the
+transaction number assigned to the next transaction will be 1.  The
+default value is 999999999.
+
+=item B<m segsize> I<max_bytes_per_file_data_segment>
+
+The B<manage segment size> command.  This command establishes the
+number of bytes of file data in each file data PDU transmitted by the
+local CFDP entity in the absence of an application-supplied reader
+function.  The default value is 65000.
+
+=item B<m inactivity> I<inactivity_period>
+
+The B<manage inactivity period> command.  This command establishes the number
+of seconds that a CFDP file transfer is allowed to go idle before the fault
+handler for inactivity is invoked.  The default is one day.
+
+When the default fault handler for inactivity is B<cancel> (the default since
+ION 4.2.0), the transaction is canceled immediately upon inactivity timeout.
+If the fault handler is set to B<ignore>, the transaction remains in the system
+and is not canceled until the check cycle mechanism expires: that is, after
+I<ckperiod> x I<maxtimeouts> additional seconds elapse without completion, at
+which point the B<checklimit> fault handler is invoked (default: cancel).
+The initial default fault handlers are compiled into the CFDP library and can
+only be changed by modifying the source code in B<libcfdpP.c> and recompiling.
+
+=item B<m throttle> I<bits_per_second>
+
+The B<manage throttle> command.  This command establishes the maximum transmit
+rate for CFDP PDUs in bits per second.  The throttle enforces a constant
+transmission rate by introducing a delay between consecutive PDU transmissions.
+The delay for each PDU is calculated as:
+
+    delay = (PDU_size_in_bits / max_rate_in_bps) seconds
+
+A value of 0 disables throttling (unlimited rate).  The default value is 0.
+
+Note: Changes take effect immediately if the UT layer (bputa) is running.  The
+setting is also persisted to the CFDP database for future restarts.
+
+Examples:
+
+  m throttle 1000000     # Limit to 1 Mbps (constant rate, takes effect immediately)
+  m throttle 10000000    # Limit to 10 Mbps
+  m throttle 0           # Disable throttle (unlimited)
+
+=item B<x> [ B<f> ]
+
+The B<stop> command.  This command stops the UT-layer service task for
+the local CFDP engine.  By default the command is refused if any CFDP
+transactions are still active (inbound or outbound), to prevent
+disrupting transfers that are in progress; append B<f> (or B<-f>) to
+force the stop regardless.  (Node shutdown via C<cfdpadmin .> always
+stops CFDP unconditionally.)
+
+=item B<w> { 0 | 1  | <activity_spec> }
+
+The B<CFDP watch> command.  This command enables and disables production of
+a continuous stream of user-selected CFDP activity indication characters.  A
+watch parameter of "1" selects all CFDP activity indication characters; "0"
+de-selects all CFDP activity indication characters; any other I<activity_spec>
+such as "p" selects all activity indication characters in the string,
+de-selecting all others.  CFDP will print each selected activity indication
+character to B<stdout> every time a processing event of the associated type
+occurs:
+
+B<p>	CFDP PDU transmitted
+
+B<q>	CFDP PDU received
+
+=item B<h>
+
+The B<help> command.  This will display a listing of the commands and their
+formats.  It is the same as the B<?> command.
+
+=item B<q>
+
+The B<quit> command.  Terminates the program immediately.
+
+=item B<t> [B<p> [I<timeout>]]
+
+The startup-test command.  Reports whether the CFDP entity is started and sets
+the program's exit code accordingly.  With B<p> ("poll") it waits up to
+I<timeout> seconds (a built-in default if omitted) for startup before giving
+up.
+
+=back
+
+=head1 EXAMPLES
+
+=over 4
+
+=item i
+
+Display general CFDP status and configuration parameters for the local entity.
+
+=item i entity 1
+
+Display detailed information about remote CFDP entity 1.
+
+=item m requirecrc 1
+
+Initiates attachment of CRCs to all subsequently issued CFDP PDUs.
+
+=back
+
+=head1 NOTE
+
+As of ION 4.1.3s, all CFDP parameter are loaded only once per start of
+UT Layer.  Changes made to CFDP configuration via subsequent cfdpadmin
+command will be stored in SDR but not loaded into running instance.
+
+To reload CFDP configuration, one needs to stop UT Layer and restart.
+As an example, to change `discard` option from 0 to 1:
+
+=over 4
+
+=item x
+
+=item m discard 1
+
+=item s 'bputa'
+
+=back
+
+This will stop UT Layer service, change discard setting, and restart/reload
+UT Layer.
+
+=head1 SEE ALSO
+
+bputa(1), cfdpadmin(1)

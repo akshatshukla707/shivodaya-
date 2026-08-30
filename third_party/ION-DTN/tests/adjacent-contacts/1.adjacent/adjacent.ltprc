@@ -1,0 +1,7 @@
+## LTP configuration for node 1
+## Span to node 2 over UDP
+
+1 100
+a span 2 100 100 1400 10000 1 'udplso 127.0.0.1:1114'
+#w 1
+s 'udplsi 127.0.0.1:1113'

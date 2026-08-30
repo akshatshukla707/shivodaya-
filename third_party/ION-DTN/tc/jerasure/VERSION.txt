@@ -1,0 +1,15 @@
+Jerasure Library - Vendored Snapshot
+
+Source: https://github.com/tsuraan/Jerasure
+Commit: 414c96ef2b9934953b6facb31d803d79b1dd1405
+Date:   2015-01-08
+License: BSD-3-Clause (see License.txt)
+
+This is a frozen snapshot of Jerasure for use in ION's TC (Trusted Collective)
+component for Reed-Solomon erasure coding.
+
+ION-specific modifications:
+- src/jerasure.c, src/liberation.c: Replaced bzero() with memset() for
+  portability. bzero() is a legacy BSD function that causes implicit function
+  declaration errors on Solaris 11 and other strict compilers. memset() is
+  C standard and portable across Linux, FreeBSD, macOS, and Solaris.

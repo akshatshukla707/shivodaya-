@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+#
+# Start ION node for incomplete LTP configuration warnings test
+
+# Start ion node
+ionadmin amroc.ionrc
+
+# Start LTP
+ltpadmin amroc.ltprc
+
+# Start bundle protocol
+bpadmin amroc.bprc
+
+# Start the IPN scheme
+ipnadmin amroc.ipnrc
+
+# Start security
+ionsecadmin amroc.ionsecrc

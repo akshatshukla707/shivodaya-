@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+#
+# Stop ION node for incomplete LTP configuration warnings test
+
+# Stop all ION processes
+ionstop
+sleep 1
+
+# Cleanup shared memory (if needed)
+killm f
+sleep 1

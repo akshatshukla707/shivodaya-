@@ -1,0 +1,115 @@
+=head1 NAME
+
+B<hmackeys> - utility program for generating HMAC keys of various lengths
+
+=head1 SYNOPSIS
+
+B<hmackeys> [ I<key_length_in_bytes> ] [ I<key_names_file> ]
+
+=head1 DESCRIPTION
+
+B<hmackeys> is a convenience utility that writes files containing
+cryptographically secure random key values.  These keys are suitable for
+use in support of BPv7 Bundle Protocol Security (BPSec), Bundle Relay
+Service (BRS), or any other function that requires symmetric keyed-hash
+authentication.
+
+The key length is configurable via a command-line argument, specified in
+bytes.  If no length is provided, it defaults to 32 bytes (256 bits),
+which is appropriate for HMAC-SHA-256.  The key material is sourced from
+the best available platform-native entropy source (e.g., C<getrandom()>,
+C<BCryptGenRandom>, C</dev/urandom>) for maximum security and portability.
+
+One key file is written for each key name provided to B<hmackeys>.  The
+content of each file is the raw binary key data, and the name given to
+each file is "I<keyname>.hmk".
+
+B<hmackeys> operates in response to the key names found in the file
+I<keynames_filename>, one name per line, if provided.  If no file is given,
+B<hmackeys> prints a simple prompt (C<:>) so that you can type key names
+directly into standard input.
+
+When the program is run in interactive mode, enter 'q' or press Ctrl-C to
+terminate.
+
+=head1 EXIT STATUS
+
+=over 4
+
+=item "0"
+
+Successful completion of key generation for all provided names.
+
+=item "-1"
+
+Failure due to invalid arguments, system error (e.g., file creation),
+or inability to generate secure random data. Check stderr for a
+descriptive error message.
+
+=back
+
+=head1 EXAMPLES
+
+=over 4
+
+=item B<hmackeys>
+
+Enter interactive key generation mode using the default key length of 32
+bytes (256 bits), suitable for HMAC-SHA-256.
+
+=item B<hmackeys 64>
+
+Enter interactive mode to generate keys with a custom length of 64 bytes
+(512 bits), suitable for HMAC-SHA-512.
+
+=item B<hmackeys 20 I<legacy_keys.txt>>
+
+Create a 20-byte (160-bit) key file, suitable for HMAC-SHA-1, for each key
+name listed in the I<legacy_keys.txt> file.
+
+=back
+
+=head1 FILES
+
+Key files are created in the current working directory with a C<.hmk>
+extension. No other files are used in the operation of B<hmackeys>.
+
+=head1 ENVIRONMENT
+
+No environment variables apply.
+
+=head1 DIAGNOSTICS
+
+The following diagnostics may be issued to standard error:
+
+=over 4
+
+=item C<Can't open keynames file...>
+
+The I<keynames_filename> specified on the command line could not be opened.
+
+=item C<Failed to allocate memory for key.>
+
+The program was unable to allocate sufficient memory for the requested
+key length.
+
+=item C<Could not generate key material: [reason]>
+
+The underlying entropy source failed.  The reason will indicate the
+specific system error.
+
+=item C<Can't write key to [file]: [reason]>
+
+The program was unable to write the generated key to its destination file.
+
+=back
+
+=head1 BUGS
+
+Report bugs to L<https://github.com/nasa-jpl/ION-DTN/issues>
+
+=head1 SEE ALSO
+
+L<brsscla(1)>, L<ionsecadmin(1)>, L<poll_entropy_src(3)>
+
+=cut

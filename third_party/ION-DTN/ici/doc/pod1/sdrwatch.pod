@@ -1,0 +1,145 @@
+=head1 NAME
+
+sdrwatch - SDR non-volatile data store activity monitor
+
+=head1 SYNOPSIS
+
+B<sdrwatch> [ I<sdr_name> ] [ -t | -s | -r | -z ] [I<interval> [I<count> [ verbose ]]]
+
+B<sdrwatch> [ I<sdr_name> ] B<-d> [ I<interval_minutes> [ I<percent_threshold> [ I<warn_pct> [ I<warn_cadence_sec> ] ] ] ]
+
+=head1 DESCRIPTION
+
+For I<count> interations (defaulting to 1), B<sdrwatch> sleeps I<interval>
+seconds and then performs the SDR operation indicated by the specified
+mode: 's' to print statistics, 'r' to reset statistics, 'z' to print ZCO
+space utilization, 't' (the default) to call the sdr_print_trace() function
+(see sdr(3)) to report on SDR data storage management activity in the SDR
+data store identified by I<sdr_name> during that interval.  If the optional
+B<verbose> parameter is specified, the printed SDR activity trace will be
+verbose as described in sdr(3). The 's', 'r' and 'z' modes do not enable tracing.
+
+If I<sdr_name> is omitted, B<sdrwatch> will auto-detect the SDR name from the
+ION configuration.
+
+If I<interval> is zero, B<sdrwatch> just performs the indicated operation
+once (for 't', it merely prints a current usage summary for the indicated
+data store) and terminates.
+
+B<sdrwatch> is helpful for detecting and diagnosing storage space leaks.  For
+debugging the ION protocol stack, I<sdr_name> is normally "ion" but might be
+overridden by the value of sdrName in the .ionconfig file used to configure
+the node under study.
+
+=head2 Daemon Mode
+
+When invoked with the B<-d> flag, B<sdrwatch> runs as a background daemon
+that periodically reports SDR heap usage and ZCO inbound/outbound heap
+occupancy percentages to B<ion.log>.  No memory allocation tracing is
+performed in this mode, minimizing overhead.
+
+The daemon reports three metrics:
+
+=over 4
+
+=item *
+
+SDR heap usage percentage (total unavailable bytes / heap size)
+
+=item *
+
+ZCO inbound heap occupancy percentage
+
+=item *
+
+ZCO outbound heap occupancy percentage
+
+=back
+
+The daemon reports when either:
+
+=over 4
+
+=item *
+
+The reporting interval elapses (default: 10 minutes)
+
+=item *
+
+Any of the three metrics crosses a threshold boundary (default: 5%, meaning
+reports occur when any metric crosses 5%, 10%, 15%, etc.)
+
+=back
+
+If I<sdr_name> is omitted, it is auto-detected from the ION configuration.
+
+=over 8
+
+=item I<interval_minutes>
+
+Reporting interval in minutes.  Default is 10.
+
+=item I<percent_threshold>
+
+Percentage threshold for change reporting.  Default is 5, meaning a report
+is generated whenever any metric crosses any multiple of 5%.
+
+=item I<warn_pct>
+
+High-water warning threshold as a percentage of memory used.  Default is 90.
+When any metric exceeds this threshold, B<sdrwatch> logs a C<[!] WARNING>
+message to B<ion.log>.  When usage drops back below the threshold, a
+C<[i] ... recovered> message is logged.  Set to 0 to disable warnings.
+
+=item I<warn_cadence_sec>
+
+While usage remains above the warning threshold, repeated warnings are
+logged at this interval (in seconds).  Default is 60.
+
+=back
+
+The daemon can be stopped by sending SIGTERM or SIGINT to the process.
+
+=head1 EXIT STATUS
+
+=over 4
+
+=item "0"
+
+B<sdrwatch> has terminated.
+
+=back
+
+=head1 FILES
+
+No configuration files are needed.
+
+=head1 ENVIRONMENT
+
+No environment variables apply.
+
+=head1 DIAGNOSTICS
+
+The following diagnostics may be issued to the B<ion.log> log file:
+
+=over 4
+
+=item Can't attach to sdr.
+
+ION system error.  One possible cause is that ION has not yet been
+initialized on the local computer; run ionadmin(1) to correct this.
+
+=item Can't start trace.
+
+Insufficient ION working memory to contain trace information.  Reinitialize
+ION with more memory.
+
+=back
+
+=head1 BUGS
+
+Report bugs to <https://github.com/nasa-jpl/ION-DTN/issues>
+
+=head1 SEE ALSO
+
+psmwatch(1), sdr(3)

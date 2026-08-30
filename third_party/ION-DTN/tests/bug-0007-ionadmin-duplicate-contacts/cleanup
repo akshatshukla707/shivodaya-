@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+#
+# Samuel Jero
+# Ohio University
+# September 21, 2012
+
+export ION_NODE_LIST_DIR=$PWD
+killm f
+echo "Cleaning up old ION..."
+rm -f ion.log tmp.txt ion_nodes

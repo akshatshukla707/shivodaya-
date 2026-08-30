@@ -1,0 +1,920 @@
+=head1 NAME
+
+bprc - Bundle Protocol management commands file
+
+=head1 DESCRIPTION
+
+Bundle Protocol management commands are passed to B<bpadmin> either in a file of
+text lines or interactively at B<bpadmin>'s command prompt (:).  Commands
+are interpreted line-by-line, with exactly one command per line.  The formats
+and effects of the Bundle Protocol management commands are described below.
+
+=head1 GENERAL COMMANDS
+
+=over 4
+
+=item B<?>
+
+The B<help> command.  This will display a listing of the commands and their
+formats.  It is the same as the B<h> command.
+
+=item B<#>
+
+Comment line.  Lines beginning with B<#> are not interpreted.
+
+=item B<e> { 1 | 0 }
+
+Echo control.  Setting echo to 1 causes all output printed by bpadmin to be
+logged as well as sent to stdout.  Setting echo to 0 disables this behavior.
+
+=item B<v>
+
+Version number.  Prints out the version of ION currently installed and the
+crypto suite BP was compiled with.  HINT: combine with B<e 1> command to log
+the version number at startup.
+
+=item B<1>
+
+The B<initialize> command.  Until this command is executed, Bundle Protocol
+is not in operation on the local ION node and most I<bpadmin> commands will
+fail.
+
+=item B<r> 'I<command_text>'
+
+The B<run> command.  This command will execute I<command_text> as if it
+had been typed at a console prompt.  It is used to, for example, run
+another administrative program.
+
+=item B<s>
+
+The B<start> command.  This command starts all schemes and all protocols
+on the local node.
+
+=item B<m heapmax> I<max_database_heap_per_acquisition>
+
+The B<manage heap for bundle acquisition> command.  This command declares
+the maximum number of bytes of SDR heap space that will be occupied by any
+single bundle acquisition activity (nominally the acquisition of a single
+bundle, but this is at the discretion of the convergence-layer input task).
+All data acquired in excess of this limit will be written to a temporary file
+pending extraction and dispatching of the acquired bundle or bundles.  Default
+is the minimum allowed value (560 bytes), which is the approximate size of a
+ZCO file reference object; this is the minimum SDR heap space occupancy in the
+event that all acquisition is into a file.
+
+=item B<m primarycrc> I<CRC type for primary block>
+
+The B<manage primary CRC type for source bundle> command.  This command sets
+the CRC type for the primary block in every locally sourced bundle.  CRC types
+are indicated by '0' for no CRC applied, '1' for CRC16, and '2' for CRC32.  See
+the Bundle Protocol specification for detailed definition of the CRC types.  The
+default value is 1 (CRC16).  Primary CRC types for bundles being relayed will
+preserve the original setting at the source node, not impacted by these settings.
+
+=item B<m payloadcrc> I<CRC type for payload block>
+
+The B<manage payload CRC type for source bundle> command.  This command sets
+the CRC type for the payload block in every locally sourced bundle.  CRC types
+are indicated by '0' for no CRC applied, '1' for CRC16, and '2' for CRC32.  See
+the Bundle Protocol specification for detailed definition of the CRC types.  The
+default value is 1 (CRC16).  Payload CRC types for bundles being relayed will
+preserve the original setting at the source node, not impacted by these settings.
+
+=item B<m maxcount> I<max_value_of_bundle_ID_sequence_nbr>
+
+The B<manage maximum bundle ID sequence number> command.  This command sets
+the maximum value that will be assigned as the sequence number in a bundle ID
+for any bundle sourced at a node that lacks a synchronized clock (such that
+the creation time in the ID of every locally sourced bundle is always zero).
+The default value is -1, i.e., unlimited.
+
+=item B<m custodymode> { none | bibe | orangebook }
+
+The B<manage custody mode> command.  This command sets the custody transfer
+mode for the local node.  The available modes are:
+
+B<none>    Custody transfer is disabled.  Bundles requesting custody
+           transfer will be forwarded without custody tracking.
+
+B<bibe>    Bundle-In-Bundle Encapsulation mode.  This mode is reserved
+           for future implementation of BIBE-based custody transfer.
+
+B<orangebook>  CCSDS Orange Book mode.  Enables Compressed Bundle Reporting
+           (CBR) and Custody Transfer (CT) as specified in the CCSDS
+           Orange Book "Compressed Bundle Status Reporting and Custody
+           Signaling" specification.  When enabled, this mode:
+           - Adds CTEB (Custody Transfer Extension Block, type 13) to
+             bundles requesting custody transfer
+           - Adds CREB (Compressed Reporting Extension Block, type 14) to
+             bundles requesting status reports
+           - Generates and processes CCS (Compressed Custody Signals)
+           - Generates and processes CRS (Compressed Reporting Signals)
+           - Tracks bundles under custody for potential retransmission
+
+           The full set of Orange Book configuration commands is:
+           B<m srmode>, B<m/l cbraggr>, B<m cbrretx>, B<m crebexpliciteid>,
+           B<a/d/l cbraccept>, B<a/d/l custodyreq>, B<m crsmaxlog>,
+           B<l crslog>, B<l custodybundle>, B<i custodybundle>,
+           B<m/l crebreportto>, B<m/l cbrcounterwidth>.
+
+The default mode is B<none>.
+
+=item B<m srmode> { none | traditional | compressed | both }
+
+The B<manage status report mode> command.  This command sets the status
+report generation mode for the local node.  The available modes are:
+
+B<none>          Do not generate any status reports.  Bundle status report
+                 request flags are honored as requests, not commands: the
+                 local node's policy overrides them, so no report is
+                 generated even for bundles that request one.  Bundle
+                 forwarding and delivery are unaffected.
+
+B<traditional>   Generate standard BPv7 status reports only.
+
+B<compressed>    Generate Compressed Reporting Signals (CRS) only, as
+                 specified in the CCSDS Orange Book.
+
+B<both>          Generate both traditional status reports and compressed
+                 reporting signals.
+
+The default mode is B<none>.  RFC 9171 5.1 requires that status report
+generation be disabled by default and enabled only when the risk of
+excessive network traffic is deemed acceptable, because requesting reports
+for a single bundle can generate up to (1 + 2 * (N - 1)) report bundles,
+where N is the number of nodes on the path.  Set B<m srmode traditional>
+to restore standard BPv7 status reporting.
+
+Note: a node whose BP database was initialized by an earlier ION release
+retains its previously configured mode across upgrade; only newly
+initialized nodes default to B<none>.
+
+Note: the status report mode is read from the BP database when each ION
+daemon starts and is cached for the life of that process, so it is not
+reliably changed at run time.  Set B<m srmode> in the B<.bprc> before the
+B<s> (start) command; changing it after the node is running will not take
+effect in the already-running forwarder and convergence-layer daemons
+until the node is restarted.
+
+Regardless of the selected mode, a status report is never generated about
+a bundle whose ADU is itself an administrative record (RFC 9171 4.2.3),
+preventing a status report from triggering another status report.
+
+This command requires B<m custodymode orangebook> to be effective for
+compressed reporting.
+
+=item B<m cbraggr> I<crs_limit> I<ccs_limit> I<timeout_seconds>
+
+The B<manage CBR aggregation> command.  This command configures the
+aggregation parameters for Compressed Reporting Signals (CRS) and
+Compressed Custody Signals (CCS).  Signal aggregation allows multiple
+status reports or custody acknowledgments to be combined into a single
+administrative bundle, reducing overhead.
+
+I<crs_limit> specifies the maximum number of bundle sequence entries to
+aggregate into a single CRS before transmission.  When this limit is
+reached, the aggregated CRS is transmitted immediately.
+
+I<ccs_limit> specifies the maximum number of bundle sequence entries to
+aggregate into a single CCS before transmission.  When this limit is
+reached, the aggregated CCS is transmitted immediately.
+
+I<timeout_seconds> specifies the maximum time in seconds to wait before
+transmitting an aggregated signal, even if the aggregation limit has not
+been reached.  This ensures timely delivery of status information.
+
+For testing purposes, setting both limits to 1 and timeout to a small
+value (e.g., 2) causes immediate signal transmission:
+
+    m cbraggr 1 1 2
+
+For production use, higher limits reduce overhead:
+
+    m cbraggr 100 50 30
+
+The default values are 10 for both limits and 5 seconds for timeout.
+
+This command takes effect immediately on a running node -- the limit and
+timeout checks (including the periodic timeout sweep performed by B<bpclock>)
+read the live values -- so it need not be issued only at startup.
+
+B<l cbraggr> displays the current CRS limit, CCS limit, and timeout.
+
+This command requires B<m custodymode orangebook> to be effective.
+
+=item B<m cbrretx> { none | timer | signal } I<interval_seconds> I<max_retransmissions>
+
+The B<manage CBR retransmission> command.  This command configures the
+retransmission strategy used when custody of a bundle is not acknowledged
+by the next-hop custodian.
+
+B<none>    No automatic retransmission is performed.  This is the default.
+
+B<timer>   Retransmit the bundle after I<interval_seconds> if no CCS
+           acceptance has been received.  The B<bpclock> daemon drives
+           these timer checks.
+
+B<signal>  Retransmit the bundle immediately when a CCS refusal is received
+           for it.  The retransmission is triggered in B<ipnadminep> when
+           the CCS is processed.
+
+I<interval_seconds> is used by the B<timer> strategy to set the polling
+interval; it is ignored by other strategies.
+
+I<max_retransmissions> limits how many retransmit attempts are made per
+bundle.  A value of 0 means unlimited.
+
+This command requires B<m custodymode orangebook> to be effective.
+
+=item B<m crebexpliciteid> { 0 | 1 }
+
+The B<manage CREB explicit EID> command.  When set to 1, the source EID is
+included explicitly in CREB (Compressed Reporting Extension Block) blocks
+rather than being omitted and implied from the bundle's primary block.  The
+default is 0 (omit).  Setting this to 1 may be needed for interoperability
+with implementations that require the explicit field.
+
+This command requires B<m custodymode orangebook> to be effective.
+
+=item B<m crebreportto> I<eid> | B<->
+
+The B<manage CREB report-to override> command.  When I<eid> is supplied,
+all CREB blocks generated by this node carry I<eid> as element 4
+(B<reportToEid>, array length 5), instructing relay and destination nodes
+to send their Compressed Reporting Signals (CRS) to I<eid> instead of the
+bundle's primary B<reportTo> field.  Use B<-> to clear the override and
+revert to the bundle's B<reportTo> field.
+
+This is useful when a dedicated monitoring station should collect all CRS
+signals from bundles originating at this node, regardless of the per-bundle
+B<reportTo> setting.
+
+When the override is set, the CREB source EID (element 3) is also included
+automatically so that the array length can reach 5.
+
+The override takes effect for all bundles sent after bpadmin processes this
+command.  Changes made to a running node after initial startup take effect
+after the BP daemons are restarted.
+
+I<Note:> B<l crebreportto> (or B<m crebreportto> with no additional
+argument) displays the current override.
+
+This command requires B<m srmode compressed> or B<m srmode both> to be
+effective.
+
+=item B<m cbrcounterwidth> { 16 | 32 | 64 }
+
+The B<manage CBR counter width> command.  Sets the wraparound width, in
+bits, of the bundle sequence-number counters created by this node.  Per
+CCSDS Orange Book Section 3.2.9 a counter may wrap at a 16-, 32-, or
+64-bit maximum; matching a constrained peer's counter width is required
+for End-to-End Gap Detection to work across the link.
+
+The width applies to sequence counters B<created after> the command is
+processed; counters already in existence keep the width they were created
+with.  The default is 64-bit.
+
+B<l cbrcounterwidth> (or B<m cbrcounterwidth> with no additional argument)
+displays the current width and its corresponding maximum value.
+
+=item B<a cbraccept> { custodian | source } I<eid>
+
+The B<add CBR acceptance whitelist entry> command.  This command adds an
+EID to the custody acceptance whitelist for the specified dimension.
+
+B<custodian>  The I<eid> is matched against the custodian EID in the CTEB
+              block -- that is, the node currently holding custody and
+              requesting this node to take it over.
+
+B<source>     The I<eid> is matched against the bundle's original source EID.
+
+Both dimensions are checked independently:
+
+=over 4
+
+=item *
+
+If the custodian whitelist is empty, any custodian EID is accepted.
+
+=item *
+
+If the source whitelist is empty, any source EID is accepted.
+
+=item *
+
+If either whitelist is non-empty, an incoming custody request must match
+an entry in that list or custody will be refused with a CCS refusal signal.
+
+=back
+
+Both lists empty (the default) means accept custody from anyone.
+
+Example -- accept custody only from node 3 acting as custodian:
+
+    a cbraccept custodian ipn:3.0
+
+Example -- accept custody only for bundles sourced from a specific endpoint:
+
+    a cbraccept source ipn:5.1
+
+This command requires B<m custodymode orangebook> to be effective.
+
+=item B<d cbraccept> { custodian | source } I<eid>
+
+The B<delete CBR acceptance whitelist entry> command.  Removes the specified
+EID from the custody acceptance whitelist for the given dimension.  If the
+EID is not present, the command has no effect.
+
+=item B<l cbraccept>
+
+The B<list CBR acceptance whitelist> command.  Prints the current custody
+acceptance whitelist for both dimensions.  An entry of B<(all)> indicates
+that the list for that dimension is empty and all EIDs are accepted.
+
+=item B<a custodyreq> I<eid>
+
+The B<add custody-request policy entry> command.  Adds I<eid> to the
+auto custody-request destination list.  When Orange Book custody mode is
+active and a bundle is sent to a destination EID that appears in this list,
+custody transfer is requested automatically even if the sending application
+did not request it.  The list accepts exact EID matches only.
+
+An empty list (the default) means no auto-request policy is active and
+custody transfer is only requested when the application explicitly asks for it.
+
+Example -- automatically request custody for all bundles sent to node 3's
+admin endpoint:
+
+    a custodyreq ipn:3.0
+
+This command requires B<m custodymode orangebook> to be effective.
+
+=item B<d custodyreq> I<eid>
+
+The B<delete custody-request policy entry> command.  Removes I<eid> from
+the auto custody-request destination list.  If I<eid> is not present the
+command has no effect.
+
+=item B<l custodyreq>
+
+The B<list custody-request policy> command.  Prints all destination EIDs
+currently in the auto custody-request list, or B<(none)> if the list is empty.
+
+=item B<m crsmaxlog> I<count>
+
+The B<manage CRS log size> command.  Sets the maximum number of received
+Compressed Reporting Signal (CRS) records to retain in the persistent CRS
+history log.  When the limit is reached, the oldest entry is discarded to
+make room for each new record.  A value of B<0> means the log is unbounded.
+The default is 100.
+
+CRS records capture the time a CRS was received, the sender's EID, the
+status code, and the number of bundle sequence entries covered.
+
+This command requires B<m custodymode orangebook> to be effective.
+
+=item B<l crslog> [I<eid>]
+
+The B<list CRS history> command.  Prints received Compressed Reporting
+Signal records from the persistent log, newest first.  Each record shows:
+
+=over 4
+
+=item *
+
+Timestamp at which the CRS bundle arrived at this node.
+
+=item *
+
+Sender EID -- the node that generated and transmitted the CRS.
+
+=item *
+
+Status code -- the event type reported for the covered bundles:
+1 = received, 2 = forwarded, 3 = delivered, 4 = deleted.
+
+=item *
+
+Bundle count -- number of bundle sequence entries covered by the record.
+
+=back
+
+If the optional I<eid> argument is supplied, only records from that sender
+EID are printed.
+
+This command requires B<m custodymode orangebook> to be effective.
+
+=item B<l custodybundle>
+
+The B<list custody bundles> command.  Lists every bundle currently held
+in custody tracking on this node -- that is, bundles for which this node
+accepted custody and has not yet received a CCS acceptance signal from the
+next hop.
+
+For each entry, the output shows the sequence identifier (B<seqId>),
+sequence number (B<seqNum>), next-custodian destination EID, the time custody
+was accepted, the time of the last retransmission (or B<(never)> if the
+bundle has not been retransmitted), and the number of retransmissions
+performed so far.
+
+This command is most useful when B<m cbrretx none> is in effect, because
+refused bundles remain in tracking pending manual retransmission.  With
+B<m cbrretx signal>, bundles are quickly re-forwarded on refusal and may
+drain before this command is run.
+
+This command requires B<m custodymode orangebook> to be effective.
+
+=item B<i custodybundle> I<source_eid> I<seqId> I<seqNum>
+
+The B<info custody bundle> command.  Reports the current custody status of
+the specific bundle identified by I<source_eid>, I<seqId>, and I<seqNum>.
+
+The status is either:
+
+=over 4
+
+=item B<pending>
+
+The bundle is in custody tracking; this node is holding it and waiting for
+a CCS acceptance signal from the next hop.
+
+=item B<not-found>
+
+The bundle is not in custody tracking.  This means it was either released
+after a CCS acceptance was received, was never custody-tracked, or has
+already expired.
+
+=back
+
+This command requires B<m custodymode orangebook> to be effective.
+
+=item B<m bsl> I<local_ipn_eid> I<key_reg_file_path> I<policy_config_file_path>
+
+The B<manage BPSec library configuration> command.  This command sets the
+values of three characters strings used by the BPSec library: the canonical
+endpoint ID of the local node, the pathname of the file containing the node's
+crypto keys, and the pathname of the JSON file declaring the node's security
+policy.  There are no default values for these strings.
+
+Each rule in the policy configuration file names, in its I<loc> member, the
+point in bundle processing at which the rule is evaluated: B<appin> when a
+bundle is sourced by a local application, B<clout> when a bundle is about to
+be transmitted, B<clin> when a bundle is received, and B<appout> when a bundle
+is delivered to a local application.  For a rule that sources a security
+block, the choice between B<appin> and B<clout> determines both what the
+security operation can protect and how far the protection reaches.
+
+A rule at B<appin> protects a block from the source of the bundle to its
+destination, and so can only name a block whose content is complete when the
+bundle is created and which no node in between will rewrite.
+
+A rule at B<clout> protects a block for one hop, and the next node must accept
+the security operation rather than forward it.  This is the location to use
+for any block whose content ION does not write until the bundle is dequeued
+for transmission.  The previous node block and the bundle age block are
+rewritten on every hop and can only be protected here.  Blocks that ION
+serializes at dequeue even though their content was settled earlier -- the
+metadata block, the quality of service block, and application-defined blocks
+of the same design -- likewise have nothing to protect at B<appin>, but may be
+protected at B<clout>.
+
+A rule that names a block with no settled content is declined, and the reason
+is recorded in the B<ion.log> file, once per block type; the bundle is still
+sourced and sent.  A block that an extension has suppressed for the
+transmission in progress is declined in the same way, since a security
+operation over a block that will not be in the transmitted bundle could not be
+verified by the receiving node.
+
+=item B<x>
+
+The B<stop> command.  This command stops all schemes and all protocols
+on the local node.
+
+=item B<w> { 0 | 1 | I<activity_spec> }
+
+The B<BP watch> command.  This command enables and disables production of
+a continuous stream of user-selected Bundle Protocol activity indication
+characters.  A watch parameter of "1" selects
+all BP activity indication characters; "0" de-selects all BP activity
+indication characters; any other I<activity_spec> such as "acz~" selects
+all activity indication characters in the string, de-selecting all
+others.  BP will print each selected activity indication character to
+B<stdout> every time a processing event of the associated type occurs:
+
+B<a>	new bundle is queued for forwarding
+
+B<b>	bundle is queued for transmission
+
+B<c>	bundle is popped from its transmission queue
+
+B<y>	bundle is accepted upon arrival
+
+B<z>	bundle is queued for delivery to an application
+
+B<~>	bundle is abandoned (discarded) on attempt to forward it
+
+B<!>	bundle is destroyed due to TTL expiration
+
+B<#>	bundle is queued for re-forwarding due to CL protocol failure
+
+B<j>	bundle is placed in "limbo" for possible future re-forwarding
+
+B<k>	bundle is removed from "limbo" and queued for re-forwarding
+
+Note that a slightly amended interpretation should be applied to watch
+characters printed in the course of multicast transmission.  The '~'
+character, meaning Abandoned (node did not forward this bundle), is printed
+by a node that is a leaf of the multicast tree, i.e., a node with no children;
+it cannot forward the bundle because it's got nobody to forward it to.  The
+'!' character, meaning Destroyed (node destroyed a physical copy of a bundle),
+is printed by a node that has forwarded copies of the bundle to all of its
+children and no longer needs to retain the original - so it does an immediate
+permanent bundle destruction just as if the bundle's time to live had expired.
+Neither condition is anomalous.
+
+=item B<h>
+
+The B<help> command.  This will display a listing of the commands and their
+formats.  It is the same as the B<?> command.
+
+=item B<q>
+
+The B<quit> command.  Terminates the program immediately.
+
+=item B<t> [B<p> [I<timeout>]]
+
+The startup-test command.  Reports whether the BP agent is started and sets the
+program's exit code accordingly.  With B<p> ("poll") it waits up to I<timeout>
+seconds (a built-in default if omitted) for startup before giving up.
+
+=back
+
+=head1 SCHEME COMMANDS
+
+=over 4
+
+=item B<a scheme> I<scheme_name> 'I<forwarder_command>' 'I<admin_app_command>'
+
+The B<add scheme> command.  This command declares an endpoint naming
+"scheme" for use in endpoint IDs, which are structured as URIs:
+I<scheme_name>:I<scheme-specific_part>.  I<forwarder_command> will be
+executed when the scheme is started on this node, to initiate operation
+of a forwarding daemon for this scheme.  I<admin_app_command> will also
+be executed when the scheme is started on this node, to initiate
+operation of a daemon that opens a custodian endpoint identified within
+this scheme so that it can receive and process custody signals and bundle
+status reports.
+
+=item B<c scheme> I<scheme_name> 'I<forwarder_command>' 'I<admin_app_command>'
+
+The B<change scheme> command.  This command sets the indicated scheme's
+I<forwarder_command> and I<admin_app_command> to the strings provided
+as arguments.
+
+=item B<d scheme> I<scheme_name>
+
+The B<delete scheme> command.  This command deletes the scheme identified
+by I<scheme_name>.  The command will fail if any bundles identified in
+this scheme are pending forwarding, transmission, or delivery.
+
+=item B<i scheme> I<scheme_name>
+
+This command will print information (number and commands) about
+the endpoint naming scheme identified by I<scheme_name>.
+
+=item B<l scheme>
+
+This command lists all declared endpoint naming schemes.
+
+=item B<s scheme> I<scheme_name>
+
+The B<start scheme> command.  This command starts the forwarder and
+administrative endpoint tasks for the indicated scheme task on the local node.
+
+=item B<x scheme> I<scheme_name>
+
+The B<stop scheme> command.  This command stops the forwarder and
+administrative endpoint tasks for the indicated scheme task on the local node.
+
+=back
+
+=head1 ENDPOINT COMMANDS
+
+=over 4
+
+=item B<a endpoint> I<endpoint_ID> { q | x } ['I<recv_script>']
+
+The B<add endpoint> command.  This command establishes a DTN endpoint named
+I<endpoint_ID> on the local node.  The remaining parameters indicate
+what is to be done when bundles destined for this endpoint arrive at a time
+when no application has got the endpoint open for bundle reception.  If 'x',
+then such bundles are to be discarded silently and immediately.  If 'q',
+then such bundles are to be enqueued for later delivery and, if I<recv_script>
+is provided, I<recv_script> is to be executed.
+
+=item B<c endpoint> I<endpoint_ID> { q | x } ['I<recv_script>']
+
+The B<change endpoint> command.  This command changes the action that is
+to be taken when bundles destined for this endpoint arrive at a time
+when no application has got the endpoint open for bundle reception, as
+described above.
+
+=item B<d endpoint> I<endpoint_ID>
+
+The B<delete endpoint> command.  This command deletes the endpoint identified
+by I<endpoint_ID>.  The command will fail if any bundles are currently
+pending delivery to this endpoint.
+
+=item B<i endpoint> I<endpoint_ID>
+
+This command will print information (disposition and script) about
+the endpoint identified by I<endpoint_ID>.
+
+=item B<l endpoint>
+
+This command lists all local endpoints, regardless of scheme name.
+
+=back
+
+=head1 PROTOCOL COMMANDS
+
+=over 4
+
+=item B<a protocol> I<protocol_name> [I<protocol_class>]
+
+The B<add protocol> command.  This command establishes access to the named
+convergence layer protocol at the local node.
+
+The optional I<protocol_class> argument indicates the reliability of the
+protocol.  The value 1 indicates that the protocol natively supports bundle
+streaming; currently the only protocol in class 1 is BSSP.  The value 2
+indicates that the protocol performs no retransmission; an example is UDP.
+The value 8 (which is the default) indicates that the protocol detects data
+loss and automatically retransmits data accordingly; an example is TCP.
+Protocol class need not be specified when I<protocol_name> is bssp, udp,
+spp, epp, file, tcp, stcp, brss, brsc, or ltp, as the protocol classes for
+these well-known protocols are hard-coded in ION.
+
+In earlier versions of ION this command took two additional arguments,
+I<payload_bytes_per_frame> and I<overhead_bytes_per_frame>.  These arguments
+are deprecated.  BP configuration files that include B<a protocol> commands
+in the old format will be processed correctly; the deprecated arguments
+will simply be ignored.
+
+=item B<d protocol> I<protocol_name>
+
+The B<delete protocol> command.  This command deletes the convergence layer
+protocol identified by I<protocol_name>.  The command will fail if any ducts
+are still locally declared for this protocol.
+
+=item B<i protocol> I<protocol_name>
+
+This command will print information about the convergence layer protocol
+identified by I<protocol_name>.
+
+=item B<l protocol>
+
+This command lists all convergence layer protocols that can currently
+be utilized at the local node.
+
+=item B<s protocol> I<protocol_name>
+
+The B<start protocol> command.  This command starts all induct and outduct
+tasks for inducts and outducts that have been defined for the indicated
+CL protocol on the local node.
+
+=item B<x protocol> I<protocol_name>
+
+The B<stop protocol> command.  This command stops all induct and outduct
+tasks for inducts and outducts that have been defined for the indicated
+CL protocol on the local node.
+
+=back
+
+=head1 INDUCT COMMANDS
+
+=over 4
+
+=item B<a induct> I<protocol_name> I<duct_name> 'I<CLI_command>'
+
+The B<add induct> command.  This command establishes a "duct" for reception
+of bundles via the indicated CL protocol.  The duct's data acquisition
+structure is used and populated by the "induct" task whose operation is
+initiated by I<CLI_command> at the time the duct is started.
+
+=item B<c induct> I<protocol_name> I<duct_name> 'I<CLI_command>'
+
+The B<change induct> command.  This command changes the command that is
+used to initiate operation of the induct task for the indicated duct.
+
+=item B<d induct> I<protocol_name> I<duct_name>
+
+The B<delete induct> command.  This command deletes the induct identified
+by I<protocol_name> and I<duct_name>.  The command will fail if any bundles
+are currently pending acquisition via this induct.
+
+=item B<i induct> I<protocol_name> [I<duct_name>]
+
+This command will print information (the CLI command) about
+the induct identified by I<protocol_name> and I<duct_name>.
+If I<duct_name> is omitted, information is printed for the
+first induct of the indicated protocol.
+
+=item B<l induct> [I<protocol_name>]
+
+If I<protocol_name> is specified, this command lists all inducts
+established locally for the indicated CL protocol.  Otherwise it lists
+all locally established inducts, regardless of protocol.
+
+=item B<s induct> I<protocol_name> I<duct_name>
+
+The B<start induct> command.  This command starts the indicated induct
+task as defined for the indicated CL protocol on the local node.
+
+=item B<x induct> I<protocol_name> I<duct_name>
+
+The B<stop induct> command.  This command stops the indicated induct
+task as defined for the indicated CL protocol on the local node.
+
+=back
+
+=head1 OUTDUCT COMMANDS
+
+=over 4
+
+=item B<a outduct> I<protocol_name> I<duct_name> 'I<CLO_command>' [I<max_payload_length>]
+
+The B<add outduct> command.  This command establishes a "duct" for transmission
+of bundles via the indicated CL protocol.  The duct's data transmission
+structure is serviced by the "outduct" task whose operation is
+initiated by I<CLO_command> at the time the duct is started.  A value of
+zero for I<max_payload_length> indicates that bundles of any size can be
+accommodated; this is the default.
+
+=item B<c outduct> I<protocol_name> I<duct_name> 'I<CLO_command>' [I<max_payload_length>]
+
+The B<change outduct> command.  This command sets new values for the indicated
+duct's payload size limit and the command that is used to initiate operation of
+the outduct task for this duct.
+
+=item B<d outduct> I<protocol_name> I<duct_name>
+
+The B<delete outduct> command.  This command deletes the outduct identified
+by I<protocol_name> and I<duct_name>.  The command will fail if any bundles
+are currently pending transmission via this outduct.
+
+=item B<i outduct> I<protocol_name> I<duct_name>
+
+This command will print information (the CLO command) about
+the outduct identified by I<protocol_name> and I<duct_name>.
+
+=item B<l outduct> [I<protocol_name>]
+
+If I<protocol_name> is specified, this command lists all outducts
+established locally for the indicated CL protocol.  Otherwise it lists
+all locally established outducts, regardless of protocol.
+
+=item B<s outduct> I<protocol_name> I<duct_name>
+
+The B<start outduct> command.  This command starts the indicated outduct
+task as defined for the indicated CL protocol on the local node.
+
+=item B<x outduct> I<protocol_name> I<duct_name>
+
+The B<stop outduct> command.  This command stops the indicated outduct
+task as defined for the indicated CL protocol on the local node.
+
+=back
+
+=head1 EGRESS PLAN COMMANDS
+
+=over 4
+
+=item B<a plan> I<endpoint_name> [I<transmission_rate>]
+
+The B<add plan> command.  This command establishes an egress plan governing
+transmission to the neighboring node[s] identified by I<endpoint_name>.  The
+plan is functionally enacted by a bpclm(1) daemon dedicated to managing
+bundles queued for transmission to the indicated neighboring node[s].
+
+NOTE that these "plan" commands supersede and generalize the egress plan
+commands documented in the ipnrc(5) and dtn2rc(5) man pages, which are
+retained for backward compatibility.  B<The syntax of the egress plan commands
+consumed by bpadmin is DIFFERENT from that of the commands consumed by
+ipnadmin and dtn2admin.>  The I<endpoint_name> identifying
+an egress plan is normally the node ID for a single node but may instead
+be "wild-carded".  That is, when the last character of an endpoint name
+ID is either '*' or '~' (these two wild-card characters are equivalent
+for this purpose), the plan applies to all nodes whose IDs are identical
+to the wild-carded node name up to the wild-card character.  For example,
+a bundle whose destination EID name is "dtn://foghorn" would be routed
+by plans citing the following node IDs: "dtn://foghorn", "dtn://fogh*",
+"dtn://fog~", "//*".  When multiple plans are all applicable to the same
+destination EID, the one citing the longest (i.e., most narrowly targeted)
+node ID will be applied.
+
+An egress plan may direct that bundles queued for transmission to the
+node[s] matching I<endpoint_name> be transmitted using one of the
+convergence-layer protocol "outducts" that have been attached to the
+plan, or instead that those bundles be routed to some other "gateway"
+endpoint (resulting in transmission according to some other egress
+plan).  In the event that both a gateway endpoint and one or more
+outducts have been declared for a given plan, the gateway declaration prevails.
+
+A I<transmission_rate> may be asserted for an egress plan; this rate is
+used as the basis for transmission rate control in the absence of applicable
+contacts (in the node's contact plan, as per ionrc(5)).  A transmission
+rate of zero (absent applicable contacts) disables rate control completely;
+this is the default.
+
+=item B<c plan> I<endpoint_name> [I<transmission_rate>]
+
+The B<change plan> command.  This command sets a new value for the indicated
+plan's transmission rate.
+
+=item B<d plan> I<endpoint_name>
+
+The B<delete plan> command.  This command deletes the plan identified
+by I<endpoint_name>.  The command will fail if any bundles are currently
+pending transmission per this plan.
+
+=item B<i plan> I<endpoint_name>
+
+This command will print information (the transmission rate) about
+the plan identified by I<endpoint_name>.
+
+=item B<l plan>
+
+This command lists all locally established egress plans.
+
+=item B<s plan> I<endpoint_name>
+
+The B<start plan> command.  This command starts the bpclm(1) task for
+the indicated egress plan.
+
+=item B<x plan> I<endpoint_name>
+
+The B<stop plan> command.  This command stops the bpclm(1) task for
+the indicated egress plan.
+
+=item B<b plan> I<endpoint_name>
+
+The B<block plan> command.  This command disables transmission of bundles
+queued for transmission to the indicated node and reforwards all non-critical
+bundles currently queued for transmission to this node.  This may result in
+some or all of these bundles being enqueued for transmission (actually just
+retention) to the pseudo-node "limbo".
+
+=item B<u plan> I<endpoint_name>
+
+The B<unblock plan> command.  This command re-enables transmission of
+bundles to the indicated node and reforwards all bundles in "limbo"
+in the hope that the unblocking of this egress plan will enable some of them
+to be transmitted.
+
+=item B<g plan> I<endpoint_name> I<gateway_endpoint_name>
+
+The B<declare gateway> command.  This command declares the name of the
+endpoint to which bundles queued for transmission to the node[s]
+identified by I<endpoint_name> must be re-routed.  Declaring
+I<gateway_endpoint_name> to be the zero-length string "''" disables
+re-routing: bundles will instead be transmitted using the plan's attached
+convergence-layer protocol outduct[s].
+
+=item B<a planduct> I<endpoint_name> I<protocol_name> I<duct_name>
+
+The B<attach outduct> command.  This command declares that the indicated
+convergence-layer protocol outduct is now a viable device for transmitting
+bundles to the node[s] identified by I<endpoint_name>.
+
+=item B<d planduct> I<protocol_name> I<duct_name>
+
+The B<detach outduct> command.  This command declares that the indicated
+convergence-layer protocol outduct is no longer a viable device for
+transmitting bundles to the node[s] to which it is currently assigned.
+
+=back
+
+=head1 EXAMPLES
+
+=over 4
+
+=item a scheme ipn 'ipnfw' 'ipnadminep'
+
+Declares the "ipn" scheme on the local node.
+
+=item a protocol udp
+
+Establishes access to the "udp" convergence layer protocol on the local
+node.  Since "udp" is a well-known protocol, its class (best-effort) is
+set automatically.
+
+=item r 'ipnadmin flyby.ipnrc'
+
+Runs the administrative program I<ipnadmin> from within I<bpadmin>.
+
+=back
+
+=head1 SEE ALSO
+
+bpadmin(1), dtn2admin(1), ipnadmin(1)

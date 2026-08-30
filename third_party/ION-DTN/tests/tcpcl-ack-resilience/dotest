@@ -1,0 +1,191 @@
+#!/usr/bin/env bash
+
+trap 'killm f; stty sane 2>/dev/null' EXIT INT TERM  # restore echo (if sudo fail)
+
+# ------------------------------------------------------------------
+# Derived from James Swaro's test, April 25 2012
+# Revised on 3/24/2025
+# Updated for Oracle Linux/RHEL detection and firewall handling
+# ------------------------------------------------------------------
+
+# Function to detect OS and set firewall type
+detect_os_and_firewall() {
+    if [ -f /etc/os-release ]; then
+        source /etc/os-release
+        if [ "$ID" = "ol" ] || [ "$ID" = "rhel" ]; then
+            DISTRO="$NAME"
+            echo "Detected $DISTRO $VERSION_ID"
+            FIREWALL="nftables"
+        else
+            DISTRO="Unknown"
+            echo "Unknown OS ($NAME)"
+            FIREWALL="iptables"
+        fi
+    else
+        DISTRO="Unknown"
+        FIREWALL="iptables"
+    fi
+}
+
+# Function to block traffic
+block_traffic() {
+    if [ "$FIREWALL" = "nftables" ]; then
+        echo "Blocking traffic with nftables..."
+        s nft add table inet filter
+        s nft add chain inet filter input { type filter hook input priority 0 \; policy accept \; }
+        s nft add rule inet filter input iif lo tcp dport $SENDER_PORT drop
+        s nft add rule inet filter input iif lo tcp dport $RECEIVER_PORT drop
+    else
+        echo "Blocking traffic with iptables..."
+        s iptables -A INPUT -i lo -p tcp --destination-port $SENDER_PORT -j DROP
+        s iptables -A INPUT -i lo -p tcp --destination-port $RECEIVER_PORT -j DROP
+    fi
+}
+
+# Function to unblock traffic
+unblock_traffic() {
+    if [ "$FIREWALL" = "nftables" ]; then
+        echo "Unblocking traffic with nftables..."
+        s nft flush ruleset
+    else
+        echo "Unblocking traffic with iptables..."
+        s iptables -F -t filter
+    fi
+}
+
+# --- sudo-availability check (non-interactive, max 15 s) -------------
+if [ "$(id -u)" -eq 0 ]; then
+    printf '%s\n\n' "Running as root — skipping sudo availability check."
+    s() { "$@"; }          # run command directly, no sudo needed
+else
+    printf '%s\n' "This test requires sudo privileges: checking now…"
+    printf '%s\n\n' \
+      "Hint: use  sudo -E  if you need to preserve ION_RUN_EXPERT."
+
+    sudo -n -v 2>/dev/null & SUDO_PID=$!
+
+    # start watchdog
+    ( sleep 15 && kill -s TERM "$SUDO_PID" 2>/dev/null && \
+    sleep 2 && kill -s KILL "$SUDO_PID" 2>/dev/null ) & WATCH_PID=$!
+
+    wait "$SUDO_PID";  SUDO_RESULT=$? # stop watchdog quietly
+
+    kill "$WATCH_PID" 2>/dev/null && wait "$WATCH_PID" 2>/dev/null
+    stty sane 2>/dev/null || : # restore echo just in case
+
+    if [ "$SUDO_RESULT" -ne 0 ]; then
+        printf '%s\n' \
+          "Password-less sudo required or lookup timed-out." >&2
+        exit 2
+    fi
+    printf '%s\n\n' "Sudo privileges confirmed: continuing test."
+    s() { sudo -n "$@"; }             # carry -n to every sudo call
+fi
+
+# Sudo privileges confirmed, begin test
+SENDER_PORT=4555
+RECEIVER_PORT=4556
+
+# Detect OS and set firewall
+detect_os_and_firewall
+
+echo "Cleaning up old ION ..."
+./cleanup
+
+printf "\nRunning sudo commands now..."
+if [ "$FIREWALL" = "nftables" ]; then
+    s nft flush ruleset
+else
+    s iptables -F -t filter
+fi
+
+sleep 1
+
+# Decrease TCP timeout time (defaults 3, 15, 7200)
+echo "Decrease TCP timeout tcp_retries1: 3 -> 1"
+echo 1 | s tee /proc/sys/net/ipv4/tcp_retries1
+echo "Decrease TCP timeout tcp_retries2: 15 -> 1"
+echo 1 | s tee /proc/sys/net/ipv4/tcp_retries2
+echo "Decrease tcp_keepalive_time: 7200 -> 5"
+echo 5 | s tee /proc/sys/net/ipv4/tcp_keepalive_time
+
+echo "Starting ION..."
+export ION_NODE_LIST_DIR=$PWD
+
+# Set up node 1
+cd 1.ipn.tcp/
+./ionstart
+../../../system_up -i "p 30" -b "p 30"
+
+if [ "$?" -ne 2 ]; then
+    echo "Node 1 not started: Aborting Test"
+    exit 1
+fi
+
+# Set up node 2
+cd ../2.ipn.tcp/
+./ionstart
+../../../system_up -i "p 30" -b "p 30"
+
+if [ "$?" -ne 2 ]; then
+    echo "Node 2 not started: Aborting Test"
+    exit 1
+fi
+
+# Start bundle receiver on node 2.
+cd ../2.ipn.tcp/
+echo "Starting bpcounter..."
+bpcounter ipn:2.1 1000 &
+counter_pid=$!
+sleep 10
+
+# Send 10,000 bundles from node 1 to node 2.
+cd ../1.ipn.tcp/
+echo "Sending bundles from node 1 to node 2..."
+bpdriver 1000 ipn:1.1 ipn:2.1 -100000 t3600 i10000000 &
+
+# Allow partial sending of data.
+sleep 1
+
+# Block traffic using detected firewall
+block_traffic
+
+echo "Waiting for TCP timeout..."
+sleep 5m
+
+# Unblock traffic using detected firewall
+unblock_traffic
+
+echo "Waiting for send to finish..."
+sleep 3m
+
+# Verify that transfer completed, e.g., bpcounter ended.
+cd ../2.ipn.tcp
+if kill -0 $counter_pid > /dev/null 2>&1; then
+    echo "bpcounter ($counter_pid) is still running."
+    RETVAL=1
+else
+    echo "bpcounter ($counter_pid) has completed."
+    RETVAL=0
+fi
+
+# Shut down ION processes.
+echo "Stopping ION..."
+
+if [ "$RETVAL" -eq 0 ]; then
+    echo "TCPCL ACK test succeeded"
+else
+    echo "TCPCL ACK test failed"
+fi
+
+# Restore TCP timeout time back (defaults 3, 15, 7200)
+echo "Set TCP timeout tcp_retries1 back to 3"
+echo 3 | s tee /proc/sys/net/ipv4/tcp_retries1
+echo "Set TCP timeout tcp_retries2 back to 15"
+echo 15 | s tee /proc/sys/net/ipv4/tcp_retries2
+echo "Set tcp_keepalive_time back to 7200"
+echo 7200 | s tee /proc/sys/net/ipv4/tcp_keepalive_time
+
+echo "Note to user: TCPCL ACK is 'expert' test"
+
+exit $RETVAL

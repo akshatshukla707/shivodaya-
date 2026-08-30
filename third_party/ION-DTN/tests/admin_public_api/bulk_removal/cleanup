@@ -1,0 +1,4 @@
+#!/bin/bash
+# Cleanup script for bulk_removal test
+killm f
+rm -f ion.log *.txt bpsink_output.txt

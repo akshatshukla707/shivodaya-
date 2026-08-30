@@ -1,0 +1,831 @@
+#!/usr/bin/env bash
+trap 'killm f' EXIT
+#
+# bpsec-all-multinode-test.bsl
+#
+# BSL (Bundle Security Library) multinode BPSec integration test.
+# Verifies BIB (integrity) and BCB (confidentiality) security processing
+# across a 3-node topology using LTP convergence layer.
+#
+# Topology:
+#   Node 2 (ipn:2.*) --LTP--> Node 3 (ipn:3.*) --LTP--> Node 4 (ipn:4.*)
+#
+# Security design (RFC 9172 compliant):
+#   Per RFC 9172 Section 4.7, a single security source MUST NOT apply
+#   separate BIB and BCB to the same target block. Instead:
+#     - BIB targets the PRIMARY block (tgt 0) for integrity
+#     - BCB targets the PAYLOAD block (tgt 1) for confidentiality
+#   This ensures each security service operates on a different block.
+#
+# BSL policy is loaded at startup via "m bsl" in each node's bprc.
+#   Node 2 (source):
+#     - BIB source on primary (tgt 0) for 2->3 and 2->4
+#     - BCB source on payload (tgt 1) for 2->3 and 2->4
+#     - BIB source on the bundle age block (tgt 7) and the previous node
+#       block (tgt 6), both of which ION does not fill in until the
+#       bundle is dequeued for transmission.  These two rules must be
+#       DECLINED: there is no settled content to protect while the
+#       bundle is at rest, and ION would overwrite it at dequeue.  They
+#       are a regression guard - offering such a block to BSL as a
+#       zero-length target used to crash the sending process, and it
+#       took two of them to do it, since the first zero-length target
+#       left BSL's stack copy of the BTSD null and only the second
+#       reached it as a garbage pointer.  Every test below must still
+#       pass with these rules in place.
+#   Node 3 (waypoint/dest for 2->3, relay for 2->4):
+#     - BCB verifier at CLIN (validates ASB, does NOT decrypt)
+#     - BIB acceptor at APPOUT for primary (verifies HMAC)
+#     - BCB acceptor at APPOUT for payload (decrypts)
+#     - BCB relay verifier at CLIN for 2->4 transit traffic
+#     - BIB source at CLOUT on primary for 2->4 transit traffic.
+#       CLOUT is the second location at which BSL can source a
+#       security block, and the only one exercised after the
+#       bundle already carries security blocks of its own.  A
+#       block sourced here must be CBOR-encoded and counted in
+#       the bundle's extensions length before serialization,
+#       while the blocks node 2 already added must be left
+#       alone.  Tests 6 and 8 fail if either half regresses.
+#     - BIB source at CLOUT on the bundle age block (tgt 7), the
+#       previous node block (tgt 6) and the metadata block (tgt 8).
+#       These are the same kind of block that node 2 must decline at
+#       APPIN, protected at the one location where they can be: by
+#       CLOUT the content ION writes at dequeue is settled, so there
+#       is something to sign.  See the note on scope below.
+#   Node 4 (dest for 2->4):
+#     - BCB verifier at CLIN (validates ASB, does NOT decrypt)
+#     - BIB acceptor at APPOUT for primary (verifies HMAC)
+#     - BCB acceptor at APPOUT for payload (decrypts)
+#     - BIB acceptor at APPOUT for the three blocks node 3 protected
+#       at CLOUT
+#
+# Scope of a security operation, and why the location matters:
+#   A BIB sourced when the bundle is created protects the block from
+#   the source to the destination, and so requires that no node in
+#   between rewrite it.  A BIB sourced while the bundle is forwarded
+#   protects it for exactly one hop, and must be accepted by the next
+#   node rather than carried further.
+#
+#   The bundle age and previous node blocks are rewritten at every
+#   dequeue, so only the second form can ever apply to them: an
+#   end-to-end signature over content the next hop replaces could not
+#   verify.  The metadata block is not rewritten in transit, but ION
+#   still does not serialize it until dequeue, so it too has nothing
+#   to protect at APPIN.  That is why node 3 sources over all three and
+#   node 4 accepts all three.
+#
+# Note: BIB verifiers are NOT used at CLIN because BIB on the primary
+# block does not depend on BCB processing order (BIB targets a different
+# block than BCB). However, BIB verification at CLIN is unnecessary for
+# this test since the acceptor at APPOUT performs the same check. BCB
+# verifiers at CLIN perform a lightweight ASB validation without decrypting.
+#
+# Tests:
+#   Test 1 - Small bundle node 2->3 with BIB(primary)+BCB(payload)
+#   Test 2 - Small bundle node 2->3, verify BSL initialization
+#   Test 3 - Wrong-key rejection (node 3 restarts with wrong keys, bundle rejected)
+#   Test 4 - Small bundle node 2->3 (baseline without dynamic rule changes)
+#   Test 5 - Large ~4MB file node 2->3 with BIB(primary)+BCB(payload)
+#   Test 6 - Small bundle node 2->4 via node 3 relay, BCB relay verification
+#   Test 7 - Anonymous bundle node 2->4 via node 3 relay
+#   Test 8 - Small bundle node 2->4 via node 3 relay (exercises SDR BTSD
+#            read path for BIB on primary at acceptor)
+#
+# Originally based on test by Scott Burleigh, April 12, 2010.
+# Adapted to BSP by Ryan Brown, August 2011.
+# Adapted to BSL multinode test with per-node policy files.
+
+TIMETODISPLAYTEXT=2
+TIMETOWAITFORTESTFINISH=5
+
+echo "Cleaning up old ION..."
+rm -f 2.ipn.ltp/ion.log 3.ipn.ltp/ion.log 4.ipn.ltp/ion.log 
+killm
+sleep 1
+
+echo "Starting ION..."
+export ION_NODE_LIST_DIR=$PWD
+rm -f ./ion_nodes
+
+# Verify BSL configuration files exist (all within the test directory)
+BSL_KEY_FILE="${PWD}/key_set.json"
+BSL_POLICY_NODE2="${PWD}/policy_node2.json"
+BSL_POLICY_NODE3="${PWD}/policy_node3.json"
+BSL_POLICY_NODE4="${PWD}/policy_node4.json"
+
+if [ ! -f "$BSL_KEY_FILE" ]; then
+    echo "ERROR: BSL key file not found: $BSL_KEY_FILE"
+    exit 2  # Exit code 2 = skip test
+fi
+
+for pf in "$BSL_POLICY_NODE2" "$BSL_POLICY_NODE3" "$BSL_POLICY_NODE4"; do
+    if [ ! -f "$pf" ]; then
+        echo "ERROR: BSL policy file not found: $pf"
+        exit 2  # Exit code 2 = skip test
+    fi
+done
+
+PASS=1
+
+# Enable BSL logging (INFO level to avoid excessive debug output)
+export BSL_LOG_LEVEL=INFO
+
+# Start nodes.
+cd 2.ipn.ltp
+ionadmin amroc.ionrc
+cd ../3.ipn.ltp
+ionadmin amroc.ionrc
+cd ../4.ipn.ltp
+ionadmin amroc.ionrc
+
+cd ../2.ipn.ltp
+ionadmin ../global.ionrc
+cd ../3.ipn.ltp
+ionadmin ../global.ionrc
+cd ../4.ipn.ltp
+ionadmin ../global.ionrc
+
+cd ../2.ipn.ltp
+ionsecadmin amroc.ionsecrc
+cd ../3.ipn.ltp
+ionsecadmin amroc.ionsecrc
+cd ../4.ipn.ltp
+ionsecadmin amroc.ionsecrc
+
+cd ../2.ipn.ltp
+ltpadmin amroc.ltprc
+cd ../3.ipn.ltp
+ltpadmin amroc.ltprc
+cd ../4.ipn.ltp
+ltpadmin amroc.ltprc
+
+cd ../2.ipn.ltp
+bpadmin amroc.bprc
+cd ../3.ipn.ltp
+bpadmin amroc.bprc
+cd ../4.ipn.ltp
+bpadmin amroc.bprc
+
+cd ..
+
+rm -f 3.ipn.ltp/3_receive_file.txt
+rm -f 3.ipn.ltp/3_results.txt
+touch 3.ipn.ltp/3_receive_file.txt
+touch 3.ipn.ltp/3_results.txt
+
+echo "Starting bpsink on node 3..."
+cd 3.ipn.ltp
+
+bpsink ipn:3.1 >> 3_results.txt &
+cd ..
+
+sleep 1
+# Determine BP version (6/7) for correct bpsecadmin rule syntax
+BPV=`bpversion`
+
+#############
+# Test 1 ....
+
+cd 2.ipn.ltp
+echo -e "\n\n\n\n\n*****TEST 1*****"
+echo "Sending bundle to ipn:3.1 with BIB on primary + BCB on payload, should be delivered..."
+sleep ${TIMETODISPLAYTEXT}
+# Send first bundle from node 2 to node 3 requesting all status reports.
+# Bundle is sent to endpoint ipn:3.1, on which bpsink is listening, so
+# it should be delivered.
+bptrace ipn:2.1 ipn:3.1 ipn:2.0 5 0.1 "test_trace" rcv,ct,fwd,dlv,del
+cd ..
+
+sleep ${TIMETOWAITFORTESTFINISH}
+
+grep "test_trace" 3.ipn.ltp/3_results.txt > 3.ipn.ltp/3_receive_file.txt
+
+echo ""
+rm -f expected.txt
+touch expected.txt
+
+echo "'test_trace'" >> expected.txt
+
+if ! diff -w expected.txt 3.ipn.ltp/3_receive_file.txt
+then
+	echo "FAIL (test 1)"
+	PASS=0
+else
+	echo "SUCCESS (test 1)"
+fi
+
+
+#########
+# Test 2
+
+echo -e "\n\n\n\n\n*****TEST 2*****"
+echo -e "Sending bundle with BIB(primary)+BCB(payload) to ipn:3.1, verifying BSL init..."
+sleep ${TIMETODISPLAYTEXT}
+
+cd 2.ipn.ltp
+#ionsecadmin<<ENDOFIONSECADMINCOMMANDS
+#a key key1 key1.hmk 
+#ENDOFIONSECADMINCOMMANDS
+#if [ $BPV == "bpv6" ] ; then
+#bpsecadmin<<ENDOFBPSECADMINCOMMANDS
+#x
+#a bspbibrule ipn:2.* ipn:3.* 1 'BIB-HMAC-SHA256' key1
+#a bspbcbrule ipn:2.* ipn:3.* 1 'BCB-ARC4-AES128' key1
+#ENDOFBPSECADMINCOMMANDS
+
+cd ../3.ipn.ltp
+#ionsecadmin<<ENDOFIONSECADMINCOMMANDS
+#a key key1 key1.hmk
+#ENDOFIONSECADMINCOMMANDS
+#bpsecadmin<<ENDOFBPSECADMINCOMMANDS
+#x
+#a bspbibrule ipn:2.* ipn:3.* 1 'BIB-HMAC-SHA256' key1
+#a bspbcbrule ipn:2.* ipn:3.* 1 'BCB-ARC4-AES128' key1
+#ENDOFBPSECADMINCOMMANDS
+#else
+#bpsecadmin<<ENDOFBPSECADMINCOMMANDS
+#x
+#a bibrule ipn:2.* ipn:3.* 1 'BIB-HMAC-SHA256' key1
+#a bcbrule ipn:2.* ipn:3.* 1 'BCB-ARC4-AES128' key1
+#ENDOFBPSECADMINCOMMANDS
+
+cd ../3.ipn.ltp
+#ionsecadmin<<ENDOFIONSECADMINCOMMANDS
+#a key key1 key1.hmk
+#ENDOFIONSECADMINCOMMANDS
+#bpsecadmin<<ENDOFBPSECADMINCOMMANDS
+#x
+#a bibrule ipn:2.* ipn:3.* 1 'BIB-HMAC-SHA256' key1
+#a bcbrule ipn:2.* ipn:3.* 1 'BCB-ARC4-AES128' key1
+#ENDOFBPSECADMINCOMMANDS
+#fi
+
+cd ../2.ipn.ltp
+bptrace ipn:2.1 ipn:3.1 ipn:2.0 5 0.1 "test2_trace" rcv,ct,fwd,dlv,del
+cd ..
+
+sleep ${TIMETOWAITFORTESTFINISH}
+
+grep "test2_trace" 3.ipn.ltp/3_results.txt > 3.ipn.ltp/3_receive_file.txt
+
+echo ""
+rm -f expected.txt
+touch expected.txt
+echo "'test2_trace'" >> expected.txt
+
+if ! diff -w expected.txt ./3.ipn.ltp/3_receive_file.txt
+then
+	echo "FAIL (test2)"
+	PASS=0
+else
+	echo "SUCCESS (test2)"
+fi
+
+# Verify BSL was initialized and operational
+echo "Verifying BSL initialization in TEST 2..."
+cd 2.ipn.ltp
+if ! grep -q "BSL agent initialization succeeded" ion.log; then
+    echo "FAIL (test2) - BSL did not initialize at source"
+    PASS=0
+else
+    echo "BSL initialized successfully at source"
+fi
+
+cd ../3.ipn.ltp
+if ! grep -q "BSL initialization succeeded" ion.log; then
+    echo "FAIL (test2) - BSL did not initialize at destination"
+    PASS=0
+else
+    echo "BSL initialized successfully at destination"
+fi
+
+cd ..
+
+#############
+# Test 3 ....
+# Wrong-key test: restart node 3 BP with wrong keys, send a bundle,
+# verify it is NOT delivered (policy_action_on_fail = delete_bundle).
+
+echo -e "\n\n\n\n\n*****TEST 3*****"
+echo -e "Send bundle with BIB+BCB to ipn:3.1 but where node 3 has"
+echo -e "wrong keys.  Bundle should be rejected (not delivered)."
+sleep ${TIMETODISPLAYTEXT}
+
+# Stop BP on node 3, restart with wrong-key policy
+cd 3.ipn.ltp
+bpadmin .
+sleep 2
+bpadmin amroc_wrongkey.bprc
+sleep 2
+
+# Restart bpsink on node 3 (previous one died with bpadmin stop)
+bpsink ipn:3.1 >> 3_results.txt &
+sleep 1
+
+# Send bundle from node 2
+cd ../2.ipn.ltp
+bptrace ipn:2.1 ipn:3.1 ipn:2.0 5 0.1 "test3_trace" rcv,ct,fwd,dlv,del
+cd ..
+
+sleep ${TIMETOWAITFORTESTFINISH}
+
+# The bundle should NOT have been delivered (wrong key -> delete_bundle)
+grep "test3_trace" 3.ipn.ltp/3_results.txt > 3.ipn.ltp/3_receive_file.txt
+
+echo ""
+rm -f expected.txt
+touch expected.txt
+
+if diff -w expected.txt 3.ipn.ltp/3_receive_file.txt > /dev/null 2>&1
+then
+	echo "SUCCESS (test 3) - bundle correctly rejected with wrong key"
+else
+	echo "FAIL (test 3) - bundle was delivered despite wrong key"
+	PASS=0
+fi
+
+# Restore node 3 with correct policy for remaining tests
+cd 3.ipn.ltp
+bpadmin .
+sleep 2
+bpadmin amroc.bprc
+sleep 2
+
+bpsink ipn:3.1 >> 3_results.txt &
+sleep 1
+cd ..
+
+#############
+# Test 4 ....
+
+echo -e "\n\n\n\n\n*****TEST 4*****"
+echo -e "Sending bundle with BIB(primary)+BCB(payload) to ipn:3.1 (should deliver)."
+sleep ${TIMETODISPLAYTEXT}
+cd 2.ipn.ltp
+#bpsecadmin<<ENDOFBPSECADMINCOMMANDS
+#x
+#ENDOFBPSECADMINCOMMANDS
+
+cd ../3.ipn.ltp
+#bpsecadmin<<ENDOFBPSECADMINCOMMANDS
+#x
+#ENDOFBPSECADMINCOMMANDS
+
+cd ../2.ipn.ltp
+bptrace ipn:2.1 ipn:3.1 ipn:2.0 5 0.1 "test4_trace" rcv,ct,fwd,dlv,del
+cd ..
+
+sleep ${TIMETOWAITFORTESTFINISH}
+
+grep "test4_trace" 3.ipn.ltp/3_results.txt > 3.ipn.ltp/3_receive_file.txt
+
+echo ""
+rm -f expected.txt
+touch expected.txt
+echo "'test4_trace'" >> expected.txt
+
+if ! diff -w expected.txt ./3.ipn.ltp/3_receive_file.txt
+then
+	echo "FAIL (test4)"
+	PASS=0
+else
+	echo "SUCCESS (test4)"
+fi
+
+#############
+# Test 5 
+#
+# This test consists of passing a huge file protected by bib.
+# In this case we will use a script to generate a ~4MB file.
+
+echo -e "\n\n\n\n\n*****TEST 5*****"
+echo -e "Sending large ~4MB file with BIB(primary)+BCB(payload) to ipn:3.2 (should deliver intact)."
+sleep ${TIMETODISPLAYTEXT}
+
+cd 2.ipn.ltp
+
+#if [ $BPV == "bpv6" ] ; then
+#bpsecadmin<<ENDOFBPSECADMINCOMMANDS
+#a bspbibrule ipn:2.* ipn:3.* 1 'BIB-HMAC-SHA256' key1
+#a bspbcbrule ipn:2.* ipn:3.* 1 'BCB-ARC4-AES128' key1
+#ENDOFBPSECADMINCOMMANDS
+
+cd ../3.ipn.ltp
+#bpsecadmin<<ENDOFBPSECADMINCOMMANDS
+#a bspbibrule ipn:2.* ipn:3.* 1 'BIB-HMAC-SHA256' key1
+#a bspbcbrule ipn:2.* ipn:3.* 1 'BCB-ARC4-AES128' key1
+#ENDOFBPSECADMINCOMMANDS
+#else
+#bpsecadmin<<ENDOFBPSECADMINCOMMANDS
+#a bibrule ipn:2.* ipn:3.* 1 'BIB-HMAC-SHA256' key1
+#a bcbrule ipn:2.* ipn:3.* 1 'BCB-ARC4-AES128' key1
+#ENDOFBPSECADMINCOMMANDS
+
+cd ../3.ipn.ltp
+#bpsecadmin<<ENDOFBPSECADMINCOMMANDS
+#a bibrule ipn:2.* ipn:3.* 1 'BIB-HMAC-SHA256' key1
+#a bcbrule ipn:2.* ipn:3.* 1 'BCB-ARC4-AES128' key1
+#ENDOFBPSECADMINCOMMANDS
+#fi
+
+bprecvfile ipn:3.2 &
+
+cd ../2.ipn.ltp
+
+# Create a ~4 MB file
+# 2^22 = ~ 4MB.  Do _NOT_ run this script with a large number
+perl file_make.pl 10
+ 
+# Send the ~4 MB file
+bpsendfile ipn:2.1 ipn:3.2 hugefile.big
+
+# Wait 2 seconds while it transfers
+sleep ${TIMETOWAITFORTESTFINISH}
+
+cd ..
+
+PROGRAMTEST="stat"
+RESULTS=`which ${PROGRAMTEST}`
+WHICHRETURN=$?
+echo "${RESULTS}" | grep "^no ${PROGRAMTEST} in"
+WHICHFAILMESSAGE=$?
+# which could return the proper fail condition, or the results could be
+# empty, or you're on solaris and your results will be "no stat in $PATH".
+if [ $WHICHRETURN -ne 0 -o -z "${RESULTS}" -o $WHICHFAILMESSAGE -eq 0 ] ; then
+	echo "${PROGRAMTEST} is not present in this system; using ls"
+# ls -l on solaris (and other platforms) puts the byte size in the 5th column
+# of output and we use sed to eliminate long strings of whitespace since cut
+# is fragile and interprets each instance of space as a delimiter
+# IF ls changes its column order, this will break, but it is only a fallback.
+	RECV_SIZE=`ls -1l 3.ipn.ltp/testfile1 | sed 's/ [ ]*/ /g' | cut -d' ' -f5`
+	SEND_SIZE=`ls -1l 2.ipn.ltp/hugefile.big | sed 's/ [ ]*/ /g' | cut -d' ' -f5`
+else
+	RECV_SIZE=`stat -c %s 3.ipn.ltp/testfile1`
+	SEND_SIZE=`stat -c %s 2.ipn.ltp/hugefile.big`
+fi
+
+echo "Receive size: $RECV_SIZE; Send size: $SEND_SIZE"
+if [ "$RECV_SIZE" = "$SEND_SIZE" ]
+then
+	echo "SUCCESS (test5)"
+else
+	echo "FAIL (test5)"
+	PASS=0
+fi
+
+# Verify BSL was operational for large file
+echo "Verifying BSL initialization in TEST 5..."
+cd 2.ipn.ltp
+if grep -q "BSL initialization succeeded" ion.log; then
+    echo "BSL operational for large file transfer"
+fi
+cd ..
+
+rm -f 2.ipn.ltp/hugefile.big
+rm -f 3.ipn.ltp/testfile1
+
+##############################
+# Test 6
+# Send bundle from node 2 to 4 via node 3, requesting all status reports.
+# Bundle is sent to endpoint ipn:4.1, on which bpsink is listening, so
+# it should be delivered.
+
+rm -f 4.ipn.ltp/4_receive_file.txt
+rm -f 4.ipn.ltp/4_results.txt
+touch 4.ipn.ltp/4_receive_file.txt
+touch 4.ipn.ltp/4_results.txt
+
+echo -e "\n\n***3 node Tests***"
+echo "------------------"
+echo "Starting bpsink on node 4..."
+cd 4.ipn.ltp
+bpsink ipn:4.1 >> 4_results.txt &
+cd ..
+
+sleep 1
+
+echo -e "\n\n\n*****TEST 6*****"
+echo -e "Sending bundle with BIB(primary)+BCB(payload) to ipn:4.1 via node 3 relay.\nNode 3 performs BCB verification (no decrypt). Should deliver."
+sleep ${TIMETODISPLAYTEXT}
+cd 2.ipn.ltp
+
+#if [ $BPV == "bpv6" ] ; then
+#bpsecadmin<<ENDOFBPSECADMINCOMMANDS
+#x
+#a bspbibrule ipn:2.* ipn:4.* 1 'BIB-HMAC-SHA256' key1
+#a bspbcbrule ipn:2.* ipn:4.* 1 'BCB-ARC4-AES128' key1
+#ENDOFBPSECADMINCOMMANDS
+
+#cd ../3.ipn.ltp
+#bpsecadmin<<ENDOFBPSECADMINCOMMANDS
+#x
+#ENDOFBPSECADMINCOMMANDS
+
+#cd ../4.ipn.ltp
+#ionsecadmin<<ENDOFIONSECADMINCOMMANDS
+#a key key1 key1.hmk
+#ENDOFIONSECADMINCOMMANDS
+#bpsecadmin<<ENDOFBPSECADMINCOMMANDS
+#x
+#a bspbibrule ipn:2.* ipn:4.* 1 'BIB-HMAC-SHA256' key1
+#a bspbcbrule ipn:2.* ipn:4.* 1 'BCB-ARC4-AES128' key1
+#ENDOFBPSECADMINCOMMANDS
+#else
+#bpsecadmin<<ENDOFBPSECADMINCOMMANDS
+#x
+#a bibrule ipn:2.* ipn:4.* 1 'BIB-HMAC-SHA256' key1
+#a bcbrule ipn:2.* ipn:4.* 1 'BCB-ARC4-AES128' key1
+#ENDOFBPSECADMINCOMMANDS
+
+#cd ../3.ipn.ltp
+#bpsecadmin<<ENDOFBPSECADMINCOMMANDS
+#x
+#ENDOFBPSECADMINCOMMANDS
+
+#cd ../4.ipn.ltp
+#ionsecadmin<<ENDOFIONSECADMINCOMMANDS
+#a key key1 key1.hmk
+#ENDOFIONSECADMINCOMMANDS
+#bpsecadmin<<ENDOFBPSECADMINCOMMANDS
+#x
+#a bibrule ipn:2.* ipn:4.* 1 'BIB-HMAC-SHA256' key1
+#a bcbrule ipn:2.* ipn:4.* 1 'BCB-ARC4-AES128' key1
+#ENDOFBPSECADMINCOMMANDS
+#fi
+
+#cd ../2.ipn.ltp
+bptrace ipn:2.1 ipn:4.1 ipn:2.0 5 0.1 "test_trace6" rcv,ct,fwd,dlv,del
+
+sleep ${TIMETOWAITFORTESTFINISH}
+
+cd ..
+
+grep "test_trace6" 4.ipn.ltp/4_results.txt > 4.ipn.ltp/4_receive_file.txt
+
+echo ""
+rm -f expected.txt
+touch expected.txt
+
+echo "'test_trace6'" >> expected.txt
+
+if ! diff -w expected.txt 4.ipn.ltp/4_receive_file.txt
+then
+        echo "FAIL (test 6)"
+        PASS=0
+else
+        echo "SUCCESS (test 6)"
+fi
+
+# Verify BSL operational at source and final destination
+echo "Verifying BSL initialization in TEST 6..."
+cd 2.ipn.ltp
+if grep -q "BSL initialization succeeded" ion.log; then
+    echo "BSL operational at source node"
+fi
+
+cd ../4.ipn.ltp
+if grep -q "BSL initialization succeeded" ion.log; then
+    echo "BSL operational at destination node"
+fi
+
+cd ..
+
+##############################
+# Test 7
+# Same as test 6, but with an
+# anonymous bundle (no source id!)
+
+echo -e "\n\n\n*****TEST 7*****"
+echo "Sending anonymous bundle with BIB(primary)+BCB(payload) to ipn:4.1 via node 3. Should be delivered."
+sleep ${TIMETODISPLAYTEXT}
+cd 2.ipn.ltp
+
+#if [ $BPV == "bpv6" ] ; then
+#bpsecadmin<<ENDOFBPSEADMINCOMMANDS
+#x
+#a bspbibrule ipn:2.* ipn:4.* 1 'BIB-HMAC-SHA256' key1
+#a bspbcbrule ipn:2.* ipn:4.* 1 'BCB-ARC4-AES128' key1
+#ENDOFBPSEADMINCOMMANDS
+
+#cd ../3.ipn.ltp
+#bpsecadmin<<ENDOFBPSEADMINCOMMANDS
+#x
+#ENDOFBPSEADMINCOMMANDS
+
+#cd ../4.ipn.ltp
+#bpsecadmin<<ENDOFBPSEADMINCOMMANDS
+#x
+#a bspbibrule ipn:2.* ipn:4.* 1 'BIB-HMAC-SHA256' key1
+#a bspbcbrule ipn:2.* ipn:4.* 1 'BCB-ARC4-AES128' key1
+#ENDOFBPSEADMINCOMMANDS
+#else
+#bpsecadmin<<ENDOFBPSEADMINCOMMANDS
+#x
+#a bibrule ipn:2.* ipn:4.* 1 'BIB-HMAC-SHA256' key1
+#a bcbrule ipn:2.* ipn:4.* 1 'BCB-ARC4-AES128' key1
+#ENDOFBPSEADMINCOMMANDS
+
+#cd ../3.ipn.ltp
+#bpsecadmin<<ENDOFBPSEADMINCOMMANDS
+#x
+#ENDOFBPSEADMINCOMMANDS
+#
+#cd ../4.ipn.ltp
+#bpsecadmin<<ENDOFBPSEADMINCOMMANDS
+#x
+#a bibrule ipn:2.* ipn:4.* 1 'BIB-HMAC-SHA256' key1
+#a bcbrule ipn:2.* ipn:4.* 1 'BCB-ARC4-AES128' key1
+#ENDOFBPSEADMINCOMMANDS
+#fi
+
+#cd ../2.ipn.ltp
+bpsource ipn:4.1 "test_trace7"
+
+sleep ${TIMETOWAITFORTESTFINISH}
+
+cd ..
+
+grep "test_trace7" 4.ipn.ltp/4_results.txt > 4.ipn.ltp/4_receive_file.txt
+
+echo ""
+rm -f expected.txt
+touch expected.txt
+
+echo "'test_trace7'" >> expected.txt
+
+if ! diff -w expected.txt 4.ipn.ltp/4_receive_file.txt
+then
+        echo "FAIL (test 7)"
+        PASS=0
+else
+        echo "SUCCESS (test 7)"
+fi
+
+# Verify BSL operational for anonymous bundle
+echo "Verifying BSL initialization in TEST 7..."
+cd 4.ipn.ltp
+if grep -q "BSL initialization succeeded" ion.log; then
+    echo "BSL operational at destination for anonymous bundle"
+fi
+cd ..
+
+##############################
+# Test 8
+# BIB on primary block (tgt: 0) from node 2 to node 4 via node 3.
+# Node 3 is a relay verifier (verifies BIB at CLIN but does NOT remove it).
+# Node 4 accepts the BIB on primary at APPOUT, exercising the SDR BTSD read path.
+
+echo -e "\n\n\n*****TEST 8*****"
+echo "Sending bundle with BIB(primary)+BCB(payload) to ipn:4.1 via node 3. Exercises SDR BTSD read path for BIB acceptor on primary block."
+sleep ${TIMETODISPLAYTEXT}
+cd 2.ipn.ltp
+
+bptrace ipn:2.1 ipn:4.1 ipn:2.0 5 0.1 "test_trace8" rcv,ct,fwd,dlv,del
+
+sleep ${TIMETOWAITFORTESTFINISH}
+
+cd ..
+
+grep "test_trace8" 4.ipn.ltp/4_results.txt > 4.ipn.ltp/4_receive_file.txt
+
+echo ""
+rm -f expected.txt
+touch expected.txt
+
+echo "'test_trace8'" >> expected.txt
+
+if ! diff -w expected.txt 4.ipn.ltp/4_receive_file.txt
+then
+        echo "FAIL (test 8)"
+        PASS=0
+else
+        echo "SUCCESS (test 8)"
+fi
+
+##############################
+# Test 9
+# Metadata block (tgt 8) protected at CLOUT while node 3 relays to node 4.
+# bpsendmeta asks for the block through ancillaryData.extensions; ION does
+# not serialize its content until dequeue, so node 2 cannot protect it at
+# APPIN, but node 3 can once the content is settled.
+#
+# bprecvmeta receives on ipn:4.2 and reports the metadata that arrived, so
+# the test can assert on the bytes the BIB was computed over.  Asserting on
+# the payload alone would not detect metadata that was altered in transit,
+# which is the failure the BIB over that block exists to prevent.
+
+echo -e "\n\n\n*****TEST 9*****"
+echo "Sending bundle with a metadata block to ipn:4.2 via node 3.  Node 3 sources a BIB over that block at CLOUT."
+sleep ${TIMETODISPLAYTEXT}
+
+rm -f 4.ipn.ltp/4_meta_results.txt
+touch 4.ipn.ltp/4_meta_results.txt
+
+cd 4.ipn.ltp
+bprecvmeta ipn:4.2 1 >> 4_meta_results.txt &
+cd ..
+
+sleep 1
+
+cd 2.ipn.ltp
+
+bpsendmeta ipn:2.1 ipn:4.2 "test_trace9" 7 5
+
+sleep ${TIMETOWAITFORTESTFINISH}
+
+cd ..
+
+# The payload must arrive, and the metadata must arrive unaltered: same
+# type code and same content that bpsendmeta was given.
+
+grep "test_trace9" 4.ipn.ltp/4_meta_results.txt > 4.ipn.ltp/4_receive_file.txt
+
+echo ""
+rm -f expected.txt
+touch expected.txt
+
+echo "'test_trace9'" >> expected.txt
+echo "metadata type 7, length 11, 'test_trace9'" >> expected.txt
+
+if ! diff -w expected.txt 4.ipn.ltp/4_receive_file.txt
+then
+        echo "FAIL (test 9)"
+        PASS=0
+else
+        echo "SUCCESS (test 9)"
+fi
+
+##############################
+# Test 10
+# The rules above must actually have been applied, not silently skipped.
+# A rule that never matches leaves every test above passing for the wrong
+# reason, so assert on what the nodes logged rather than on delivery alone.
+
+echo -e "\n\n\n*****TEST 10*****"
+echo "Verifying that the deferred-content rules were applied and not skipped."
+
+# Node 2 must DECLINE its two APPIN rules, because the bundle age and
+# previous node blocks have no content while the bundle is at rest.
+
+DECLINED=`grep -c "cannot be the target of a BIB or BCB" 2.ipn.ltp/ion.log`
+if [ ${DECLINED} -lt 1 ]
+then
+	echo "FAIL (test 10): node 2 never declined a deferred-content target."
+	PASS=0
+else
+	echo "Node 2 declined deferred-content targets at APPIN."
+fi
+
+# Node 3 must SOURCE a BIB at CLOUT over each of the blocks named by its
+# clout rules.  Tests 6, 8 and 9 each relay one bundle through node 3, and
+# each of those bundles should pick up a BIB over the primary block, the
+# bundle age block and the previous node block; the bundle from test 9 also
+# carries a metadata block, for ten in total.  Counting them distinguishes
+# "the rules were applied" from "the rules were silently skipped", which
+# delivery alone cannot: a bundle whose rule never matched is still
+# delivered, so tests 6, 8 and 9 would all pass with no BIB sourced at all.
+
+SOURCED=`grep -c "Created block type 11" 3.ipn.ltp/ion.log`
+if [ ${SOURCED} -lt 10 ]
+then
+	echo "FAIL (test 10): node 3 sourced ${SOURCED} BIB(s) at CLOUT, \
+expected 10; a deferred-content rule did not fire."
+	PASS=0
+else
+	echo "Node 3 sourced ${SOURCED} BIBs at CLOUT over settled blocks."
+fi
+
+# Node 4 must not have rejected any of them.
+
+if grep -q "sop_missing_at_acceptor" 4.ipn.ltp/ion.log
+then
+	echo "FAIL (test 10): node 4 reported a missing security target."
+	PASS=0
+else
+	echo "Node 4 accepted every security operation it was offered."
+fi
+
+############################################################
+#   END OF TESTS                ........
+
+# Shut down ION processes.
+echo "Stopping ION..."
+cd 2.ipn.ltp
+./ionstop &
+cd ../3.ipn.ltp
+./ionstop &
+cd ../4.ipn.ltp
+./ionstop &
+
+cd ..
+
+# Give all three nodes time to shut down, then clean up.
+sleep 7
+killm
+echo "Status reports test completed."
+
+if [ $PASS -eq 1 ]
+then
+	exit 0
+else
+	exit 1
+fi

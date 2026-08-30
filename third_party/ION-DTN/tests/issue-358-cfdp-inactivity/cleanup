@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Issue 358 - CFDP inactivity
+# Samuel Jero
+# June 26, 2012
+
+export ION_NODE_LIST_DIR=$PWD
+killm f
+echo "Cleaning up old ION..."
+rm -f ipn.cfdp.bp.tcp/ion.log
+rm -f ipn.cfdp.bp.tcp/test
+rm -f ipn.cfdp.bp.tcp/bpacq*
+rm -f ipn.cfdp.bp.tcp/output
+rm -f data
