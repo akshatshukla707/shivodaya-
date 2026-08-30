@@ -1,18 +1,40 @@
-# PROJECT SHIVODAYA :: COMPLETE MODULE EXECUTION TRANSCRIPT & COMMAND GUIDE
+# PROJECT SHIVODAYA :: CHRONOLOGICAL STEP-BY-STEP EXECUTION TRANSCRIPTS (1 TO 6)
 
 ---
 
-## 1. PRAKASH SEMANTIC ENCODER MODULE (`ipn:1.1` Aditya-L1 Probe)
+## [TRANSCRIPT 1] SETUP & CLONING ON A NEW LAPTOP (WSL / Ubuntu)
 
-### Build & Direct Run
+### Step 1.1: Install System Dependencies
+```bash
+sudo apt update
+sudo apt install -y build-essential cmake openjdk-17-jdk libsqlite3-dev git
+```
+
+### Step 1.2: Clone Project Repository
+```bash
+cd ~
+git clone https://github.com/akshatshukla707/shivodaya-.git shivodaya
+cd shivodaya
+chmod +x *.sh
+```
+
+### Step 1.3: Build All Native Binaries & Java GUIs
+```bash
+./build_all.sh
+./build_java.sh
+```
+
+---
+
+## [TRANSCRIPT 2] MODULE 1 - PRAKASH SEMANTIC ENCODER (`ipn:1.1` Aditya-L1 Probe)
+
+### Step 2.1: Run Prakash Native Binary
 ```bash
 cd ~/shivodaya
-chmod +x *.sh
-./build_all.sh
 ./build/prakash_encoder
 ```
 
-### Standalone Demo Script
+### Step 2.2: Standalone Demo Runner Script
 ```bash
 cd ~/shivodaya/prakash
 ./run_cmd_demo.sh
@@ -20,17 +42,16 @@ cd ~/shivodaya/prakash
 
 ---
 
-## 2. RICHA NEURAL DTN ROUTER MODULE (`ipn:2.1` Cis-Lunar Relay)
+## [TRANSCRIPT 3] MODULE 2 - RICHA NEURAL DTN ROUTER (`ipn:2.1` Cis-Lunar Relay)
 
-### Build & Direct Run
+### Step 3.1: Run Richa Perceptron Router Binary
 ```bash
 cd ~/shivodaya
-./build_all.sh
 ./build/richa_neural_router
 ```
 
-### 3-Terminal NASA ION BPv7 DTN Store-and-Forward Demonstration
-Run across 3 separate terminal windows:
+### Step 3.2: Run 3-Terminal NASA ION BPv7 Store-and-Forward Demo
+Open **3 separate terminal windows** and execute in order:
 
 - **Terminal 1 (Sender - Aditya-L1 `ipn:1.1`)**:
   ```bash
@@ -50,7 +71,7 @@ Run across 3 separate terminal windows:
   ./richa/ion_dtn_demo/terminal3_delayed_receiver.sh
   ```
 
-### Launch 3D WebGL Neural Mesh Visualizer
+### Step 3.3: Launch Richa 3D WebGL Mesh Visualizer
 ```bash
 cd ~/shivodaya/richa
 explorer.exe main3dvisual.html
@@ -58,89 +79,63 @@ explorer.exe main3dvisual.html
 
 ---
 
-## 3. AKASHDEEP SEMANTIC DECODER & 3D MISSION CONTROL GUI (`ipn:3.1` Mars Base)
+## [TRANSCRIPT 4] MODULE 3 - AKASHDEEP SEMANTIC DECODER & 3D MISSION CONTROL GUI (`ipn:3.1` Mars Base)
 
-### Native C++ Semantic Decoder Listener
+### Step 4.1: Run Akashdeep Native C++ Decoder Listener
 ```bash
 cd ~/shivodaya/build
 ./akashdeep_decoder
 ```
 
-### Akashdeep 3D Mission Control Java Swing GUI
+### Step 4.2: Launch Akashdeep 3D Mission Control Java Dashboard
 ```bash
-cd ~/shivodaya
-./build_java.sh
-cd akashdeep/java_gui
+cd ~/shivodaya/akashdeep/java_gui
 java -cp "bin:." Main
 ```
 
 ---
 
-## 4. 4-STEP NATIVE NEURAL ARCHITECTURE PIPELINE COMMANDS
+## [TRANSCRIPT 5] 4-TERMINAL NATIVE NEURAL ARCHITECTURE PIPELINE EXECUTION
 
-Run across 3 separate terminal windows in order:
+Execute in chronological order across **3 terminal windows**:
 
-### Command 1: Build All Binaries
+### Step 5.1: Build All Binaries (Terminal 1)
 ```bash
 cd ~/shivodaya && ./build_all.sh
 ```
 
-### Command 2: Start Akashdeep Decoder (Terminal 1)
+### Step 5.2: Launch Akashdeep Destination Decoder (Terminal 1 Listener)
 ```bash
 cd ~/shivodaya/build && ./akashdeep_decoder
 ```
 
-### Command 3: Start Richa Neural Router (Terminal 2)
+### Step 5.3: Launch Richa Neural Router (Terminal 2 Relay)
 ```bash
 cd ~/shivodaya/build && ./richa_neural_router
 ```
 
-### Command 4: Start Prakash Encoder (Terminal 3)
+### Step 5.4: Launch Prakash Encoder (Terminal 3 Source)
 ```bash
 cd ~/shivodaya/build && ./prakash_encoder
 ```
 
-### Automated Single-Command Execution
+### Alternative: Automated Single-Command Execution
 ```bash
 cd ~/shivodaya && ./run_full_mesh_pipeline.sh
 ```
 
 ---
 
-## 5. GROUND OPERATIONS EARTH CONTROL CENTER & WEB DASHBOARDS
+## [TRANSCRIPT 6] GROUND OPERATIONS EARTH CONTROL CENTER & WEB DASHBOARDS
 
-### Java Control Center HUD GUI
+### Step 6.1: Launch Ground Operations Control Center Java HUD
 ```bash
 cd ~/shivodaya
-./build_java.sh
 ./run_earth_control_center.sh
 ```
 
-### 3D WebGL Earth Operations Dashboard
+### Step 6.2: Launch 3D WebGL Earth Operations Dashboard
 ```bash
 cd ~/shivodaya/earth_monitor
 explorer.exe index_earth_dashboard.html
 ```
-
----
-
-## 6. CLONING & EXECUTING ON ANOTHER LAPTOP (WSL / Ubuntu)
-
-### Step 1: Clone Repository
-```bash
-cd ~
-git clone https://github.com/akshatshukla707/shivodaya-.git shivodaya
-cd shivodaya
-```
-
-### Step 2: Build All Native & Java Code
-```bash
-chmod +x *.sh
-./build_all.sh
-./build_java.sh
-```
-
-### Step 3: Run Any Module
-- **Akashdeep Dashboard**: `cd akashdeep/java_gui && java -cp "bin:." Main`
-- **Earth Ground Center**: `./run_earth_control_center.sh`
-- **Full Mesh Pipeline**: `./run_full_mesh_pipeline.sh`
