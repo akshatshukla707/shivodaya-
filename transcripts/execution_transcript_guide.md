@@ -1,4 +1,4 @@
-# PROJECT SHIVODAYA :: CHRONOLOGICAL STEP-BY-STEP EXECUTION TRANSCRIPTS (1 TO 6)
+# PROJECT SHIVODAYA :: CHRONOLOGICAL STEP-BY-STEP EXECUTION TRANSCRIPTS (1 TO 7)
 
 ---
 
@@ -139,3 +139,21 @@ cd ~/shivodaya
 cd ~/shivodaya/earth_monitor
 explorer.exe index_earth_dashboard.html
 ```
+
+---
+
+## [TRANSCRIPT 7] STANDALONE STREAMLIT MISSION CONTROL ANALYTICS DASHBOARD
+
+### Step 7.1: Install Streamlit & Dependencies (On Laptop)
+```bash
+sudo apt update
+sudo apt install -y python3-pip python3-pandas python3-numpy python3-plotly
+pip3 install streamlit
+```
+
+### Step 7.2: Launch Streamlit Dashboard
+```bash
+cd ~/shivodaya
+streamlit run streamlit_dashboard.py
+```
+*(Automatically opens browser at `http://localhost:8501`)*
