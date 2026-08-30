@@ -9,21 +9,23 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_compile_options(-O3 -Wall -Wextra -pthread)
 
 # Include directories
-include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sqlite3
-)
-
+set(ION_INCLUDE_DIRS)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/third_party/ION-DTN")
-    include_directories(
+    list(APPEND ION_INCLUDE_DIRS
         ${CMAKE_CURRENT_SOURCE_DIR}/third_party/ION-DTN/bpv7/include
         ${CMAKE_CURRENT_SOURCE_DIR}/third_party/ION-DTN/ici/include
     )
 elseif(EXISTS "/home/akshat/ION-DTN")
-    include_directories(
+    list(APPEND ION_INCLUDE_DIRS
         /home/akshat/ION-DTN/bpv7/include
         /home/akshat/ION-DTN/ici/include
     )
 endif()
+
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sqlite3
+    ${ION_INCLUDE_DIRS}
+)
 
 # SQLite3 Library
 add_library(sqlite3_static STATIC third_party/sqlite3/sqlite3.c)
