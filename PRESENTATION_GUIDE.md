@@ -38,6 +38,8 @@ cd shivodaya-/build
 
 **Commands to run (Terminal 2):**
 ```bash
+~/shivodaya-/richa$ python3 -m http.server 8000
+http://localhost:8000/main3dvisual.html
 cd shivodaya-/build
 ./richa_neural_router
 ```
