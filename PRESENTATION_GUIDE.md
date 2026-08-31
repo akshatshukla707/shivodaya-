@@ -10,7 +10,7 @@
 
 **Commands to run:**
 ```bash
-cd shivodaya
+cd shivodaya-
 ./build_all.sh
 ```
 
