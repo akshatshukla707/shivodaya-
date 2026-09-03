@@ -22,8 +22,8 @@ if [ ! -f "$DB_PATH" ]; then
     echo "[!] Target database not found at $DB_PATH, using fallback location."
 fi
 
-# Include SQLite JDBC classpath from akashdeep
-CP=".:${SCRIPT_DIR}/earth_control_center/bin"
+# Include bundled jars and akashdeep classes
+CP=".:${SCRIPT_DIR}/earth_control_center/bin:${SCRIPT_DIR}/earth_control_center/lib/*"
 if [ -d "${SCRIPT_DIR}/akashdeep/java_gui/bin" ]; then
     CP="${CP}:${SCRIPT_DIR}/akashdeep/java_gui/bin"
 fi

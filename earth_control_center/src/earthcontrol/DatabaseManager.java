@@ -7,15 +7,27 @@ import java.util.List;
 
 public class DatabaseManager {
     private static final String DEFAULT_DB_PATH = "/home/akshat/Downloads/parabitshivchaitanya.db";
-    private static final String FALLBACK_DB_PATH = "earth_control_center/parabitshivchaitanya.db";
+    private static final String FALLBACK_DB_PATH = "/home/shivodaya-/earth_control_center/parabitshivchaitanya.db";
     private String activeDbPath;
 
     public DatabaseManager() {
+        File fLocal = new File("parabitshivchaitanya.db");
+        File fSub = new File("earth_control_center/parabitshivchaitanya.db");
+        File fParent = new File("../parabitshivchaitanya.db");
         File f1 = new File(DEFAULT_DB_PATH);
-        if (f1.exists()) {
+        File f2 = new File(FALLBACK_DB_PATH);
+        if (fLocal.exists()) {
+            activeDbPath = fLocal.getAbsolutePath();
+        } else if (fSub.exists()) {
+            activeDbPath = fSub.getAbsolutePath();
+        } else if (fParent.exists()) {
+            activeDbPath = fParent.getAbsolutePath();
+        } else if (f2.exists()) {
+            activeDbPath = FALLBACK_DB_PATH;
+        } else if (f1.exists()) {
             activeDbPath = DEFAULT_DB_PATH;
         } else {
-            activeDbPath = FALLBACK_DB_PATH;
+            activeDbPath = fSub.getAbsolutePath();
         }
     }
 

@@ -2,6 +2,7 @@ build/
 bin/
 *.class
 *.db
+!earth_control_center/*.db
 *.log
 *.fifo
 .latentcode
@@ -15,5 +16,8 @@ warning_dispatch.txt
 earth_control_center/bin/
 session-*.md
 *.pyc
-
-
+*.o
+node_modules/
+.next/
+web/node_modules/
+web/.next/

@@ -33,26 +33,26 @@ target_include_directories(sqlite3_static PUBLIC third_party/sqlite3)
 
 # Module 1: Prakash (C11 - Native Semantic Encoder & Ingest)
 add_executable(prakash_encoder prakash/prakash_encoder.c)
-target_link_libraries(prakash_encoder PRIVATE sqlite3_static pthread m)
+target_link_libraries(prakash_encoder PRIVATE sqlite3_static pthread m dl)
 
 # Module 2: Richa (C++17 - Native Neural DTN Router)
 add_executable(richa_neural_router richa/richa_neural_router.cpp)
-target_link_libraries(richa_neural_router PRIVATE sqlite3_static pthread m)
+target_link_libraries(richa_neural_router PRIVATE sqlite3_static pthread m dl)
 
 # Module 3: Akashdeep Legacy Decoder (C++17 - Native Semantic Decoder)
 add_executable(akashdeep_decoder akashdeep/akashdeep_decoder.cpp)
-target_link_libraries(akashdeep_decoder PRIVATE sqlite3_static pthread m)
+target_link_libraries(akashdeep_decoder PRIVATE sqlite3_static pthread m dl)
 
 # Module 3: Akashdeep NASA ION Backend (C++17 - BP Ingress & SQLite Logger, optional if ION headers are present)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/third_party/ION-DTN" OR EXISTS "/home/akshat/ION-DTN")
     add_executable(akashdeep_ion_backend akashdeep/akashdeep_ion_backend.cpp)
-    target_link_libraries(akashdeep_ion_backend PRIVATE sqlite3_static pthread m)
+    target_link_libraries(akashdeep_ion_backend PRIVATE sqlite3_static pthread m dl)
 endif()
 
 # Module 4: Earth Monitoring Center & Visualization Bridge
 add_executable(earth_monitor earth_monitor/earth_monitor.cpp)
-target_link_libraries(earth_monitor PRIVATE sqlite3_static pthread m)
+target_link_libraries(earth_monitor PRIVATE sqlite3_static pthread m dl)
 
 # Module 5: Standalone ION DTN Engine Demo
 add_executable(ion_dtn_engine richa/ion_dtn_demo/ion_dtn_engine.cpp)
-target_link_libraries(ion_dtn_engine PRIVATE pthread m)
+target_link_libraries(ion_dtn_engine PRIVATE pthread m dl)

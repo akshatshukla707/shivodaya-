@@ -107,7 +107,7 @@ public class EarthControlCenterUI extends JFrame {
         JButton launch3dBtn = ModernTheme.createTacticalButton("🌐 3D MESH VISUALIZER", ModernTheme.VIVID_AMBER, Color.BLACK);
         launch3dBtn.addActionListener(e -> {
             try {
-                Desktop.getDesktop().open(new File("/home/akshat/shivodaya/richa/main3dvisual.html"));
+                Desktop.getDesktop().open(new File("/home/shivodaya-/richa/main3dvisual.html"));
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, "Opening 3D visualizer at: richa/main3dvisual.html", "3D Visualizer", JOptionPane.INFORMATION_MESSAGE);
             }
