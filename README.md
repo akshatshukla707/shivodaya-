@@ -51,14 +51,56 @@ Shivodaya is a strategic advantage that positions India as the central hub of ne
 
 ```text
 shivodaya/
+├── build.sh                   # Unified master build script (Prerequisites, C++, Java, Web, Python)
+├── run_web.sh                 # Launches Next.js Aerospace Web Platform & Landing Page
+├── web/                       # Next.js 14 Aerospace Web Platform & 3D Visualizer
 ├── prakash/                   # Acquisition & JSCC Encoder Module (C11)
 ├── richa/                     # Neural Router & DTN Transport Engine (C++17)
 │   └── ion_dtn_demo/          # Bundle Protocol v7 (BPv7) Custody Engine
 ├── akashdeep/                 # Mars Target Semantic Decoder & Java GUI
 ├── earth_control_center/      # Ground Operations Control Center GUI (Java)
 ├── earth_monitor/             # Earth Monitoring Bridge & 3D Dashboard Modal
-├── build_all.sh               # Builds all C/C++ native binaries into build/
+├── streamlit_dashboard.py     # Python Telemetry & Routing Analytics Dashboard
+├── build_all.sh               # Builds C/C++ native binaries into build/
 ├── build_java.sh              # Builds Java GUIs (Akashdeep & Ground Operations)
 ├── run_earth_control_center.sh# Launches Ground Operations GUI
 ├── run_full_mesh_pipeline.sh  # Automated end-to-end pipeline runner
+├── run_interactive_mesh_pipeline.sh # Interactive terminal simulation runner
 └── ARCHITECTURE.md            # Detailed system design & pipeline flowchart
+```
+
+---
+
+## One-Command Setup & Launch
+
+### 1. Build Everything
+To install missing dependencies and build all native binaries, Java GUIs, web platform, and Python telemetry in one step:
+```bash
+./build.sh
+```
+
+### 2. Launch Services
+* **Next.js Web Landing Page & Visualizer (Port 3000):**
+  ```bash
+  ./run_web.sh
+  ```
+* **Interactive End-to-End Simulation:**
+  ```bash
+  ./run_interactive_mesh_pipeline.sh
+  ```
+* **Automated Full Mesh Pipeline:**
+  ```bash
+  ./run_full_mesh_pipeline.sh
+  ```
+* **Ground Operations Control Center (Java GUI):**
+  ```bash
+  ./run_earth_control_center.sh
+  ```
+* **Mars Akashdeep CME Telemetry GUI (Java Swing):**
+  ```bash
+  cd akashdeep/java_gui && java -cp "bin:." Main
+  ```
+* **Streamlit Telemetry Dashboard:**
+  ```bash
+  streamlit run streamlit_dashboard.py
+  ```

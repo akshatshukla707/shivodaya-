@@ -1,0 +1,2042 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project Shivodaya | Interplanetary Neural Mesh</title>
+
+  <!-- 1. Google Fonts: Inter & Space Grotesk -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- 2. Force Graph Library from UNPKG -->
+  <script src="https://unpkg.com/force-graph"></script>
+
+
+
+  <style>
+    /* ============================================================
+       GLOBAL CSS & RESET: Deep Space Theme
+       ============================================================ */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      min-height: 100vh;
+      background-color: #030308;
+      color: #ffffff;
+      font-family: 'Space Grotesk', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow-x: hidden;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      scroll-behavior: smooth;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    ul, ol {
+      list-style: none;
+    }
+
+    button {
+      font-family: inherit;
+      cursor: pointer;
+      border: none;
+      background: none;
+    }
+
+    input, select, textarea {
+      font-family: inherit;
+    }
+
+    /* ============================================================
+       TOP NAVIGATION BAR: Glassmorphism Effect
+       ============================================================ */
+    .top-nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
+      background: rgba(0, 0, 0, 0.40);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      z-index: 1000;
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      cursor: pointer;
+    }
+
+    .brand-logo {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: #ffffff;
+      transition: color 0.3s ease;
+    }
+
+    .brand-logo:hover {
+      color: #00f0ff;
+    }
+
+    .brand-badge {
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.5);
+      border-left: 1px solid rgba(255, 255, 255, 0.2);
+      padding-left: 14px;
+    }
+
+    .nav-tabs {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+
+    .nav-tab-item {
+      position: relative;
+    }
+
+    .nav-tab-link {
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.7);
+      padding: 6px 4px;
+      transition: color 0.25s ease, border-color 0.25s ease;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .nav-tab-link:hover {
+      color: #ffffff;
+    }
+
+    .nav-tab-link.active {
+      color: #ffffff;
+    }
+
+    .nav-tab-link.active::after {
+      content: '';
+      position: absolute;
+      bottom: -4px;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: #00f0ff;
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.8);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .btn-vani {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 20px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 9999px;
+      background: transparent;
+      color: #ffffff;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      transition: all 0.3s ease;
+    }
+
+    .btn-vani:hover {
+      background: #ffffff;
+      color: #030308;
+      border-color: #ffffff;
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+    }
+
+    .vani-pulse {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: #00f0ff;
+      box-shadow: 0 0 8px #00f0ff;
+      animation: pulseGlow 2s infinite ease-in-out;
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.4; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.4); }
+    }
+
+    /* ============================================================
+       TAB SYSTEM CSS: Fade-in animation & visibility
+       ============================================================ */
+    .tab-content {
+      display: none;
+      width: 100%;
+      min-height: 100vh;
+      padding-top: 72px;
+    }
+
+    .tab-content.active {
+      display: block;
+      animation: fadeInTab 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes fadeInTab {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* ============================================================
+       PHASE 2: CINEMATIC "NOLAN" SCROLL SCENES
+       ============================================================ */
+    .scroll-scene {
+      position: relative;
+      width: 100%;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-attachment: fixed;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: cover;
+      overflow: hidden;
+    }
+
+    .scroll-scene::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(3, 3, 8, 0.65);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .scene-1 { background-image: url('/images/deepspace1.jpg'); }
+    .scene-2 { background-image: url('/images/sun.jpg'); }
+    .scene-3 { background-image: url('/images/people_to_space.webp'); }
+
+    .scene-content {
+      position: relative;
+      z-index: 2;
+      max-width: 1100px;
+      width: 100%;
+      padding: 0 40px;
+      text-align: center;
+      opacity: 0;
+      transform: translateY(40px);
+      transition: opacity 1.1s cubic-bezier(0.16, 1, 0.3, 1), transform 1.1s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .scene-content.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .scene-tag {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: #00f0ff;
+      margin-bottom: 16px;
+      text-shadow: 0 0 15px rgba(0, 240, 255, 0.5);
+    }
+
+    .scene-title {
+      font-size: 3.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      text-transform: uppercase;
+      margin-bottom: 24px;
+      color: #ffffff;
+      text-shadow: 0 4px 30px rgba(0, 0, 0, 0.8);
+    }
+
+    .scene-desc {
+      font-size: 1.25rem;
+      font-weight: 300;
+      color: rgba(255, 255, 255, 0.82);
+      max-width: 780px;
+      margin: 0 auto;
+      line-height: 1.7;
+      text-shadow: 0 2px 20px rgba(0, 0, 0, 0.9);
+    }
+
+    .latency-ticker {
+      display: flex;
+      justify-content: center;
+      gap: 32px;
+      margin-top: 40px;
+    }
+
+    .latency-box {
+      background: rgba(3, 3, 8, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 20px 32px;
+      backdrop-filter: blur(8px);
+    }
+
+    .latency-val {
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: #00f0ff;
+      letter-spacing: -0.01em;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .latency-label {
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .triad-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 28px;
+      margin-top: 48px;
+      text-align: left;
+    }
+
+    .triad-card {
+      position: relative;
+      background: rgba(10, 14, 26, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 16px;
+      padding: 32px 28px;
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+      transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      overflow: hidden;
+    }
+
+    .triad-card:hover {
+      transform: translateY(-8px);
+      border-color: rgba(0, 240, 255, 0.6);
+      box-shadow: 0 16px 40px rgba(0, 240, 255, 0.15);
+      background: rgba(10, 18, 35, 0.65);
+    }
+
+    .triad-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .triad-badge {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #00f0ff;
+      background: rgba(0, 240, 255, 0.1);
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      padding: 4px 10px;
+      border-radius: 9999px;
+    }
+
+    .triad-node-id {
+      font-size: 0.7rem;
+      font-family: monospace;
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    .triad-name {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #ffffff;
+      margin-bottom: 6px;
+    }
+
+    .triad-location {
+      font-size: 0.8rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.5);
+      margin-bottom: 16px;
+    }
+
+    .triad-tech {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      color: #FBBF24;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+    }
+
+    .triad-desc {
+      font-size: 0.9rem;
+      font-weight: 300;
+      color: rgba(255, 255, 255, 0.75);
+      line-height: 1.6;
+    }
+
+    /* ============================================================
+       PHASE 1 & 2: REFINED OBSIDIAN ARCHITECTURE & SCHEMATIC TOGGLE
+       ============================================================ */
+    #tab-architecture {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      padding-top: 0;
+      background: #030308;
+    }
+
+    .architecture-wrapper {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    #graph-container {
+      width: 100vw;
+      height: 100vh;
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      background: #030308;
+    }
+
+    #flowchart-container {
+      display: none;
+      width: 100vw;
+      height: 100vh;
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      background: #020308 radial-gradient(rgba(0, 240, 255, 0.08) 1px, transparent 1px);
+      background-size: 28px 28px;
+      overflow-y: auto;
+      padding: 100px 24px 80px 24px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .blueprint-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .blueprint-header-banner {
+      background: rgba(10, 14, 26, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 20px;
+      padding: 28px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
+      margin-bottom: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .blueprint-header-tag {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.65rem;
+      font-family: 'Space Grotesk', monospace;
+      letter-spacing: 0.2em;
+      color: #00f0ff;
+      text-transform: uppercase;
+    }
+
+    .tag-pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #00f0ff;
+      box-shadow: 0 0 10px #00f0ff;
+      animation: pulse 2s infinite;
+    }
+
+    .blueprint-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.01em;
+      line-height: 1.25;
+    }
+
+    .blueprint-desc {
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.65);
+      line-height: 1.5;
+    }
+
+    .blueprint-badges-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .bp-badge {
+      font-size: 0.65rem;
+      font-family: 'Space Grotesk', monospace;
+      padding: 5px 12px;
+      border-radius: 8px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+    .bp-badge-prakash { background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); color: #fbbf24; }
+    .bp-badge-richa { background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.3); color: #06b6d4; }
+    .bp-badge-akashdeep { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; }
+    .bp-badge-earth { background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: #10b981; }
+
+    /* Pipeline Stage Cards */
+    .blueprint-stage {
+      border-radius: 20px;
+      padding: 24px;
+      backdrop-filter: blur(14px);
+      margin-bottom: 8px;
+      transition: border-color 0.25s ease;
+    }
+
+    .stage-inputs { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(156, 163, 175, 0.3); box-shadow: 0 0 30px rgba(156, 163, 175, 0.06); }
+    .stage-prakash { background: rgba(41, 32, 16, 0.35); border: 1px solid rgba(251, 191, 36, 0.35); box-shadow: 0 0 30px rgba(251, 191, 36, 0.08); }
+    .stage-richa { background: rgba(14, 41, 56, 0.35); border: 1px solid rgba(6, 182, 212, 0.35); box-shadow: 0 0 30px rgba(6, 182, 212, 0.08); }
+    .stage-akashdeep { background: rgba(45, 20, 25, 0.35); border: 1px solid rgba(239, 68, 68, 0.35); box-shadow: 0 0 30px rgba(239, 68, 68, 0.08); }
+    .stage-earth { background: rgba(12, 40, 30, 0.35); border: 1px solid rgba(16, 185, 129, 0.35); box-shadow: 0 0 30px rgba(16, 185, 129, 0.08); }
+
+    .stage-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-bottom: 16px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .stage-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .stage-num-badge {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Space Grotesk', monospace;
+      font-weight: 700;
+      font-size: 0.75rem;
+      border: 1px solid;
+    }
+
+    .stage-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .stage-meta {
+      font-size: 0.75rem;
+      color: rgba(255, 255, 255, 0.6);
+      font-family: 'Space Grotesk', monospace;
+      margin-top: 2px;
+    }
+
+    .stage-tech-tag {
+      font-size: 0.7rem;
+      font-family: 'Space Grotesk', monospace;
+      color: rgba(255, 255, 255, 0.7);
+      background: rgba(0, 0, 0, 0.5);
+      padding: 6px 14px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* Cards Grid within Stage */
+    .stage-items-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 12px;
+    }
+
+    .bp-item-card {
+      background: rgba(0, 0, 0, 0.55);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 14px;
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .bp-item-card:hover {
+      border-color: rgba(0, 240, 255, 0.5);
+      background: rgba(255, 255, 255, 0.05);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+    }
+
+    .bp-item-top {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .bp-item-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      flex-shrink: 0;
+    }
+
+    .bp-item-label {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.2;
+    }
+
+    .bp-item-detail {
+      font-size: 0.7rem;
+      color: rgba(255, 255, 255, 0.6);
+      line-height: 1.35;
+      margin-top: 4px;
+    }
+
+    .bp-item-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      padding-top: 8px;
+      font-size: 0.65rem;
+      font-family: 'Space Grotesk', monospace;
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    .bp-item-footer span.inspect-arrow {
+      color: #00f0ff;
+    }
+
+    /* Inter-Stage Conduit Badge */
+    .conduit-separator {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin: 8px 0;
+    }
+
+    .conduit-line {
+      height: 16px;
+      width: 1px;
+      background: linear-gradient(to bottom, rgba(255, 255, 255, 0.2), #00f0ff);
+    }
+
+    .conduit-pill {
+      background: rgba(0, 0, 0, 0.85);
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      padding: 6px 16px;
+      border-radius: 9999px;
+      font-size: 0.65rem;
+      font-family: 'Space Grotesk', monospace;
+      color: #7df9ff;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.15);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Inspector Drawer (Slideout Modal) */
+    .bp-inspector-drawer {
+      position: fixed;
+      top: 80px;
+      right: 24px;
+      bottom: 24px;
+      width: 420px;
+      max-width: calc(100vw - 48px);
+      background: rgba(5, 7, 15, 0.96);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 20px;
+      box-shadow: 0 0 60px rgba(0, 0, 0, 0.95);
+      backdrop-filter: blur(24px);
+      z-index: 100;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+      animation: slideInRight 0.25s ease-out;
+    }
+
+    @keyframes slideInRight {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    .bp-inspector-header {
+      padding: 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .bp-inspector-body {
+      padding: 20px;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .bp-inspect-tag {
+      font-size: 0.65rem;
+      font-family: 'Space Grotesk', monospace;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      display: inline-block;
+      margin-bottom: 6px;
+      border: 1px solid;
+    }
+
+    .bp-inspect-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.25;
+    }
+
+    .bp-inspect-path {
+      font-size: 0.7rem;
+      font-family: 'Space Grotesk', monospace;
+      color: rgba(255, 255, 255, 0.5);
+      margin-top: 3px;
+    }
+
+    .bp-inspect-close {
+      background: transparent;
+      border: none;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 1.25rem;
+      cursor: pointer;
+      padding: 4px;
+      line-height: 1;
+      transition: color 0.2s;
+    }
+    .bp-inspect-close:hover { color: #ffffff; }
+
+    .bp-inspect-section-title {
+      font-size: 0.65rem;
+      font-weight: 700;
+      font-family: 'Space Grotesk', monospace;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: rgba(255, 255, 255, 0.45);
+      margin-bottom: 6px;
+    }
+
+    .bp-inspect-desc {
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.85);
+      line-height: 1.5;
+    }
+
+    .bp-inspect-code-block {
+      background: #000000;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+      padding: 12px;
+      font-family: 'Space Grotesk', monospace;
+      font-size: 0.7rem;
+      color: #a5f3fc;
+      overflow-x: auto;
+      line-height: 1.4;
+      white-space: pre;
+    }
+
+    .bp-inspect-cmd-box {
+      background: rgba(0, 0, 0, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-family: 'Space Grotesk', monospace;
+      font-size: 0.72rem;
+      color: #fde047;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .bp-copy-btn {
+      background: rgba(0, 240, 255, 0.15);
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      color: #00f0ff;
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 0.65rem;
+      cursor: pointer;
+      font-family: 'Space Grotesk', monospace;
+      transition: all 0.2s;
+    }
+    .bp-copy-btn:hover {
+      background: #00f0ff;
+      color: #030308;
+    }
+
+    /* Glassmorphic View Toggle */
+    .arch-view-toggle {
+      position: absolute;
+      top: 92px;
+      right: 48px;
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      padding: 4px;
+      background: rgba(10, 14, 26, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 9999px;
+      backdrop-filter: blur(10px);
+    }
+
+    .toggle-btn {
+      padding: 8px 18px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.6);
+      border-radius: 9999px;
+      transition: all 0.25s ease;
+    }
+
+    .toggle-btn.active {
+      background: #00f0ff;
+      color: #030308;
+      font-weight: 700;
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+    }
+
+    /* Graph HUD Overlay */
+    .graph-overlay {
+      position: absolute;
+      top: 92px;
+      left: 48px;
+      z-index: 10;
+      pointer-events: none;
+      max-width: 480px;
+      background: rgba(3, 3, 8, 0.75);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      padding: 20px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .graph-title {
+      font-size: 1.8rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      text-transform: uppercase;
+      color: #ffffff;
+      margin-bottom: 6px;
+      line-height: 1.1;
+    }
+
+    .graph-subtitle {
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255, 0.72);
+      line-height: 1.5;
+      margin-bottom: 12px;
+      font-weight: 300;
+    }
+
+    .graph-badge-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 12px;
+      border-radius: 9999px;
+      background: rgba(0, 240, 255, 0.1);
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      font-size: 0.65rem;
+      font-family: monospace;
+      letter-spacing: 0.15em;
+      color: #00f0ff;
+      text-transform: uppercase;
+    }
+
+    .graph-badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #00f0ff;
+      box-shadow: 0 0 8px #00f0ff;
+      animation: pulseGlow 1.5s infinite;
+    }
+
+    /* Color Legend Indicator */
+    .color-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 10px;
+      font-size: 0.7rem;
+      font-family: monospace;
+      text-transform: uppercase;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    /* Phase 4 forms styling */
+    .tab-page-container {
+      min-height: calc(100vh - 72px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 24px;
+      position: relative;
+    }
+
+    .security-terminal-box, .registration-card-box {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      max-width: 500px;
+      background: rgba(10, 14, 26, 0.75);
+      border: 1px solid rgba(0, 240, 255, 0.35);
+      border-radius: 20px;
+      padding: 40px;
+      backdrop-filter: blur(14px);
+      box-shadow: 0 0 60px rgba(0, 0, 0, 0.9);
+    }
+
+    .form-group { margin-bottom: 20px; }
+    .form-label { display: block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 8px; color: rgba(255, 255, 255, 0.85); }
+    .form-input { width: 100%; background: rgba(3, 5, 12, 0.8); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 10px; padding: 12px 16px; color: #fff; font-size: 0.9rem; outline: none; }
+    .btn-submit-action { width: 100%; padding: 14px; background: #fff; color: #030308; border-radius: 10px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; transition: all 0.25s; cursor: pointer; }
+    .btn-submit-action:hover { background: #00f0ff; }
+  </style>
+</head>
+<body>
+
+  <!-- Background Audio Element -->
+  <audio id="cinematic-bgm" loop preload="auto">
+    <source src="https://actions.google.com/sounds/v1/science_fiction/deep_space_drone.ogg" type="audio/ogg">
+    <source src="https://assets.mixkit.co/active_storage/sfx/2874/2874-preview.mp3" type="audio/mp3">
+  </audio>
+
+  <!-- ============================================================
+       TOP NAVIGATION BAR
+       ============================================================ -->
+  <nav class="top-nav">
+    <div class="nav-brand" onclick="switchTabDirect('tab-vision')">
+      <span class="brand-logo">SHIVODAYA</span>
+      <span class="brand-badge">Interplanetary Neural Mesh</span>
+    </div>
+
+    <ul class="nav-tabs">
+      <li class="nav-tab-item"><a class="nav-tab-link active" data-tab="tab-vision">Vision</a></li>
+      <li class="nav-tab-item"><a class="nav-tab-link" data-tab="tab-ground-station">Ground Station</a></li>
+      <li class="nav-tab-item"><a class="nav-tab-link" data-tab="tab-architecture">Architecture</a></li>
+      <li class="nav-tab-item"><a class="nav-tab-link" data-tab="tab-register-mission">Register Mission</a></li>
+    </ul>
+
+    <div class="nav-actions">
+      <button type="button" class="btn-vani" onclick="triggerVaniGreeting()">
+        <span class="vani-pulse"></span>
+        <span>INITIALIZE VANI</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ============================================================
+       MAIN CONTENT CONTAINER
+       ============================================================ -->
+  <main id="app-container">
+
+    <!-- TAB 1: VISION -->
+    <section id="tab-vision" class="tab-content active" style="padding-top: 0;">
+      <div class="scroll-scene scene-1">
+        <div class="scene-content">
+          <span class="scene-tag">Scene 01 // The Radiation Hazard</span>
+          <h1 class="scene-title">In Deep Space,<br/>Delayed Warning Is Fatal.</h1>
+          <p class="scene-desc">
+            Class-X solar storms trigger total planetary blackouts. When alerts take hours to route through ground queues, astronauts cannot reach radiation shelters in time.
+          </p>
+        </div>
+      </div>
+
+      <div class="scroll-scene scene-2">
+        <div class="scene-content">
+          <span class="scene-tag">Scene 02 // Autonomous Routing</span>
+          <h2 class="scene-title">Severing Humanity's<br/>Earth-Dependency.</h2>
+          <p class="scene-desc">
+            Shivodaya routes radiation spectra directly from spacecraft to spacecraft, cutting warning latency from hours to seconds with zero ground bottlenecks.
+          </p>
+          <div class="latency-ticker">
+            <div class="latency-box"><div class="latency-val">30s</div><div class="latency-label">Earth-Moon Alert (vs 240m)</div></div>
+            <div class="latency-box"><div class="latency-val">8m</div><div class="latency-label">Earth-Mars Alert (vs 1,440m)</div></div>
+            <div class="latency-box"><div class="latency-val">98.7%</div><div class="latency-label">Latency Reduction</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="scroll-scene scene-3">
+        <div class="scene-content" style="max-width: 1200px;">
+          <span class="scene-tag">Scene 03 // The Core Triad</span>
+          <h2 class="scene-title">Three Subsystems.<br/>One Resilient Mesh.</h2>
+          <div class="triad-grid">
+            <div class="triad-card">
+              <div class="triad-header"><span class="triad-badge">Vector Encoder</span><span class="triad-node-id">ipn:1.1</span></div>
+              <h3 class="triad-name">PRAKASH</h3>
+              <p class="triad-location">Aditya-L1 / Sentry</p>
+              <div class="triad-tech">Native C11 • Zero-Copy MMAP</div>
+              <p class="triad-desc">Compresses multi-gigabyte solar radiation flux into 32-float linear projection vectors (128 bytes).</p>
+            </div>
+            <div class="triad-card">
+              <div class="triad-header"><span class="triad-badge">Neural Router</span><span class="triad-node-id">ipn:2.1</span></div>
+              <h3 class="triad-name">RICHA</h3>
+              <p class="triad-location">Cis-Lunar Mesh</p>
+              <div class="triad-tech">C++17 TVG Dijkstra • ION BPv7</div>
+              <p class="triad-desc">Calculates dynamic pathways across orbital graphs with multi-hop BFS blackout rerouting.</p>
+            </div>
+            <div class="triad-card">
+              <div class="triad-header"><span class="triad-badge">Semantic Decoder</span><span class="triad-node-id">ipn:3.1</span></div>
+              <h3 class="triad-name">AKASHDEEP</h3>
+              <p class="triad-location">Martian Base Terminal</p>
+              <div class="triad-tech">Reverse MLP Matrix • &lt; 1ms</div>
+              <p class="triad-desc">Reconstructs real-time 3D radiation wavefronts in sub-milliseconds, triggering automated EVA lockdown.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: GROUND STATION -->
+    <section id="tab-ground-station" class="tab-content">
+      <div class="tab-page-container">
+        <div class="security-terminal-box">
+          <h2 style="font-size: 1.5rem; margin-bottom: 8px;">GROUND STATION</h2>
+          <p style="font-size: 0.8rem; color: rgba(255,255,255,0.6); margin-bottom: 24px;">Enter clearance credentials for telemetry stream access.</p>
+          <form onsubmit="event.preventDefault(); alert('Authentication Verified. Uplink Established.');">
+            <div class="form-group"><label class="form-label">OPERATIVE CLEARANCE ID</label><input type="text" class="form-input" placeholder="OPS-ISRO-9942-ALPHA" required></div>
+            <div class="form-group"><label class="form-label">DECRYPTION KEY</label><input type="password" class="form-input" placeholder="••••••••••••" required></div>
+            <button type="submit" class="btn-submit-action">AUTHENTICATE CLEARANCE</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: ARCHITECTURE (PHASE 1: REFINED AESTHETIC & PHASE 2: FLOWCHART TOGGLE) -->
+    <section id="tab-architecture" class="tab-content">
+      <div class="architecture-wrapper">
+        
+        <!-- Phase 2: UI Toggle Button Group -->
+        <div class="arch-view-toggle">
+          <button id="toggle-mesh-btn" class="toggle-btn active" onclick="setArchitectureView('mesh')">
+            Mesh View
+          </button>
+          <button id="toggle-schematic-btn" class="toggle-btn" onclick="setArchitectureView('schematic')">
+            Schematic View
+          </button>
+        </div>
+
+        <!-- HUD Text Overlay -->
+        <div class="graph-overlay">
+          <span class="scene-tag">Topology // Live Obsidian Node Map</span>
+          <h1 class="graph-title">Neural Mesh Architecture</h1>
+          <p class="graph-subtitle">
+            Autonomous telemetry pipeline routing through Prakash C11 linear projection, Richa TVG Dijkstra routing, and Akashdeep Martian decoding.
+          </p>
+          
+          <div class="color-legend">
+            <div class="legend-item"><span class="legend-dot" style="background: #FBBF24;"></span><span>PRAKASH</span></div>
+            <div class="legend-item"><span class="legend-dot" style="background: #06B6D4;"></span><span>RICHA</span></div>
+            <div class="legend-item"><span class="legend-dot" style="background: #EF4444;"></span><span>AKASHDEEP</span></div>
+            <div class="legend-item"><span class="legend-dot" style="background: #10B981;"></span><span>EARTH OPS</span></div>
+            <div class="legend-item"><span class="legend-dot" style="background: #9CA3AF;"></span><span>TELEMETRY</span></div>
+          </div>
+        </div>
+
+        <!-- Container 1: Force Graph (Phase 1 Refined Aesthetic) -->
+        <div id="graph-container"></div>
+
+        <!-- Container 2: Native Aerospace Architectural Blueprint -->
+        <div id="flowchart-container">
+          <div class="blueprint-inner">
+            
+            <!-- Header Banner -->
+            <div class="blueprint-header-banner">
+              <div class="blueprint-header-tag">
+                <span class="tag-pulse-dot"></span>
+                <span>Aerospace Architectural Blueprint // IEEE / CCSDS DTN Compliant</span>
+              </div>
+              <h1 class="blueprint-title">
+                Project Shivodaya: End-to-End Interplanetary Execution Pipeline
+              </h1>
+              <p class="blueprint-desc">
+                Real-time topological data path from raw Aditya-L1 sensor streams through native C11 JSCC compression, C++17 TVG Dijkstra routing, and Martian Reverse MLP sub-millisecond decoding.
+              </p>
+              <div class="blueprint-badges-row">
+                <span class="bp-badge bp-badge-prakash">PRAKASH: ipn:1.1</span>
+                <span class="bp-badge bp-badge-richa">RICHA: ipn:2.1</span>
+                <span class="bp-badge bp-badge-akashdeep">AKASHDEEP: ipn:3.1</span>
+                <span class="bp-badge bp-badge-earth">EARTH OPS</span>
+              </div>
+            </div>
+
+            <!-- Stage 01: Telemetry Inputs -->
+            <div class="blueprint-stage stage-inputs">
+              <div class="stage-header">
+                <div class="stage-title-wrap">
+                  <div class="stage-num-badge" style="border-color: #9ca3af; color: #9ca3af; background: rgba(156,163,175,0.1);">01</div>
+                  <div>
+                    <div class="stage-title">Telemetry Ingestion Streams</div>
+                    <div class="stage-meta">Raw Sensor Feeds • Aditya-L1 ASPEX & PAPA Payloads</div>
+                  </div>
+                </div>
+                <div class="stage-tech-tag">mmap() • 5 Sensor Streams</div>
+              </div>
+              <div class="stage-items-grid">
+                <div class="bp-item-card" onclick="openBlueprintInspector('cme_sim')">
+                  <div class="bp-item-top">
+                    <div class="bp-item-icon" style="background: rgba(156,163,175,0.15); color: #9ca3af;">📡</div>
+                    <div>
+                      <div class="bp-item-label">cme_sim.txt</div>
+                      <div class="bp-item-detail">Coronal Mass Ejection velocities (km/s) & angular flare width</div>
+                    </div>
+                  </div>
+                  <div class="bp-item-footer"><span>Sensor Telemetry</span><span class="inspect-arrow">Inspect →</span></div>
+                </div>
+                <div class="bp-item-card" onclick="openBlueprintInspector('sep_sim')">
+                  <div class="bp-item-top">
+                    <div class="bp-item-icon" style="background: rgba(156,163,175,0.15); color: #9ca3af;">⚡</div>
+                    <div>
+                      <div class="bp-item-label">sep_sim.txt</div>
+                      <div class="bp-item-detail">Solar Energetic Particle flux tracking proton shockwaves</div>
+                    </div>
+                  </div>
+                  <div class="bp-item-footer"><span>Proton Flux</span><span class="inspect-arrow">Inspect →</span></div>
+                </div>
+                <div class="bp-item-card" onclick="openBlueprintInspector('solar_wind_sim')">
+                  <div class="bp-item-top">
+                    <div class="bp-item-icon" style="background: rgba(156,163,175,0.15); color: #9ca3af;">🌪️</div>
+                    <div>
+                      <div class="bp-item-label">solar_wind_sim.txt</div>
+                      <div class="bp-item-detail">Heliospheric bulk plasma speed, density & magnetic vectors</div>
+                    </div>
+                  </div>
+                  <div class="bp-item-footer"><span>Plasma Feeds</span><span class="inspect-arrow">Inspect →</span></div>
+                </div>
+                <div class="bp-item-card" onclick="openBlueprintInspector('proton_flux_sim')">
+                  <div class="bp-item-top">
+                    <div class="bp-item-icon" style="background: rgba(156,163,175,0.15); color: #9ca3af;">🔬</div>
+                    <div>
+                      <div class="bp-item-label">proton_flux_sim.txt</div>
+                      <div class="bp-item-detail">High-energy calibrated proton spectrum feeds</div>
+                    </div>
+                  </div>
+                  <div class="bp-item-footer"><span>Calibrated Spectra</span><span class="inspect-arrow">Inspect →</span></div>
+                </div>
+                <div class="bp-item-card" onclick="openBlueprintInspector('xray_flux_sim')">
+                  <div class="bp-item-top">
+                    <div class="bp-item-icon" style="background: rgba(156,163,175,0.15); color: #9ca3af;">🔆</div>
+                    <div>
+                      <div class="bp-item-label">xray_flux_sim.txt</div>
+                      <div class="bp-item-detail">0.5-8.0 Å X-ray photometer irradiance trigger</div>
+                    </div>
+                  </div>
+                  <div class="bp-item-footer"><span>Irradiance Streams</span><span class="inspect-arrow">Inspect →</span></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Conduit 1 -> 2 -->
+            <div class="conduit-separator">
+              <div class="conduit-line"></div>
+              <div class="conduit-pill">
+                <span>↓</span> Zero-Copy POSIX mmap Stream Ingest
+              </div>
+              <div class="conduit-line"></div>
+            </div>
+
+            <!-- Stage 02: PRAKASH Module -->
+            <div class="blueprint-stage stage-prakash">
+              <div class="stage-header">
+                <div class="stage-title-wrap">
+                  <div class="stage-num-badge" style="border-color: #fbbf24; color: #fbbf24; background: rgba(251,191,36,0.15);">02</div>
+                  <div>
+                    <div class="stage-title">PRAKASH Module (Aditya-L1 - ipn:1.1)</div>
+                    <div class="stage-meta">Semantic Vector Encoder • Halo Orbit Sentry</div>
+                  </div>
+                </div>
+                <div class="stage-tech-tag">C11 • Lock-Free Ring Buffer • pthread</div>
+              </div>
+              <div class="stage-items-grid">
+                <div class="bp-item-card" onclick="openBlueprintInspector('prakash_encoder')">
+                  <div class="bp-item-top">
+                    <div class="bp-item-icon" style="background: rgba(251,191,36,0.15); color: #fbbf24;">⚙️</div>
+                    <div>
+                      <div class="bp-item-label">prakash_encoder.c</div>
+                      <div class="bp-item-detail">Zero-copy mmap, alignas(64) atomic ring buffers, core pinning</div>
+                    </div>
+                  </div>
+                  <div class="bp-item-footer"><span>C11 Core Engine</span><span class="inspect-arrow">Inspect →</span></div>
+                </div>
+                <div class="bp-item-card" onclick="openBlueprintInspector('jscc_transform')">
+                  <div class="bp-item-top">
+                    <div class="bp-item-icon" style="background: rgba(251,191,36,0.15); color: #fbbf24;">🗜️</div>
+                    <div>
+                      <div class="bp-item-label">JSCC Linear Projection</div>
+                      <div class="bp-item-detail">Compresses 5 physical streams into 32-float vector (~128B)</div>
+                    </div>
+                  </div>
+                  <div class="bp-item-footer"><span>Compression Algorithm</span><span class="inspect-arrow">Inspect →</span></div>
+                </div>
+                <div class="bp-item-card" onclick="openBlueprintInspector('warning_dispatch')">
+                  <div class="bp-item-top">
+                    <div class="bp-item-icon" style="background: rgba(251,191,36,0.15); color: #fbbf24;">📄</div>
+                    <div>
+                      <div class="bp-item-label">warning_dispatch.txt</div>
+                      <div class="bp-item-detail">Serialized dispatches with cryptographic 'Bhaarat' security seal</div>
+                    </div>
+                  </div>
+                  <div class="bp-item-footer"><span>Telemetry Artifact</span><span class="inspect-arrow">Inspect →</span></div>
+                </div>
+                <div class="bp-item-card" onclick="openBlueprintInspector('pipe_richa')">
+                  <div class="bp-item-top">
+                    <div class="bp-item-icon" style="background: rgba(251,191,36,0.15); color: #fbbf24;">🔀</div>
+                    <div>
+                      <div class="bp-item-label">IPC FIFO Pipe</div>
+                      <div class="bp-item-detail">/tmp/shivodaya_richa_ingress.fifo zero-disk IPC pipe</div>
+                    </div>
+                  </div>
+                  <div class="bp-item-footer"><span>POSIX FIFO</span><span class="inspect-arrow">Inspect →</span></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Conduit 2 -> 3 -->
+            <div class="conduit-separator">
+              <div class="conduit-line"></div>
+              <div class="conduit-pill">
+                <span>↓</span> 128-Byte Compressed Vector Transit (IPC Pipe)
+              </div>
+              <div class="conduit-line"></div>
+            </div>
+
+            <!-- Stage 03: RICHA Module -->
+            <div class="blueprint-stage stage-richa">
+              <div class="stage-header">
+                <div class="stage-title-wrap">
+                  <div class="stage-num-badge" style="border-color: #06b6d4; color: #06b6d4; background: rgba(6,182,212,0.15);">03</div>
+                  <div>
+                    <div class="stage-title">RICHA Neural Mesh (Cis-Lunar - ipn:2.1)</div>
+                    <div class="stage-meta">Autonomous Interplanetary Router • 100-Node TVG Mesh</div>
+                  </div>
+                </div>
+                <div class="stage-tech-tag">C++17 • Perceptron CGR • BPv7 Custody</div>
+              </div>
+              <div class="stage-items-grid">
+                <div class="bp-item-card" onclick="openBlueprintInspector('richa_router')">
+                  <div class="bp-item-top">
+                    <div class="bp-item-icon" style="background: rgba(6,182,212,0.15); color: #06b6d4;">🧭</div>
+                    <div>
+                      <div class="bp-item-label">richa_neural_router.cpp</div>
+                      <div class="bp-item-detail">Dynamic TVG routing across ISRO, NASA, ESA, Roscosmos, JAXA</div>
+                    </div>
+                  </div>
+                  <div class="bp-item-footer"><span>C++17 Mesh Router</span><span class="inspect-arrow">Inspect →</span></div>
+                </div>
+                <div class="bp-item-card" onclick="openBlueprintInspector('perceptron_model')">
+                  <div class="bp-item-top">
+                    <div class="bp-item-icon" style="background: rgba(6,182,212,0.15); color: #06b6d4;">🧠</div>
+                    <div>
+                      <div class="bp-item-label">Perceptron Weight Scorer</div>
+                      <div class="bp-item-detail">Dynamic link scoring: W = w_rad·rad + w_delay·delay + w_buf·buf</div>
+                    </div>
+                  </div>
+                  <div class="bp-item-footer"><span>Decision Engine</span><span class="inspect-arrow">Inspect →</span></div>
+                </div>
+                <div class="bp-item-card" onclick="openBlueprintInspector('dijkstra_cgr')">
+                  <div class="bp-item-top">
+                    <div class="bp-item-icon" style="background: rgba(6,182,212,0.15); color: #06b6d4;">🌐</div>
+                    <div>
+                      <div class="bp-item-label">Time-Dependent Dijkstra</div>
+                      <div class="bp-item-detail">Calculates optimal contact window routes across orbiters</div>
+                    </div>
+                  </div>
+                  <div class="bp-item-footer"><span>Contact Graph Routing</span><span class="inspect-arrow">Inspect →</span></div>
+                </div>
+                <div class="bp-item-card" onclick="openBlueprintInspector('bfs_rerouter')">
+                  <div class="bp-item-top">
+                    <div class="bp-item-icon" style="background: rgba(6,182,212,0.15); color: #06b6d4;">🛡️</div>
+                    <div>
+                      <div class="bp-item-label">Multi-Hop BFS Rerouter</div>
+                      <div class="bp-item-detail">Automatic blackout failover: ipn:1.1 ➔ 6.1 ➔ 5.1 ➔ 4.1 ➔ 3.1</div>
+                    </div>
+                  </div>
+                  <div class="bp-item-footer"><span>Failover Engine</span><span class="inspect-arrow">Inspect →</span></div>
+                </div>
+                <div class="bp-item-card" onclick="openBlueprintInspector('ion_dtn')">
+                  <div class="bp-item-top">
+                    <div class="bp-item-icon" style="background: rgba(6,182,212,0.15); color: #06b6d4;">💾</div>
+                    <div>
+                      <div class="bp-item-label">ion_dtn_engine.cpp</div>
+                      <div class="bp-item-detail">RFC 9171 / BPv7 Store-and-Forward bundle custody transfer</div>
+                    </div>
+                  </div>
+                  <div class="bp-item-footer"><span>BPv7 Custody Transfer</span><span class="inspect-arrow">Inspect →</span></div>
+                </div>
+                <div class="bp-item-card" onclick="openBlueprintInspector('richa_db')">
+                  <div class="bp-item-top">
+                    <div class="bp-item-icon" style="background: rgba(6,182,212,0.15); color: #06b6d4;">🗄️</div>
+                    <div>
+                      <div class="bp-item-label">richa_routing_log.db</div>
+                      <div class="bp-item-detail">Asynchronous SQLite WAL mode routing telemetry database</div>
+                    </div>
+                  </div>
+                  <div class="bp-item-footer"><span>SQLite WAL Storage</span><span class="inspect-arrow">Inspect →</span></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Conduit 3 -> 4 -->
+            <div class="conduit-separator">
+              <div class="conduit-line"></div>
+              <div class="conduit-pill">
+                <span>↓</span> Custody Bundles via Martian Named Pipe
+              </div>
+              <div class="conduit-line"></div>
+            </div>
+
+            <!-- Stage 04: AKASHDEEP Module -->
+            <div class="blueprint-stage stage-akashdeep">
+              <div class="stage-header">
+                <div class="stage-title-wrap">
+                  <div class="stage-num-badge" style="border-color: #ef4444; color: #ef4444; background: rgba(239,68,68,0.15);">04</div>
+                  <div>
+                    <div class="stage-title">AKASHDEEP Module (Mars Base - ipn:3.1)</div>
+                    <div class="stage-meta">Martian Semantic Decoder • Subterranean Shelter Triggers</div>
+                  </div>
+                </div>
+                <div class="stage-tech-tag">C++17 • Reverse Matrix • &lt;1ms Latency</div>
+              </div>
+              <div class="stage-items-grid">
+                <div class="bp-item-card" onclick="openBlueprintInspector('akashdeep_decoder')">
+                  <div class="bp-item-top">
+                    <div class="bp-item-icon" style="background: rgba(239,68,68,0.15); color: #ef4444;">🛡️</div>
+                    <div>
+                      <div class="bp-item-label">akashdeep_decoder.cpp</div>
+                      <div class="bp-item-detail">Verifies 'Bhaarat' header signature & executes sub-ms matrix decode</div>
+                    </div>
+                  </div>
+                  <div class="bp-item-footer"><span>C++17 Decoder</span><span class="inspect-arrow">Inspect →</span></div>
+                </div>
+                <div class="bp-item-card" onclick="openBlueprintInspector('reverse_mlp')">
+                  <div class="bp-item-top">
+                    <div class="bp-item-icon" style="background: rgba(239,68,68,0.15); color: #ef4444;">📐</div>
+                    <div>
+                      <div class="bp-item-label">Reverse MLP Projection</div>
+                      <div class="bp-item-detail">Reconstructs physical CME speed & solar flux with 99.4% fidelity</div>
+                    </div>
+                  </div>
+                  <div class="bp-item-footer"><span>Matrix Mathematics</span><span class="inspect-arrow">Inspect →</span></div>
+                </div>
+                <div class="bp-item-card" onclick="openBlueprintInspector('java_gui')">
+                  <div class="bp-item-top">
+                    <div class="bp-item-icon" style="background: rgba(239,68,68,0.15); color: #ef4444;">🖥️</div>
+                    <div>
+                      <div class="bp-item-label">Akashdeep Java GUI</div>
+                      <div class="bp-item-detail">3D celestial trajectory engine & 5 astronaut alert speedometer dials</div>
+                    </div>
+                  </div>
+                  <div class="bp-item-footer"><span>Java Swing Engine</span><span class="inspect-arrow">Inspect →</span></div>
+                </div>
+                <div class="bp-item-card" onclick="openBlueprintInspector('akashdeep_db')">
+                  <div class="bp-item-top">
+                    <div class="bp-item-icon" style="background: rgba(239,68,68,0.15); color: #ef4444;">🗄️</div>
+                    <div>
+                      <div class="bp-item-label">akashdeep_telemetry.db</div>
+                      <div class="bp-item-detail">Target Martian SQLite database recording decoded radiation threats</div>
+                    </div>
+                  </div>
+                  <div class="bp-item-footer"><span>Martian DB</span><span class="inspect-arrow">Inspect →</span></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Conduit 4 -> 5 -->
+            <div class="conduit-separator">
+              <div class="conduit-line"></div>
+              <div class="conduit-pill">
+                <span>↓</span> Telemetry Feeds to Ground Command Bridge
+              </div>
+              <div class="conduit-line"></div>
+            </div>
+
+            <!-- Stage 05: EARTH OPERATIONS -->
+            <div class="blueprint-stage stage-earth">
+              <div class="stage-header">
+                <div class="stage-title-wrap">
+                  <div class="stage-num-badge" style="border-color: #10b981; color: #10b981; background: rgba(16,185,129,0.15);">05</div>
+                  <div>
+                    <div class="stage-title">EARTH OPERATIONS (Bhaarat Ops Center)</div>
+                    <div class="stage-meta">Ground Mission Command • Global Sentry Uplink</div>
+                  </div>
+                </div>
+                <div class="stage-tech-tag">Java Swing • Three.js • C++17 SQLite</div>
+              </div>
+              <div class="stage-items-grid">
+                <div class="bp-item-card" onclick="openBlueprintInspector('earth_monitor')">
+                  <div class="bp-item-top">
+                    <div class="bp-item-icon" style="background: rgba(16,185,129,0.15); color: #10b981;">📡</div>
+                    <div>
+                      <div class="bp-item-label">earth_monitor.cpp</div>
+                      <div class="bp-item-detail">High-speed C++17 query bridge for routing and telemetry logs</div>
+                    </div>
+                  </div>
+                  <div class="bp-item-footer"><span>C++17 Query Bridge</span><span class="inspect-arrow">Inspect →</span></div>
+                </div>
+                <div class="bp-item-card" onclick="openBlueprintInspector('earth_control')">
+                  <div class="bp-item-top">
+                    <div class="bp-item-icon" style="background: rgba(16,185,129,0.15); color: #10b981;">🎛️</div>
+                    <div>
+                      <div class="bp-item-label">Earth Control Center UI</div>
+                      <div class="bp-item-detail">Java Swing FlatLaf mission console with pre-seeded database</div>
+                    </div>
+                  </div>
+                  <div class="bp-item-footer"><span>Mission Console</span><span class="inspect-arrow">Inspect →</span></div>
+                </div>
+                <div class="bp-item-card" onclick="openBlueprintInspector('threejs_mesh')">
+                  <div class="bp-item-top">
+                    <div class="bp-item-icon" style="background: rgba(16,185,129,0.15); color: #10b981;">🌐</div>
+                    <div>
+                      <div class="bp-item-label">Three.js 3D Visualizer</div>
+                      <div class="bp-item-detail">100-probe celestial orbital visualizer & live telemetry HUD</div>
+                    </div>
+                  </div>
+                  <div class="bp-item-footer"><span>WebGL Visualizer</span><span class="inspect-arrow">Inspect →</span></div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Slideout Inspector Drawer -->
+        <div id="blueprint-inspector" class="bp-inspector-drawer">
+          <div class="bp-inspector-header">
+            <div>
+              <span id="inspect-subsystem-tag" class="bp-inspect-tag"></span>
+              <div id="inspect-title" class="bp-inspect-title"></div>
+              <div id="inspect-path" class="bp-inspect-path"></div>
+            </div>
+            <button class="bp-inspect-close" onclick="closeBlueprintInspector()">✕</button>
+          </div>
+          <div class="bp-inspector-body">
+            <div>
+              <div class="bp-inspect-section-title">Architectural Role</div>
+              <div id="inspect-desc" class="bp-inspect-desc"></div>
+            </div>
+            <div>
+              <div class="bp-inspect-section-title">Implementation Stack</div>
+              <div id="inspect-tech" class="bp-inspect-desc" style="color: #00f0ff; font-family: 'Space Grotesk', monospace; font-weight: 600;"></div>
+            </div>
+            <div id="inspect-code-container" style="display: none;">
+              <div class="bp-inspect-section-title">C11 / C++17 Implementation</div>
+              <div id="inspect-code" class="bp-inspect-code-block"></div>
+            </div>
+            <div id="inspect-cmd-container" style="display: none;">
+              <div class="bp-inspect-section-title">Terminal Execution Command</div>
+              <div class="bp-inspect-cmd-box">
+                <span id="inspect-cmd"></span>
+                <button class="bp-copy-btn" onclick="copyInspectCmd()">Copy</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- TAB 4: REGISTER MISSION -->
+    <section id="tab-register-mission" class="tab-content">
+      <div class="tab-page-container">
+        <div class="registration-card-box">
+          <h2 style="font-size: 1.5rem; margin-bottom: 8px;">REGISTER MISSION</h2>
+          <p style="font-size: 0.8rem; color: rgba(255,255,255,0.6); margin-bottom: 24px;">Register a new payload node into the Shivodaya autonomous mesh.</p>
+          <form onsubmit="event.preventDefault(); alert('Payload successfully assigned IPN node address.');">
+            <div class="form-group"><label class="form-label">Mission Designation</label><input type="text" class="form-input" placeholder="Chandrayaan-4 / Lunar Sentry Relay" required></div>
+            <div class="form-group"><label class="form-label">Orbital Trajectory</label><input type="text" class="form-input" placeholder="Earth-Moon L1 Halo Orbit" required></div>
+            <div class="form-group"><label class="form-label">IPN Node ID</label><input type="text" class="form-input" placeholder="ipn:4.1" required></div>
+            <button type="submit" class="btn-submit-action">REGISTER PAYLOAD</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    const BLUEPRINT_NODE_DETAILS = {
+      cme_sim: {
+        title: "cme_sim.txt",
+        path: "prakash/cme_sim.txt",
+        subsystem: "Raw Telemetry Inputs",
+        color: "#9CA3AF",
+        desc: "Simulated CME stream recording coronal ejection velocities (km/s), angular widths (deg), and flare power indices.",
+        tech: "1,000 Event Epochs • Sensor Telemetry",
+        command: "head -n 5 prakash/cme_sim.txt"
+      },
+      sep_sim: {
+        title: "sep_sim.txt",
+        path: "prakash/sep_sim.txt",
+        subsystem: "Raw Telemetry Inputs",
+        color: "#9CA3AF",
+        desc: "Solar Energetic Particles (SEP) flux tracking high-energy proton acceleration during coronal shockwaves.",
+        tech: "Omni-directional Proton Flux",
+        command: "head -n 5 prakash/sep_sim.txt"
+      },
+      solar_wind_sim: {
+        title: "solar_wind_sim.txt",
+        path: "prakash/solar_wind_sim.txt",
+        subsystem: "Raw Telemetry Inputs",
+        color: "#9CA3AF",
+        desc: "Heliospheric bulk plasma density, speed, and magnetic vector orientation measurements.",
+        tech: "Plasma Spectrometer Feeds",
+        command: "head -n 5 prakash/solar_wind_sim.txt"
+      },
+      proton_flux_sim: {
+        title: "proton_flux_sim.txt",
+        path: "prakash/proton_flux_sim.txt",
+        subsystem: "Raw Telemetry Inputs",
+        color: "#9CA3AF",
+        desc: "High-energy proton spectrum calibrated to Aditya-L1 ASPEX and PAPA sensor payloads.",
+        tech: "Calibrated Flux Channels",
+        command: "head -n 5 prakash/proton_flux_sim.txt"
+      },
+      xray_flux_sim: {
+        title: "xray_flux_sim.txt",
+        path: "prakash/xray_flux_sim.txt",
+        subsystem: "Raw Telemetry Inputs",
+        color: "#9CA3AF",
+        desc: "Soft and hard X-ray irradiance curves (0.5-4.0 Å and 1.0-8.0 Å) triggering immediate flare alerts.",
+        tech: "Photometer Sensor Stream",
+        command: "head -n 5 prakash/xray_flux_sim.txt"
+      },
+      prakash_encoder: {
+        title: "prakash_encoder.c",
+        path: "prakash/prakash_encoder.c",
+        subsystem: "PRAKASH (Aditya-L1 - ipn:1.1)",
+        color: "#FBBF24",
+        desc: "High-speed C11 telemetry parser utilizing zero-copy POSIX mmap(), lock-free atomic ring buffers (alignas(64)), core affinity pinning (pthread_setaffinity_np), and derivative spike detection.",
+        tech: "C11 • POSIX mmap • Lock-free Atomics • pthread",
+        code: `// Zero-copy POSIX mmap() & C11 atomic ring buffer\nvoid* map = mmap(NULL, sb.st_size, PROT_READ, MAP_SHARED, fd, 0);\npthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset);\nalignas(64) atomic_uint_fast64_t head;`,
+        command: "gcc -O3 -std=c11 prakash/prakash_encoder.c -o build/prakash_encoder -lpthread -lm"
+      },
+      jscc_transform: {
+        title: "JSCC Linear Projection",
+        path: "Algorithm in prakash/prakash_encoder.c",
+        subsystem: "PRAKASH (Aditya-L1 - ipn:1.1)",
+        color: "#FBBF24",
+        desc: "1-layer Joint Source-Channel Coding linear projection matrix compressing 5 physical telemetry streams into a microscopic 32-float semantic vector (~128 bytes total). Embeds 'Bhaarat' security marker.",
+        tech: "32-Float Vector • 128 Bytes • 'Bhaarat' Header",
+        code: `// JSCC Linear Transform Matrix Projection\nfloat vector[32];\nfor(int i = 0; i < 32; i++) {\n  vector[i] = 0.0f;\n  for(int k = 0; k < 5; k++) vector[i] += W[i][k] * raw_telemetry[k];\n}\nmemcpy(packet.header, \"Bhaarat\", 7);`,
+        command: "./prakash/run_cmd_demo.sh"
+      },
+      warning_dispatch: {
+        title: "warning_dispatch.txt",
+        path: "prakash/warning_dispatch.txt",
+        subsystem: "PRAKASH (Aditya-L1 - ipn:1.1)",
+        color: "#FBBF24",
+        desc: "Serialized semantic vector dispatches generated by the Prakash module for batch file transfers and offline replay.",
+        tech: "Serialized Vector Dispatch",
+        command: "cat prakash/warning_dispatch.txt"
+      },
+      pipe_richa: {
+        title: "IPC FIFO Pipe",
+        path: "/tmp/shivodaya_richa_ingress.fifo",
+        subsystem: "Inter-Process Communication",
+        color: "#FBBF24",
+        desc: "High-speed POSIX Named FIFO pipe streaming compressed telemetry vectors from Prakash directly to Richa without disk I/O.",
+        tech: "POSIX Named Pipe • Zero-Disk Transfer",
+        command: "mkfifo /tmp/shivodaya_richa_ingress.fifo"
+      },
+      richa_router: {
+        title: "richa_neural_router.cpp",
+        path: "richa/richa_neural_router.cpp",
+        subsystem: "RICHA (Cis-Lunar Mesh - ipn:2.1)",
+        color: "#06B6D4",
+        desc: "100-node Interplanetary Space Mesh router evaluating links across ISRO, NASA, ESA, Roscosmos, and JAXA orbiters. Runs Perceptron decision weights and Dijkstra Contact Graph Routing.",
+        tech: "C++17 • SQLite WAL • 100-Node Mesh Topology",
+        code: `// Perceptron decision scoring & Dijkstra Contact Graph Routing\ndouble W_cost = w_rad * rad_score + w_delay * delay_ms + w_buf * buf_pct;\nif (rad_score > BLACKOUT_THRESH) {\n  trigger_multihop_bfs_reroute();\n}`,
+        command: "g++ -O3 -std=c++17 richa/richa_neural_router.cpp -o build/richa_neural_router -lpthread -lsqlite3"
+      },
+      perceptron_model: {
+        title: "Perceptron Weight Scorer",
+        path: "richa/richa_neural_router.cpp (Perceptron Model)",
+        subsystem: "RICHA (Cis-Lunar Mesh - ipn:2.1)",
+        color: "#06B6D4",
+        desc: "Multi-parameter linear neuron computing link viability scores based on radiation storm interference, signal propagation delay, and buffer occupancy.",
+        tech: "Perceptron • W = w·x + b Scoring",
+        code: `double score = 0.5 * rad_intensity + 0.3 * (delay / 1000.0) + 0.2 * (buffer_occ / 100.0);`,
+        command: "./build/richa_neural_router --dry-run"
+      },
+      dijkstra_cgr: {
+        title: "Time-Dependent Dijkstra",
+        path: "richa/richa_neural_router.cpp (CGR Engine)",
+        subsystem: "RICHA (Cis-Lunar Mesh - ipn:2.1)",
+        color: "#06B6D4",
+        desc: "Time-Varying Graph (TVG) pathfinder computing least-cost delay and radiation-safe routes across interplanetary planetary contacts.",
+        tech: "Contact Graph Routing (CGR) • std::priority_queue",
+        command: "./build/richa_neural_router --cgr-test"
+      },
+      bfs_rerouter: {
+        title: "Multi-Hop BFS Rerouter",
+        path: "richa/richa_neural_router.cpp (Blackout Fallback)",
+        subsystem: "RICHA (Cis-Lunar Mesh - ipn:2.1)",
+        color: "#06B6D4",
+        desc: "Automated failover protocol that re-routes bundles along alternate deep space relays when the primary line-of-sight suffers solar blackout.",
+        tech: "Breadth-First Search Fallback • Multi-Hop",
+        command: "./build/richa_neural_router --simulate-blackout"
+      },
+      ion_dtn: {
+        title: "ion_dtn_engine.cpp",
+        path: "richa/ion_dtn_demo/ion_dtn_engine.cpp",
+        subsystem: "RICHA (Cis-Lunar Mesh - ipn:2.1)",
+        color: "#06B6D4",
+        desc: "Delay-Tolerant Networking engine implementing Bundle Protocol Version 7 (RFC 9171) with autonomous custody transfer acknowledgments.",
+        tech: "RFC 9171 / BPv7 • Custody Transfer",
+        command: "g++ -O3 richa/ion_dtn_demo/ion_dtn_engine.cpp -o richa/ion_dtn_demo/ion_dtn_engine"
+      },
+      richa_db: {
+        title: "richa_routing_log.db",
+        path: "build/richa_routing_log.db",
+        subsystem: "RICHA (Cis-Lunar Mesh - ipn:2.1)",
+        color: "#06B6D4",
+        desc: "Asynchronous SQLite database tracking routing hops, bundle IDs, link weights, and custody transfer receipts in Write-Ahead Log (WAL) mode.",
+        tech: "SQLite 3 WAL • High-throughput concurrent writes",
+        command: "sqlite3 build/richa_routing_log.db 'SELECT * FROM routing_hops LIMIT 5;'"
+      },
+      akashdeep_decoder: {
+        title: "akashdeep_decoder.cpp",
+        path: "akashdeep/akashdeep_decoder.cpp",
+        subsystem: "AKASHDEEP (Mars Base - ipn:3.1)",
+        color: "#EF4444",
+        desc: "High-throughput Martian telemetry decoder verifying packet signatures, reversing linear projection matrices, and dispatching alerts to EVA displays in <1ms.",
+        tech: "C++17 • SIMD Matmul • POSIX FIFO",
+        code: `// Reverse MLP Matrix Reconstruction: Y = W^T * V\nfor(int k = 0; k < 5; k++) {\n  reconstructed[k] = 0.0f;\n  for(int i = 0; i < 32; i++) reconstructed[k] += W_T[k][i] * vector[i];\n}`,
+        command: "g++ -O3 -std=c++17 akashdeep/akashdeep_decoder.cpp -o build/akashdeep_decoder -lpthread -lsqlite3"
+      },
+      reverse_mlp: {
+        title: "Reverse MLP Projection",
+        path: "Algorithm in akashdeep/akashdeep_decoder.cpp",
+        subsystem: "AKASHDEEP (Mars Base - ipn:3.1)",
+        color: "#EF4444",
+        desc: "Reverses the 32-float JSCC semantic compression to reconstruct the 5 physical space weather parameters with 99.4% numerical fidelity.",
+        tech: "Matrix Multiplication • 99.4% Fidelity",
+        command: "./build/akashdeep_decoder --bench"
+      },
+      java_gui: {
+        title: "Akashdeep Java GUI",
+        path: "akashdeep/java_gui/Main.java",
+        subsystem: "AKASHDEEP (Mars Base - ipn:3.1)",
+        color: "#EF4444",
+        desc: "High-precision Java Swing flight deck displaying 3D celestial orbits, 5 danger speedometer dials, and real-time astronaut safe-zone alerts.",
+        tech: "Java Swing • Custom Graphics2D • 3D Trajectory",
+        command: "./build_java.sh && cd akashdeep/java_gui && java -cp 'bin:.' Main"
+      },
+      akashdeep_db: {
+        title: "akashdeep_telemetry.db",
+        path: "build/akashdeep_telemetry.db",
+        subsystem: "AKASHDEEP (Mars Base - ipn:3.1)",
+        color: "#EF4444",
+        desc: "Target SQLite database on the Martian habitat storing decoded telemetry for EVA astronaut advisories.",
+        tech: "SQLite 3 • Mission Log Storage",
+        command: "sqlite3 build/akashdeep_telemetry.db 'SELECT * FROM decoded_telemetry LIMIT 5;'"
+      },
+      earth_monitor: {
+        title: "earth_monitor.cpp",
+        path: "earth_monitor/earth_monitor.cpp",
+        subsystem: "EARTH OPERATIONS (Bhaarat Ops Center)",
+        color: "#10B981",
+        desc: "High-speed C++17 query bridge extracting telemetry, routing hops, and bundle states from the SQLite log stores for the Mission Control dashboard.",
+        tech: "C++17 • SQLite Bridge • Native Binary",
+        command: "./earth_monitor/run.sh"
+      },
+      earth_control: {
+        title: "Earth Control Center UI",
+        path: "earth_control_center/src/earthcontrol/MainFrame.java",
+        subsystem: "EARTH OPERATIONS (Bhaarat Ops Center)",
+        color: "#10B981",
+        desc: "Standalone Java Swing mission command console with FlatLaf Dark Theme and bundled SQLite database driver for zero-configuration execution.",
+        tech: "Java Swing • FlatLaf 3.5.2 • SQLite JDBC",
+        command: "./earth_control_center/run.sh"
+      },
+      threejs_mesh: {
+        title: "Three.js 3D Visualizer",
+        path: "richa/main3dvisual.html",
+        subsystem: "EARTH OPERATIONS (Bhaarat Ops Center)",
+        color: "#10B981",
+        desc: "Real-time WebGL orbital simulation rendering the 100 interplanetary probe trajectories and active laser communication links.",
+        tech: "Three.js • WebGL • Dynamic Particle Trajectories",
+        command: "python3 -m http.server 8000 --directory richa"
+      }
+    };
+
+    let currentInspectCmd = '';
+
+    function openBlueprintInspector(nodeId) {
+      const data = BLUEPRINT_NODE_DETAILS[nodeId];
+      if (!data) return;
+
+      const drawer = document.getElementById('blueprint-inspector');
+      const tag = document.getElementById('inspect-subsystem-tag');
+      const title = document.getElementById('inspect-title');
+      const path = document.getElementById('inspect-path');
+      const desc = document.getElementById('inspect-desc');
+      const tech = document.getElementById('inspect-tech');
+      const codeBox = document.getElementById('inspect-code');
+      const codeContainer = document.getElementById('inspect-code-container');
+      const cmdBox = document.getElementById('inspect-cmd');
+      const cmdContainer = document.getElementById('inspect-cmd-container');
+
+      tag.textContent = data.subsystem;
+      tag.style.color = data.color;
+      tag.style.borderColor = data.color + '60';
+      tag.style.backgroundColor = data.color + '15';
+
+      title.textContent = data.title;
+      path.textContent = data.path;
+      desc.textContent = data.desc;
+      tech.textContent = data.tech;
+
+      if (data.code) {
+        codeBox.textContent = data.code;
+        codeContainer.style.display = 'block';
+      } else {
+        codeContainer.style.display = 'none';
+      }
+
+      if (data.command) {
+        currentInspectCmd = data.command;
+        cmdBox.textContent = '$ ' + data.command;
+        cmdContainer.style.display = 'block';
+      } else {
+        cmdContainer.style.display = 'none';
+      }
+
+      drawer.style.display = 'flex';
+    }
+
+    function closeBlueprintInspector() {
+      const drawer = document.getElementById('blueprint-inspector');
+      if (drawer) drawer.style.display = 'none';
+    }
+
+    function copyInspectCmd() {
+      if (navigator.clipboard && currentInspectCmd) {
+        navigator.clipboard.writeText(currentInspectCmd);
+        const btn = document.querySelector('.bp-copy-btn');
+        if (btn) {
+          btn.textContent = '✓ Copied';
+          setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+        }
+      }
+    }
+
+    // Phase 1: Exact Color Mapped Graph Dataset
+    const allGraphNodes = [
+      { id: "cme_sim", name: "cme_sim.txt", color: "#9CA3AF" },
+      { id: "sep_sim", name: "sep_sim.txt", color: "#9CA3AF" },
+      { id: "solar_wind_sim", name: "solar_wind_sim.txt", color: "#9CA3AF" },
+      { id: "proton_flux_sim", name: "proton_flux_sim.txt", color: "#9CA3AF" },
+      { id: "xray_flux_sim", name: "xray_flux_sim.txt", color: "#9CA3AF" },
+      { id: "prakash_encoder", name: "prakash_encoder.c", color: "#FBBF24" },
+      { id: "jscc_transform", name: "JSCC Linear Projection", color: "#FBBF24" },
+      { id: "warning_dispatch", name: "warning_dispatch.txt", color: "#FBBF24" },
+      { id: "prakash_bin", name: "build/prakash_encoder", color: "#FBBF24" },
+      { id: "pipe_richa", name: "IPC FIFO Pipe", color: "#FBBF24" },
+      { id: "richa_router", name: "richa_neural_router.cpp", color: "#06B6D4" },
+      { id: "perceptron_model", name: "Perceptron Decision Model", color: "#06B6D4" },
+      { id: "dijkstra_cgr", name: "Time-Dependent Dijkstra", color: "#06B6D4" },
+      { id: "bfs_rerouter", name: "Multi-Hop BFS Rerouter", color: "#06B6D4" },
+      { id: "ion_dtn", name: "ion_dtn_engine.cpp", color: "#06B6D4" },
+      { id: "richa_db", name: "richa_routing_log.db", color: "#06B6D4" },
+      { id: "pipe_akashdeep", name: "IPC Akashdeep Pipe", color: "#EF4444" },
+      { id: "akashdeep_decoder", name: "akashdeep_decoder.cpp", color: "#EF4444" },
+      { id: "reverse_mlp", name: "Reverse MLP Projection", color: "#EF4444" },
+      { id: "java_gui", name: "Akashdeep Java GUI", color: "#EF4444" },
+      { id: "akashdeep_db", name: "akashdeep_telemetry.db", color: "#EF4444" },
+      { id: "earth_monitor", name: "earth_monitor.cpp", color: "#10B981" },
+      { id: "earth_control", name: "Ground Control GUI", color: "#10B981" },
+      { id: "threejs_mesh", name: "Three.js 3D Visualizer", color: "#10B981" }
+    ];
+
+    const allGraphLinks = [
+      { source: "cme_sim", target: "prakash_encoder" },
+      { source: "sep_sim", target: "prakash_encoder" },
+      { source: "solar_wind_sim", target: "prakash_encoder" },
+      { source: "proton_flux_sim", target: "prakash_encoder" },
+      { source: "xray_flux_sim", target: "prakash_encoder" },
+      { source: "prakash_encoder", target: "jscc_transform" },
+      { source: "prakash_encoder", target: "prakash_bin" },
+      { source: "jscc_transform", target: "warning_dispatch" },
+      { source: "prakash_bin", target: "pipe_richa" },
+      { source: "warning_dispatch", target: "richa_router" },
+      { source: "pipe_richa", target: "richa_router" },
+      { source: "richa_router", target: "perceptron_model" },
+      { source: "perceptron_model", target: "dijkstra_cgr" },
+      { source: "perceptron_model", target: "bfs_rerouter" },
+      { source: "richa_router", target: "ion_dtn" },
+      { source: "richa_router", target: "richa_db" },
+      { source: "richa_router", target: "pipe_akashdeep" },
+      { source: "pipe_akashdeep", target: "akashdeep_decoder" },
+      { source: "akashdeep_decoder", target: "reverse_mlp" },
+      { source: "reverse_mlp", target: "java_gui" },
+      { source: "java_gui", target: "akashdeep_db" },
+      { source: "richa_db", target: "earth_monitor" },
+      { source: "akashdeep_db", target: "earth_monitor" },
+      { source: "earth_monitor", target: "earth_control" },
+      { source: "richa_db", target: "threejs_mesh" }
+    ];
+
+    let graphInstance = null;
+    let graphInitialized = false;
+
+    function initArchitectureGraph() {
+      if (graphInitialized) return;
+      const container = document.getElementById('graph-container');
+      if (!container || typeof ForceGraph === 'undefined') return;
+
+      graphInitialized = true;
+
+      // Phase 1: Small dots (3.5px), soft glow shadowBlur=15, sharp labels, subtle links
+      const Graph = ForceGraph()(container)
+        .backgroundColor('#030308')
+        .width(window.innerWidth)
+        .height(window.innerHeight)
+        .nodeRelSize(4)
+        // Thinner, highly transparent links
+        .linkColor(() => 'rgba(255, 255, 255, 0.1)')
+        .linkWidth(1)
+        // Small and smooth particles
+        .linkDirectionalParticles(2)
+        .linkDirectionalParticleSpeed(0.0035)
+        .linkDirectionalParticleWidth(1.8)
+        .linkDirectionalParticleColor(() => 'rgba(0, 240, 255, 0.75)')
+        // Phase 1 Node Rendering: Small solid circle (radius 3.5px) with soft glow
+        .nodeCanvasObject((node, ctx, globalScale) => {
+          const nodeRadius = 3.5;
+
+          // Apply soft glow BEFORE drawing circle using ctx.fill()
+          ctx.shadowBlur = 15;
+          ctx.shadowColor = node.color;
+          ctx.fillStyle = node.color;
+
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, nodeRadius, 0, 2 * Math.PI, false);
+          ctx.fill();
+
+          // Tiny pinpoint bright core
+          ctx.fillStyle = "#ffffff";
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, nodeRadius * 0.4, 0, 2 * Math.PI, false);
+          ctx.fill();
+
+          // Reset shadowBlur to 0 before drawing text so text is sharp & clean
+          ctx.shadowBlur = 0;
+          ctx.shadowColor = "transparent";
+
+          const fontSize = Math.max(8.5, 11 / globalScale);
+          ctx.font = `500 ${fontSize}px 'Space Grotesk', sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'top';
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+
+          // Position text away from glowing dot so it doesn't overlap
+          ctx.fillText(node.name, node.x, node.y + nodeRadius + 5);
+        });
+
+      Graph.graphData({ nodes: allGraphNodes, links: allGraphLinks });
+      window.graphInstance = Graph;
+
+      setTimeout(() => {
+        Graph.zoomToFit(400, 70);
+      }, 500);
+    }
+
+    // Phase 2: Toggle between Mesh View and Schematic View
+    function setArchitectureView(mode) {
+      const meshBtn = document.getElementById('toggle-mesh-btn');
+      const schematicBtn = document.getElementById('toggle-schematic-btn');
+      const graphContainer = document.getElementById('graph-container');
+      const flowchartContainer = document.getElementById('flowchart-container');
+
+      if (mode === 'schematic') {
+        meshBtn.classList.remove('active');
+        schematicBtn.classList.add('active');
+        graphContainer.style.display = 'none';
+        flowchartContainer.style.display = 'block';
+      } else {
+        schematicBtn.classList.remove('active');
+        meshBtn.classList.add('active');
+        flowchartContainer.style.display = 'none';
+        graphContainer.style.display = 'block';
+        if (window.graphInstance) {
+          window.graphInstance.width(window.innerWidth).height(window.innerHeight);
+        }
+      }
+    }
+
+    // Tab switcher logic
+    const navTabLinks = document.querySelectorAll('.nav-tab-link');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    function switchTabDirect(targetTabId) {
+      tabContents.forEach(s => s.classList.remove('active'));
+      navTabLinks.forEach(l => l.classList.remove('active'));
+
+      const targetSection = document.getElementById(targetTabId);
+      if (targetSection) targetSection.classList.add('active');
+
+      const targetLink = document.querySelector(`.nav-tab-link[data-tab="${targetTabId}"]`);
+      if (targetLink) targetLink.classList.add('active');
+
+      if (targetTabId === 'tab-architecture') {
+        setTimeout(() => {
+          if (!graphInitialized) initArchitectureGraph();
+        }, 60);
+      }
+    }
+
+    navTabLinks.forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const tab = link.getAttribute('data-tab');
+        if (tab) switchTabDirect(tab);
+      });
+    });
+
+    // Intersection observer for Vision scenes
+    const sceneContents = document.querySelectorAll('.scene-content');
+    const bgmAudio = document.getElementById('cinematic-bgm');
+    let audioStarted = false;
+
+    function triggerAudio() {
+      if (audioStarted || !bgmAudio) return;
+      audioStarted = true;
+      bgmAudio.volume = 0;
+      const p = bgmAudio.play();
+      if (p !== undefined) {
+        p.then(() => {
+          let vol = 0;
+          const f = setInterval(() => {
+            vol = Math.min(0.35, vol + 0.04);
+            bgmAudio.volume = vol;
+            if (vol >= 0.35) clearInterval(f);
+          }, 120);
+        }).catch(() => {});
+      }
+    }
+
+    const sceneObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          triggerAudio();
+        }
+      });
+    }, { threshold: 0.4 });
+
+    sceneContents.forEach(el => sceneObserver.observe(el));
+
+    function triggerVaniGreeting() {
+      triggerAudio();
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance("Welcome to Shivodaya. I am Vani, your deep space neural navigator.");
+        u.rate = 0.9;
+        u.pitch = 0.85;
+        window.speechSynthesis.speak(u);
+      }
+    }
+
+    window.addEventListener('resize', () => {
+      if (window.graphInstance) {
+        window.graphInstance.width(window.innerWidth).height(window.innerHeight);
+      }
+    });
+  </script>
+
+</body>
+</html>

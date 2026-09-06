@@ -118,7 +118,10 @@ with tabs[1]:
 # -----------------------------------------------------------------------------
 with tabs[2]:
     st.header("Richa Perceptron Neural Router Logs (`richa_routing_log.db`)")
-    db_path = "/home/akshat/shivodaya/build/richa_routing_log.db"
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    db_path = os.path.join(script_dir, "build", "richa_routing_log.db")
+    if not os.path.exists(db_path):
+        db_path = "/home/shivodaya-/build/richa_routing_log.db"
 
     if os.path.exists(db_path):
         try:

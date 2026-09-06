@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Shivodaya - Deep Space Neural Mesh & DTN Visualizer</title>
+    <style>
+        :root {
+            --bg-color: #020208;
+            --accent-cyan: #00ffcc;
+            --accent-orange: #ffaa00;
+            --accent-red: #ff3366;
+            --panel-bg: rgba(6, 14, 28, 0.88);
+            --border-glow: rgba(0, 255, 204, 0.3);
+        }
+
+        * { box-sizing: border-box; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: var(--bg-color); font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; color: #fff; }
+        
+        #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
+
+        /* UI Header Banner */
+        .top-banner {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--panel-bg);
+            border: 1px solid var(--accent-cyan);
+            border-radius: 8px;
+            padding: 10px 18px;
+            box-shadow: 0 0 15px var(--border-glow);
+            backdrop-filter: blur(8px);
+        }
+
+        .top-banner h1 { margin: 0; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1.5px; color: #fff; }
+        .badge-isro { background: linear-gradient(135deg, #ff9933, #138808); color: #fff; font-size: 0.75rem; font-weight: bold; padding: 3px 8px; border-radius: 4px; }
+        .badge-jscc { background: var(--accent-cyan); color: #000; font-size: 0.75rem; font-weight: bold; padding: 3px 8px; border-radius: 4px; }
+
+        /* Collapsible Console Sidebar */
+        #sidebar {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 380px;
+            max-height: calc(100vh - 40px);
+            z-index: 10;
+            background: var(--panel-bg);
+            border: 1px solid var(--accent-cyan);
+            border-radius: 10px;
+            padding: 18px;
+            box-shadow: 0 0 25px var(--border-glow);
+            backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+
+        #sidebar.collapsed {
+            transform: translateX(420px);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(0, 255, 204, 0.2);
+            padding-bottom: 10px;
+        }
+
+        .panel-header h2 { margin: 0; font-size: 1.05rem; color: var(--accent-cyan); letter-spacing: 1px; }
+        
+        .close-btn {
+            background: rgba(255, 51, 102, 0.2);
+            border: 1px solid var(--accent-red);
+            color: var(--accent-red);
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        .close-btn:hover {
+            background: var(--accent-red);
+            color: #fff;
+            box-shadow: 0 0 10px var(--accent-red);
+        }
+
+        /* Toggle Sidebar Floating Pill */
+        #sidebar-toggle-pill {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 9;
+            background: var(--panel-bg);
+            border: 1px solid var(--accent-cyan);
+            color: var(--accent-cyan);
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.85rem;
+            box-shadow: 0 0 15px var(--border-glow);
+            backdrop-filter: blur(8px);
+            display: none;
+        }
+
+        #sidebar-toggle-pill.visible { display: block; }
+
+        .metric-card {
+            background: rgba(0, 0, 0, 0.4);
+            border-left: 3px solid var(--accent-cyan);
+            border-radius: 4px;
+            padding: 10px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .metric-title { font-size: 0.72rem; text-transform: uppercase; color: #88a; letter-spacing: 0.5px; }
+        .metric-val { font-size: 0.95rem; font-weight: 600; color: #fff; }
+        
+        .alert-card {
+            border-left-color: var(--accent-red);
+            background: rgba(255, 51, 102, 0.08);
+        }
+
+        .btn-action {
+            background: linear-gradient(135deg, var(--accent-cyan), #00cca3);
+            color: #000;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 0.88rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 15px var(--accent-cyan);
+        }
+
+        /* Modal Dialog Box */
+        .modal-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.65);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+
+        .modal-box {
+            background: var(--panel-bg);
+            border: 1px solid var(--accent-red);
+            border-radius: 12px;
+            width: 440px;
+            padding: 22px;
+            box-shadow: 0 0 30px rgba(255, 51, 102, 0.4);
+            position: relative;
+        }
+
+        .modal-close-cross {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            width: 26px;
+            height: 26px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.85rem;
+        }
+
+        .modal-close-cross:hover { background: var(--accent-red); border-color: var(--accent-red); }
+
+        .modal-title { margin-top: 0; color: var(--accent-red); font-size: 1.15rem; display: flex; align-items: center; gap: 8px; }
+        .modal-body { font-size: 0.9rem; line-height: 1.5; color: #ddd; margin-bottom: 18px; }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <div class="top-banner">
+        <span class="badge-isro">ISRO BHAARAT</span>
+        <h1>PROJECT SHIVODAYA :: NEURAL MESH</h1>
+        <span class="badge-jscc">32-FLOAT JSCC</span>
+    </div>
+
+    <button id="sidebar-toggle-pill" onclick="toggleSidebar()">⚙ CONSOLE SIDEBAR</button>
+
+    <div id="sidebar">
+        <div class="panel-header">
+            <h2>DEEP SPACE CONTROL</h2>
+            <div class="close-btn" onclick="toggleSidebar()" title="Close Panel">✖</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-title">PRIMARY SENDER EID</div>
+            <div class="metric-val">ipn:1.1 (Aditya-L1 Probe)</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-title">NEURAL DTN ROUTER</div>
+            <div class="metric-val">ipn:2.1 (Richa Perceptron Engine)</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-title">DESTINATION TARGET EID</div>
+            <div class="metric-val">ipn:3.1 (Mars Base Station)</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-title">SEMANTIC EMBEDDING MARKER</div>
+            <div class="metric-val" style="color: var(--accent-cyan);">"Bhaarat" (Verified)</div>
+        </div>
+
+        <div class="metric-card alert-card" id="routing-status-card">
+            <div class="metric-title">ROUTING ALGORITHM</div>
+            <div class="metric-val" id="routing-mode-text">Time-Dependent Dijkstra</div>
+        </div>
+
+        <button class="btn-action" onclick="triggerCmeBlackout()">SIMULATE CME BLACKOUT</button>
+    </div>
+
+    <!-- Alert Dialog Modal -->
+    <div class="modal-overlay" id="blackout-modal">
+        <div class="modal-box">
+            <div class="modal-close-cross" onclick="closeModal()">✖</div>
+            <h3 class="modal-title">⚠ CME SOLAR BLACKOUT ALERT</h3>
+            <div class="modal-body">
+                Solar Proton & X-Ray flux threshold exceeded on direct Cis-Lunar link <code>ipn:2.1</code>.<br><br>
+                <strong>Neural Router Action:</strong> Triggered instant Breadth-First Search (BFS) CGR reroute via multi-hop relay <code>ipn:6.1 -> ipn:5.1 -> ipn:4.1 -> ipn:3.1</code>.
+            </div>
+            <button class="btn-action" style="width:100%;" onclick="closeModal()">ACKNOWLEDGE ALERT</button>
+        </div>
+    </div>
+
+    <!-- Three.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
+
+        camera.position.set(0, 35, 70);
+        camera.lookAt(0, 0, 0);
+
+        // Sun (Central Solar Emission)
+        const sunGeo = new THREE.SphereGeometry(4.5, 32, 32);
+        const sunMat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+        const sun = new THREE.Mesh(sunGeo, sunMat);
+        scene.add(sun);
+
+        // Sun Corona Glow
+        const coronaGeo = new THREE.SphereGeometry(5.2, 32, 32);
+        const coronaMat = new THREE.MeshBasicMaterial({ color: 0xff4400, transparent: true, opacity: 0.35 });
+        const corona = new THREE.Mesh(coronaGeo, coronaMat);
+        scene.add(corona);
+
+        // Aditya-L1 Node (ipn:1.1)
+        const adityaGeo = new THREE.SphereGeometry(1.2, 16, 16);
+        const adityaMat = new THREE.MeshBasicMaterial({ color: 0x00ffcc });
+        const aditya = new THREE.Mesh(adityaGeo, adityaMat);
+        aditya.position.set(-15, 0, 15);
+        scene.add(aditya);
+
+        // Cis-Lunar Relay Node (ipn:2.1)
+        const relayGeo = new THREE.SphereGeometry(1.5, 16, 16);
+        const relayMat = new THREE.MeshBasicMaterial({ color: 0x2288ff });
+        const relay = new THREE.Mesh(relayGeo, relayMat);
+        relay.position.set(0, 0, 30);
+        scene.add(relay);
+
+        // Mars Operations Station (ipn:3.1)
+        const marsGeo = new THREE.SphereGeometry(2.0, 32, 32);
+        const marsMat = new THREE.MeshBasicMaterial({ color: 0xff4422 });
+        const mars = new THREE.Mesh(marsGeo, marsMat);
+        mars.position.set(35, 0, -25);
+        scene.add(mars);
+
+        // 100 Deep Space Mesh TVG Nodes
+        const meshNodes = [];
+        const meshPositions = [];
+        for (let i = 0; i < 60; i++) {
+            const geo = new THREE.SphereGeometry(0.4, 8, 8);
+            const mat = new THREE.MeshBasicMaterial({ color: 0x00ffcc, transparent: true, opacity: 0.7 });
+            const mesh = new THREE.Mesh(geo, mat);
+            
+            const pos = new THREE.Vector3(
+                (Math.random() - 0.5) * 80,
+                (Math.random() - 0.5) * 25,
+                (Math.random() - 0.5) * 80
+            );
+            mesh.position.copy(pos);
+            scene.add(mesh);
+            meshNodes.push(mesh);
+            meshPositions.push(pos);
+        }
+
+        // Active Dynamic Link Lines
+        const linkMaterial = new THREE.LineBasicMaterial({ color: 0x00ffcc, transparent: true, opacity: 0.4 });
+        const linkGeometry = new THREE.BufferGeometry();
+        const linePoints = [
+            aditya.position, relay.position,
+            relay.position, mars.position
+        ];
+        linkGeometry.setFromPoints(linePoints);
+        const activeLinkLine = new THREE.LineSegments(linkGeometry, linkMaterial);
+        scene.add(activeLinkLine);
+
+        // Solar Particle Water Sprinkler Simulation
+        const particleCount = 400;
+        const particleGeo = new THREE.BufferGeometry();
+        const particlePositions = new Float32Array(particleCount * 3);
+        const particleVelocities = [];
+
+        for (let i = 0; i < particleCount; i++) {
+            particlePositions[i * 3] = 0;
+            particlePositions[i * 3 + 1] = 0;
+            particlePositions[i * 3 + 2] = 0;
+
+            const dir = new THREE.Vector3(
+                (Math.random() - 0.5),
+                (Math.random() - 0.5) * 0.3,
+                (Math.random() - 0.5)
+            ).normalize().multiplyScalar(0.3 + Math.random() * 0.4);
+
+            particleVelocities.push(dir);
+        }
+
+        particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+        const particleMat = new THREE.PointsMaterial({ color: 0xffcc00, size: 0.6, transparent: true, opacity: 0.8 });
+        const particleSystem = new THREE.Points(particleGeo, particleMat);
+        scene.add(particleSystem);
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            sun.rotation.y += 0.004;
+            corona.rotation.y -= 0.002;
+
+            // Animate Solar Particles (Sprinkler Particle Emitter)
+            const positions = particleGeo.attributes.position.array;
+            for (let i = 0; i < particleCount; i++) {
+                positions[i * 3] += particleVelocities[i].x;
+                positions[i * 3 + 1] += particleVelocities[i].y;
+                positions[i * 3 + 2] += particleVelocities[i].z;
+
+                // Reset particles reaching boundary
+                const dist = Math.sqrt(
+                    positions[i * 3] ** 2 +
+                    positions[i * 3 + 1] ** 2 +
+                    positions[i * 3 + 2] ** 2
+                );
+
+                if (dist > 50) {
+                    positions[i * 3] = 0;
+                    positions[i * 3 + 1] = 0;
+                    positions[i * 3 + 2] = 0;
+                }
+            }
+            particleGeo.attributes.position.needsUpdate = true;
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // UI Interactions
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const pill = document.getElementById('sidebar-toggle-pill');
+            sidebar.classList.toggle('collapsed');
+            if (sidebar.classList.contains('collapsed')) {
+                pill.classList.add('visible');
+            } else {
+                pill.classList.remove('visible');
+            }
+        }
+
+        function triggerCmeBlackout() {
+            relayMat.color.setHex(0xff3366);
+            linkMaterial.color.setHex(0xff3366);
+            
+            document.getElementById('routing-mode-text').innerText = 'MULTI-HOP BFS FALLBACK';
+            document.getElementById('routing-mode-text').style.color = '#ff3366';
+            
+            document.getElementById('blackout-modal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('blackout-modal').classList.remove('active');
+            
+            setTimeout(() => {
+                relayMat.color.setHex(0x2288ff);
+                linkMaterial.color.setHex(0x00ffcc);
+                document.getElementById('routing-mode-text').innerText = 'Time-Dependent Dijkstra';
+                document.getElementById('routing-mode-text').style.color = '#fff';
+            }, 5000);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
