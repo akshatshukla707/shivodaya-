@@ -12,6 +12,14 @@ export async function POST(req) {
 
     if (!cleanMsg) {
       reply = "Welcome to Shivodaya, I am Vani. How can I navigate you today?";
+    } else if (cleanMsg.includes("ephemeris") || cleanMsg.includes("trajectory format")) {
+      reply = "An ephemeris provides precise calculated positions and velocities of your spacecraft over time, accepted in CSV, JSON, or OEM formats.";
+    } else if (cleanMsg.includes("relay node") || cleanMsg.includes("what is a relay")) {
+      reply = "A relay node carries emergency alert bundles across the deep-space mesh for other spacecraft using Delay-Tolerant Networking.";
+    } else if (cleanMsg.includes("telemetry") && (cleanMsg.includes("provide") || cleanMsg.includes("should") || cleanMsg.includes("what"))) {
+      reply = "Missions typically provide spacecraft health, radiation dosimeter readings, proton flux, power bus state, and position state vectors.";
+    } else if (cleanMsg.includes("hybrid node") || cleanMsg.includes("what does a hybrid")) {
+      reply = "A hybrid node detects environmental radiation, relays data for nearby missions, and receives mission-critical alerts simultaneously.";
     } else if (cleanMsg.includes("network") || cleanMsg.includes("mesh") || cleanMsg.includes("model") || cleanMsg.includes("prakash") || cleanMsg.includes("richa") || cleanMsg.includes("akashdeep")) {
       reply = "Routing you to the Shivodaya deep space neural mesh network and subsystem models.";
       route = "/mesh-network";

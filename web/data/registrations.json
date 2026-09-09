@@ -1,0 +1,289 @@
+[
+  {
+    "applicationId": "SHV-2026-9929",
+    "organization": {
+      "name": "Test Agency",
+      "agencyCode": "TAG",
+      "type": "Research Institution",
+      "country": "India",
+      "director": "",
+      "contact": "",
+      "email": "test@agency.space",
+      "phone": "",
+      "website": "",
+      "verificationContact": ""
+    },
+    "mission": {
+      "name": "TEST-EXPLORER-1",
+      "id": "TEST-EXP",
+      "type": "Robotic",
+      "status": "Planned",
+      "objective": "",
+      "description": "",
+      "launchVehicle": "",
+      "launchSite": "",
+      "launchDate": "",
+      "destination": "Mars",
+      "duration": ""
+    },
+    "trajectory": {
+      "phase": "Cruise Phase",
+      "departureWindow": "",
+      "expectedArrival": "",
+      "regime": "Mars Transfer Orbit (MTO)",
+      "ephemerisUploaded": false,
+      "ephemerisFileName": null,
+      "ephemerisFormat": null
+    },
+    "telemetry": {
+      "availability": "None",
+      "types": [],
+      "delivery": "API",
+      "updateFrequency": "60s",
+      "contact": "",
+      "docsUploaded": false
+    },
+    "radiation": {
+      "hasSensors": "NO",
+      "sensorTypes": [],
+      "dataMode": "Event-based",
+      "alertGeneration": "Both",
+      "canGenerateAlert": false
+    },
+    "network": {
+      "primaryRole": "Hybrid Node",
+      "sendAlerts": true,
+      "relayAlerts": true,
+      "provideData": false,
+      "receiveEmergency": false,
+      "alternateRoute": false,
+      "alertTypes": [],
+      "priority": "High",
+      "preferredDelivery": "Any available path"
+    },
+    "crew": {
+      "isCrewed": "NO",
+      "members": [],
+      "healthOption": "No health integration",
+      "medicalOfficer": "",
+      "emergencyMedicalContact": "",
+      "healthSystemRef": ""
+    },
+    "responsibility": {
+      "hierarchy": [],
+      "emergencyContacts": []
+    },
+    "interoperability": {
+      "declaredCapabilities": [],
+      "telemetryFormat": "",
+      "commandFormat": "",
+      "dataInterface": ""
+    },
+    "security": {
+      "authContact": "",
+      "securityContact": "",
+      "integrationContact": "",
+      "authMethod": "Institutional Identity"
+    },
+    "dataSharing": {
+      "publicLevel": false,
+      "networkLevel": false,
+      "operationalLevel": false,
+      "restrictedLevel": false,
+      "medicalRestricted": false,
+      "purposes": []
+    },
+    "status": "VERIFICATION PENDING",
+    "assignedNode": null,
+    "isDemo": false,
+    "createdAt": "2026-09-09T14:55:57.222Z"
+  },
+  {
+    "applicationId": "SHV-2026-2394",
+    "organization": {
+      "name": "Shivodaya Research Flight",
+      "agencyCode": "SRF",
+      "type": "Commercial Space Operator",
+      "country": "India",
+      "director": "",
+      "contact": "",
+      "email": "flight-ops@shivodaya-research.space",
+      "phone": "",
+      "website": "",
+      "verificationContact": ""
+    },
+    "mission": {
+      "name": "AURORA-DEEP-01",
+      "id": "AURORA-D",
+      "type": "Technology Demonstration",
+      "status": "Planned",
+      "objective": "",
+      "description": "",
+      "launchVehicle": "",
+      "launchSite": "",
+      "launchDate": "",
+      "destination": "Mars",
+      "duration": ""
+    },
+    "trajectory": {
+      "phase": "Cruise",
+      "departureWindow": "",
+      "expectedArrival": "",
+      "regime": "Heliocentric",
+      "ephemerisUploaded": false,
+      "ephemerisFileName": null,
+      "ephemerisFormat": null
+    },
+    "telemetry": {
+      "availability": "None",
+      "types": [],
+      "delivery": "API",
+      "updateFrequency": "60s",
+      "contact": "",
+      "docsUploaded": false
+    },
+    "radiation": {
+      "hasSensors": "NO",
+      "sensorTypes": [],
+      "dataMode": "Event-based",
+      "alertGeneration": "Both",
+      "canGenerateAlert": false
+    },
+    "network": {
+      "primaryRole": "Hybrid Node",
+      "sendAlerts": false,
+      "relayAlerts": false,
+      "provideData": false,
+      "receiveEmergency": false,
+      "alternateRoute": false,
+      "alertTypes": [],
+      "priority": "High",
+      "preferredDelivery": "Any available path"
+    },
+    "crew": {
+      "isCrewed": "NO",
+      "members": [],
+      "healthOption": "No health integration",
+      "medicalOfficer": "",
+      "emergencyMedicalContact": "",
+      "healthSystemRef": ""
+    },
+    "responsibility": {
+      "hierarchy": [],
+      "emergencyContacts": []
+    },
+    "interoperability": {
+      "declaredCapabilities": [],
+      "telemetryFormat": "",
+      "commandFormat": "",
+      "dataInterface": ""
+    },
+    "security": {
+      "authContact": "",
+      "securityContact": "",
+      "integrationContact": "",
+      "authMethod": "Institutional Identity"
+    },
+    "dataSharing": {
+      "publicLevel": false,
+      "networkLevel": false,
+      "operationalLevel": false,
+      "restrictedLevel": false,
+      "medicalRestricted": false,
+      "purposes": []
+    },
+    "status": "VERIFICATION PENDING",
+    "assignedNode": null,
+    "isDemo": false,
+    "createdAt": "2026-09-09T14:34:49.905Z"
+  },
+  {
+    "applicationId": "SHV-2026-0038",
+    "mission": {
+      "name": "CYGNUS-EXPLORER-02",
+      "destination": "Lunar Orbit (NRHO)",
+      "type": "Robotic Science & Relay",
+      "status": "Planned",
+      "launchDate": "2027-03-15"
+    },
+    "organization": {
+      "name": "Cislunar Space Dynamics",
+      "agencyCode": "CSD",
+      "type": "Commercial Space Operator",
+      "country": "USA / Global",
+      "email": "flight-ops@cislunar-dynamics.space"
+    },
+    "network": {
+      "primaryRole": "Relay Node",
+      "sendAlerts": true,
+      "relayAlerts": true,
+      "provideData": true,
+      "receiveEmergency": true,
+      "alternateRoute": true
+    },
+    "radiation": {
+      "hasSensors": "YES",
+      "canGenerateAlert": true
+    },
+    "telemetry": {
+      "availability": "Live During Mission",
+      "types": [
+        "Radiation",
+        "Position",
+        "Power"
+      ]
+    },
+    "crew": {
+      "isCrewed": "NO",
+      "members": []
+    },
+    "status": "UNDER REVIEW",
+    "assignedNode": null,
+    "createdAt": "2026-09-08T10:14:22.000Z"
+  },
+  {
+    "applicationId": "SHV-2026-0041",
+    "mission": {
+      "name": "HELIOS-SENTINEL-X",
+      "destination": "Heliocentric (Sun-Earth L5)",
+      "type": "Science & Early Warning",
+      "status": "Pre-launch",
+      "launchDate": "2026-11-20"
+    },
+    "organization": {
+      "name": "International Heliophysics Consortium",
+      "agencyCode": "IHC",
+      "type": "Research Institution",
+      "country": "International",
+      "email": "sentry-operations@helioconsortium.org"
+    },
+    "network": {
+      "primaryRole": "Radiation Sentinel",
+      "sendAlerts": true,
+      "relayAlerts": false,
+      "provideData": true,
+      "receiveEmergency": false,
+      "alternateRoute": false
+    },
+    "radiation": {
+      "hasSensors": "YES",
+      "canGenerateAlert": true
+    },
+    "telemetry": {
+      "availability": "Live During Mission",
+      "types": [
+        "Radiation",
+        "Proton Flux",
+        "Solar Activity",
+        "X-Ray"
+      ]
+    },
+    "crew": {
+      "isCrewed": "NO",
+      "members": []
+    },
+    "status": "VERIFIED",
+    "assignedNode": "ipn:ihc.5",
+    "createdAt": "2026-09-08T16:30:00.000Z"
+  }
+]
