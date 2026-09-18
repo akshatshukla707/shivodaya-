@@ -1,5 +1,133 @@
 [
   {
+    "applicationId": "SHV-2026-8225",
+    "organization": {
+      "name": "Shivodaya Research Flight",
+      "agencyCode": "SRF",
+      "type": "Research Institution",
+      "country": "India / International",
+      "director": "Dr. A. K. Sharma",
+      "contact": "Flight Ops Director P. Nair",
+      "email": "flight-ops@shivodaya-research.space",
+      "phone": "+91-80-2839-4400",
+      "website": "https://shivodaya.space",
+      "verificationContact": "Deputy Registrar S. Iyer"
+    },
+    "mission": {
+      "name": "AURORA-DEEP-01",
+      "id": "ADR-01",
+      "type": "Technology Demonstration",
+      "status": "Planned",
+      "objective": "Autonomous radiation sentry and delay-tolerant laser mesh testbed",
+      "description": "Deep space technology pathfinder evaluating lock-free JSCC telemetry compression and TVG Dijkstra reroutes along Mars transfer corridors.",
+      "launchVehicle": "LVM3 / Falcon Heavy",
+      "launchSite": "Satish Dhawan Space Centre (SDSC)",
+      "launchDate": "2027-04-15",
+      "destination": "Mars",
+      "duration": "36 Months"
+    },
+    "trajectory": {
+      "phase": "Cruise Phase",
+      "departureWindow": "2027-04-10 to 2027-05-02 (TMI)",
+      "expectedArrival": "2027-11-20 UTC (Mars Insertion)",
+      "regime": "Mars Transfer Orbit (MTO)",
+      "ephemerisUploaded": true,
+      "ephemerisFileName": "aurora_deep_01_ephem_v2.oem",
+      "ephemerisFormat": "OEM"
+    },
+    "telemetry": {
+      "availability": "Live During Mission",
+      "types": [
+        "Radiation",
+        "Proton Flux",
+        "Spacecraft Health",
+        "Position",
+        "Power",
+        "Thermal"
+      ],
+      "delivery": "Stream",
+      "updateFrequency": "1 Hz (High-Frequency Stream)",
+      "contact": "telemetry-desk@shivodaya-research.space",
+      "docsUploaded": false
+    },
+    "radiation": {
+      "hasSensors": "NO",
+      "sensorTypes": [
+        "Proton",
+        "X-Ray",
+        "Dosimeter",
+        "Solar Energetic Particles",
+        "Electron"
+      ],
+      "dataMode": "Continuous",
+      "alertGeneration": "Both",
+      "canGenerateAlert": true
+    },
+    "network": {
+      "primaryRole": "Hybrid Node",
+      "sendAlerts": true,
+      "relayAlerts": true,
+      "provideData": true,
+      "receiveEmergency": true,
+      "alternateRoute": true,
+      "alertTypes": [
+        "Radiation",
+        "Solar Particle Event",
+        "CME Shockwave",
+        "Communication Disruption"
+      ],
+      "priority": "High",
+      "preferredDelivery": "Any available path"
+    },
+    "crew": {
+      "isCrewed": "NO",
+      "members": [],
+      "healthOption": "No health integration",
+      "medicalOfficer": "N/A (Robotic Asset)",
+      "emergencyMedicalContact": "ops-safety@shivodaya-research.space",
+      "healthSystemRef": ""
+    },
+    "responsibility": {
+      "hierarchy": [],
+      "emergencyContacts": []
+    },
+    "interoperability": {
+      "declaredCapabilities": [
+        "CCSDS Standard",
+        "DTN / BPv7",
+        "IPN Node Architecture",
+        "Optical Laser Direct"
+      ],
+      "telemetryFormat": "JSON Schema & XTCE",
+      "commandFormat": "CCSDS Telecommand",
+      "dataInterface": "RESTful API / UDP Stream"
+    },
+    "security": {
+      "authContact": "auth-desk@shivodaya-research.space",
+      "securityContact": "security-officer@shivodaya-research.space",
+      "integrationContact": "lead-engineer@shivodaya-research.space",
+      "authMethod": "Institutional Identity"
+    },
+    "dataSharing": {
+      "publicLevel": true,
+      "networkLevel": true,
+      "operationalLevel": true,
+      "restrictedLevel": false,
+      "medicalRestricted": true,
+      "purposes": [
+        "Network operations",
+        "Alert delivery",
+        "Mission monitoring",
+        "Research",
+        "Safety analysis"
+      ]
+    },
+    "status": "VERIFICATION PENDING",
+    "assignedNode": null,
+    "isDemo": true,
+    "createdAt": "2026-09-10T13:06:03.245Z"
+  },
+  {
     "applicationId": "SHV-2026-9929",
     "organization": {
       "name": "Test Agency",

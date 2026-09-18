@@ -18,6 +18,16 @@ import java.util.function.Supplier;
 
 public class Main extends JFrame {
 
+    static {
+        try {
+            Class.forName("org.sqlite.JDBC");
+        } catch (Throwable t) {
+            try {
+                DriverManager.registerDriver(new org.sqlite.JDBC());
+            } catch (Throwable ignored) {}
+        }
+    }
+
     private static final long MARS_TIME_OFFSET_HOURS = 13;
     private static final long MARS_TIME_OFFSET_MINUTES = 20;
 
@@ -430,6 +440,65 @@ public class Main extends JFrame {
     }
 
     public static void main(String[] args) {
+        String os = System.getProperty("os.name", "").toLowerCase();
+        boolean isWindows = os.contains("win");
+        boolean isRelaunched = "true".equals(System.getProperty("shivodaya.bridge"));
+
+        if (!isWindows && !isRelaunched) {
+            String display = System.getenv("DISPLAY");
+            boolean hasDisplay = display != null && !display.trim().isEmpty();
+
+            // Check if configured X11 server is actually reachable
+            boolean displayReachable = false;
+            if (hasDisplay) {
+                try {
+                    if (display.contains(":")) {
+                        String[] parts = display.split(":");
+                        String host = parts[0];
+                        if (host.isEmpty() || host.equals("localhost") || host.equals("127.0.0.1")) {
+                            displayReachable = new java.io.File("/tmp/.X11-unix/X0").exists();
+                        } else {
+                            int port = 6000;
+                            try {
+                                port += Integer.parseInt(parts[1].split("\\.")[0]);
+                            } catch (Exception ignored) {}
+                            try (java.net.Socket s = new java.net.Socket()) {
+                                s.connect(new java.net.InetSocketAddress(host, port), 250);
+                                displayReachable = true;
+                            } catch (Exception e) {
+                                displayReachable = false;
+                            }
+                        }
+                    }
+                } catch (Exception ignored) {}
+            }
+
+            if (!displayReachable) {
+                try {
+                    Process testProc = new ProcessBuilder("which", "xvfb-run").start();
+                    if (testProc.waitFor() == 0) {
+                        System.out.println("========================================================================");
+                        System.out.println("   PROJECT SHIVODAYA :: AKASHDEEP AUTONOMOUS MISSION CONTROL           ");
+                        System.out.println("   Target EID: ipn:3.1 | DTN BPv7 | Cryptographic Marker: 'Bhaarat'    ");
+                        System.out.println("========================================================================");
+                        System.out.println("[+] Headless / Non-X11 environment detected in WSL.");
+                        System.out.println("[+] Auto-bridging graphical pipeline via Virtual Frame Buffer (xvfb)...");
+                        System.out.println("[+] Akashdeep Swing EventQueue & SQLite Telemetry Feeder Online.");
+                        System.out.println("[*] TIP: To view the graphical window on Windows Desktop, launch VcXsrv");
+                        System.out.println("    or run 'run_akashdeep_gui.bat' from Windows File Explorer.");
+                        System.out.println("========================================================================");
+
+                        String cp = System.getProperty("java.class.path");
+                        ProcessBuilder pb = new ProcessBuilder("xvfb-run", "-a", "java", "-Dshivodaya.bridge=true", "-cp", cp, "Main");
+                        pb.inheritIO();
+                        Process p = pb.start();
+                        System.exit(p.waitFor());
+                        return;
+                    }
+                } catch (Exception ignored) {}
+            }
+        }
+
         SwingUtilities.invokeLater(() -> {
             new Main().setVisible(true);
         });

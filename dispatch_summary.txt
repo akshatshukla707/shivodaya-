@@ -1,0 +1,14 @@
+========================================================================
+PROJECT SHIVODAYA :: PRAKASH DATA PIPELINE DISPATCH SUMMARY
+Generated at: 2026-09-18 UTC | Target: ipn:1.1 -> ipn:2.1
+========================================================================
+
+Total Source Rows Ingested : 500000 rows across 5 streams
+Total Source Bytes         : 40641079 bytes (38.76 MB)
+Danger Alert Bundles       : 60271 dispatched
+Dispatch Ledger File       : dispatch_records.csv (12504619 bytes / 11.93 MB)
+Semantic 32f Binary File   : dispatch_32f.bin (11089952 bytes / 10.58 MB)
+Source -> Final 32f Ratio  : 3.66 : 1 (72.71% net bandwidth reduction)
+Dispatch -> Final 32f      : 1.13 : 1 (11.31% smaller than dispatch ledger)
+Total Processing Time      : 2125.51 ms
+Processing Throughput      : 235237.62 rows/sec (18.23 MB/sec)

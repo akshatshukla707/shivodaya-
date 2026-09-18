@@ -21,6 +21,16 @@ import java.util.Random;
 
 public class CME_Dashboard extends JFrame {
 
+    static {
+        try {
+            Class.forName("org.sqlite.JDBC");
+        } catch (Throwable t) {
+            try {
+                DriverManager.registerDriver(new org.sqlite.JDBC());
+            } catch (Throwable ignored) {}
+        }
+    }
+
     static final Color BG_COLOR = new Color(0x12, 0x14, 0x20);
     static final Color PANEL_BG_COLOR = new Color(0x1c, 0x20, 0x35);
     static final Color BORDER_COLOR = new Color(0x2d, 0x36, 0x55);

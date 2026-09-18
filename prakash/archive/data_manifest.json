@@ -1,0 +1,165 @@
+{
+  "project": "Project Shivodaya",
+  "module": "Prakash Data Pipeline",
+  "system": "Aditya-L1 Solar Acquisition & JSCC Encoder",
+  "generated_at": "2026-09-17T13:41:44.914390Z",
+  "target_rows_per_dataset": 100000,
+  "deterministic_seed": 42,
+  "datasets": {
+    "cme": {
+      "dataset": "CME",
+      "filename": "cme_sim.txt",
+      "source": "NASA SOHO/LASCO CME Catalog",
+      "source_url": "https://cdaw.gsfc.nasa.gov/CME_list/catalog_description.htm",
+      "schema_version": "CDAW-SOHO-LASCO-v2.1",
+      "field_names": [
+        "Date",
+        "Time_UT",
+        "Central_PA_deg",
+        "Angular_Width_deg",
+        "Linear_Speed_kms",
+        "2nd_Order_Speed_Final_kms",
+        "2nd_Order_Speed_20Rs_kms",
+        "Accel_ms2",
+        "Mass_grams",
+        "Kinetic_Energy_erg",
+        "MPA_deg",
+        "Remarks",
+        "Data_Class"
+      ],
+      "units": {
+        "Central_PA_deg": "degrees",
+        "Angular_Width_deg": "degrees",
+        "Linear_Speed_kms": "km/s",
+        "2nd_Order_Speed_Final_kms": "km/s",
+        "2nd_Order_Speed_20Rs_kms": "km/s",
+        "Accel_ms2": "m/s^2",
+        "Mass_grams": "grams",
+        "Kinetic_Energy_erg": "ergs",
+        "MPA_deg": "degrees"
+      },
+      "original_rows": 10,
+      "synthetic_rows": 99990,
+      "total_rows": 100000,
+      "timestamp_range": "2026-08-28 to 2026-10-15",
+      "mode": "reference + synthetic expansion",
+      "generator_seed": 42,
+      "generated_at": "2026-09-17T13:41:44.914390Z"
+    },
+    "xray": {
+      "dataset": "X-RAY",
+      "filename": "xray_flux_sim.txt",
+      "source": "NOAA/SWPC GOES-18 Solar X-Ray Irradiance Primary Product",
+      "source_url": "https://services.swpc.noaa.gov/json/goes/",
+      "schema_version": "NOAA-GOES18-XRAY-v1.0",
+      "field_names": [
+        "time_tag",
+        "satellite",
+        "flux_Wm2",
+        "observed_flux_Wm2",
+        "electron_correction_Wm2",
+        "electron_contamination",
+        "energy_band",
+        "Data_Class"
+      ],
+      "units": {
+        "flux_Wm2": "W/m^2",
+        "observed_flux_Wm2": "W/m^2",
+        "electron_correction_Wm2": "W/m^2"
+      },
+      "original_rows": 10,
+      "synthetic_rows": 99990,
+      "total_rows": 100000,
+      "timestamp_range": "2026-08-28T00:00:00Z onwards",
+      "mode": "reference + synthetic expansion",
+      "generator_seed": 43,
+      "generated_at": "2026-09-17T13:41:44.914390Z"
+    },
+    "proton_flux": {
+      "dataset": "INTEGRAL PROTON",
+      "filename": "proton_flux_sim.txt",
+      "source": "NOAA/SWPC GOES-18 High-Energy Integral Proton Flux",
+      "source_url": "https://services.swpc.noaa.gov/json/goes/",
+      "schema_version": "NOAA-GOES18-HEPAD-v1.0",
+      "field_names": [
+        "time_tag",
+        "satellite",
+        "flux_pfu",
+        "energy_channel",
+        "quality_flag",
+        "Data_Class"
+      ],
+      "units": {
+        "flux_pfu": "particles / (cm^2 * s * sr)"
+      },
+      "original_rows": 10,
+      "synthetic_rows": 99990,
+      "total_rows": 100000,
+      "timestamp_range": "2026-08-28T00:00:00Z onwards",
+      "mode": "reference + synthetic expansion",
+      "generator_seed": 44,
+      "generated_at": "2026-09-17T13:41:44.914390Z"
+    },
+    "solar_wind": {
+      "dataset": "SOLAR WIND",
+      "filename": "solar_wind_sim.txt",
+      "source": "NOAA/SWPC DSCOVR L1 Real-Time Solar Wind (RTSW)",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/",
+      "schema_version": "NOAA-RTSW-DSCOVR-v1.0",
+      "field_names": [
+        "time_tag",
+        "source",
+        "proton_speed_kms",
+        "proton_temperature_K",
+        "proton_density_p_cm3",
+        "bt_nT",
+        "bz_nT",
+        "by_nT",
+        "Data_Class"
+      ],
+      "units": {
+        "proton_speed_kms": "km/s",
+        "proton_temperature_K": "Kelvin",
+        "proton_density_p_cm3": "protons/cm^3",
+        "bt_nT": "nT",
+        "bz_nT": "nT",
+        "by_nT": "nT"
+      },
+      "original_rows": 10,
+      "synthetic_rows": 99990,
+      "total_rows": 100000,
+      "timestamp_range": "2026-08-28T00:00:00Z onwards",
+      "mode": "reference + synthetic expansion",
+      "generator_seed": 45,
+      "generated_at": "2026-09-17T13:41:44.914390Z"
+    },
+    "sep": {
+      "dataset": "SEP",
+      "filename": "sep_sim.txt",
+      "source": "SEP DEMO DATA \u2014 schema matched to NOAA GOES particle products",
+      "source_url": "https://services.swpc.noaa.gov/json/goes/",
+      "schema_version": "NOAA-GOES-PARTICLE-SEP-v1.0",
+      "field_names": [
+        "time_tag",
+        "satellite",
+        "channel",
+        "energy_range_MeV",
+        "differential_flux",
+        "integral_flux_pfu",
+        "quality_flag",
+        "Data_Class"
+      ],
+      "units": {
+        "differential_flux": "particles / (cm^2 * s * sr * MeV)",
+        "integral_flux_pfu": "particles / (cm^2 * s * sr)"
+      },
+      "original_rows": 10,
+      "synthetic_rows": 99990,
+      "total_rows": 100000,
+      "timestamp_range": "2026-08-28T00:00:00Z onwards",
+      "mode": "reference + synthetic expansion (SEP DEMO DATA \u2014 schema matched to NOAA GOES particle products)",
+      "generator_seed": 46,
+      "generated_at": "2026-09-17T13:41:44.914390Z"
+    }
+  }
+}

@@ -103,6 +103,18 @@ export default function MeshNetworkPage() {
                 <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-zinc-400" /> Protocol: <strong>Bundle Protocol v7 (BPv7) Custody</strong></div>
                 <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-zinc-400" /> Reroute Time: <strong>&lt; 4 milliseconds</strong></div>
               </div>
+
+              <div className="pt-2">
+                <a
+                  href="/mesh-3d.html"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 hover:text-white border border-cyan-500/40 hover:border-cyan-400 text-xs font-mono tracking-wider uppercase transition-all shadow-[0_0_20px_rgba(0,240,255,0.15)]"
+                >
+                  <span>Launch 3D DTN Mesh Visualizer</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </a>
+              </div>
             </div>
           </div>
         </section>
