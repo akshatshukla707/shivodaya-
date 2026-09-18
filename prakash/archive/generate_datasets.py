@@ -29,7 +29,7 @@ DEFAULT_TARGET_ROWS = int(os.environ.get("PRAKASH_DEMO_ROWS", os.environ.get("DA
 DEFAULT_SEED = int(os.environ.get("PRAKASH_SYNTHETIC_SEED", "42"))
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-OUTPUT_DIR = SCRIPT_DIR
+OUTPUT_DIR = os.environ.get("PRAKASH_OUTPUT_DIR", os.path.dirname(SCRIPT_DIR) if os.path.basename(SCRIPT_DIR) == "archive" else SCRIPT_DIR)
 
 # ------------------------------------------------------------------------------
 # 1. CME (NASA SOHO/LASCO CME Catalog)

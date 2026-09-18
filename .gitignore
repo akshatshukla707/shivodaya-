@@ -25,5 +25,3 @@ web/.next/
 richa/ion_cpp_demo/third_party/
 richa/ion_cpp_demo/sender
 richa/ion_cpp_demo/ion_runtime/ion.log
-*.bin
-*.csv
