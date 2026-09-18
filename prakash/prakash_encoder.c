@@ -809,14 +809,16 @@ int main(int argc, char **argv) {
         fclose(sum_f);
     }
 
-    // Sync freshly generated dispatch artifacts directly into /home/shivodaya-/prakash/, build, and Windows Desktop
-    int r1 = system("cp -f dispatch_records.csv dispatch_32f.bin semantic_dispatch.bin dispatch_summary.txt /home/shivodaya-/prakash/ 2>/dev/null || true");
-    int r2 = system("cp -f dispatch_records.csv dispatch_32f.bin semantic_dispatch.bin dispatch_summary.txt /home/shivodaya-/build/ 2>/dev/null || true");
-    int r3 = system("cp -f dispatch_records.csv dispatch_32f.bin semantic_dispatch.bin dispatch_summary.txt /home/shivodaya-/ 2>/dev/null || true");
-    int r4 = system("cp -f ../dispatch_records.csv ../dispatch_32f.bin ../semantic_dispatch.bin ../dispatch_summary.txt /home/shivodaya-/prakash/ 2>/dev/null || true");
-    int r5 = system("cp -f dispatch_records.csv dispatch_32f.bin semantic_dispatch.bin dispatch_summary.txt /mnt/c/Users/lenovo/Desktop/shivodaya-/prakash/ 2>/dev/null || true");
-    int r6 = system("cp -f ../dispatch_records.csv ../dispatch_32f.bin ../semantic_dispatch.bin ../dispatch_summary.txt /mnt/c/Users/lenovo/Desktop/shivodaya-/prakash/ 2>/dev/null || true");
-    (void)r1; (void)r2; (void)r3; (void)r4; (void)r5; (void)r6;
+    // Sync freshly generated dispatch artifacts directly into prakash/, root, build, and any Windows Desktop mount
+    int r1 = system("cp -f dispatch_records.csv dispatch_32f.bin semantic_dispatch.bin dispatch_summary.txt ../prakash/ 2>/dev/null || true");
+    int r2 = system("cp -f dispatch_records.csv dispatch_32f.bin semantic_dispatch.bin dispatch_summary.txt ../ 2>/dev/null || true");
+    int r3 = system("cp -f dispatch_records.csv dispatch_32f.bin semantic_dispatch.bin dispatch_summary.txt ./prakash/ 2>/dev/null || true");
+    int r4 = system("cp -f dispatch_records.csv dispatch_32f.bin semantic_dispatch.bin dispatch_summary.txt ./build/ 2>/dev/null || true");
+    int r5 = system("cp -f ../dispatch_records.csv ../dispatch_32f.bin ../semantic_dispatch.bin ../dispatch_summary.txt ./ 2>/dev/null || true");
+    int r6 = system("cp -f ../dispatch_records.csv ../dispatch_32f.bin ../semantic_dispatch.bin ../dispatch_summary.txt ../prakash/ 2>/dev/null || true");
+    int r7 = system("cp -f dispatch_records.csv dispatch_32f.bin semantic_dispatch.bin dispatch_summary.txt /mnt/c/Users/*/Desktop/shivodaya-/prakash/ 2>/dev/null || true");
+    int r8 = system("cp -f ../dispatch_records.csv ../dispatch_32f.bin ../semantic_dispatch.bin ../dispatch_summary.txt /mnt/c/Users/*/Desktop/shivodaya-/prakash/ 2>/dev/null || true");
+    (void)r1; (void)r2; (void)r3; (void)r4; (void)r5; (void)r6; (void)r7; (void)r8;
 
     return 0;
 }

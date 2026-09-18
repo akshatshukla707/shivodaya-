@@ -76,16 +76,15 @@ Point out the 5 official space-weather datasets:
 5. `xray_flux_sim.txt` (NOAA GOES-18 X-Ray Irradiance)
 
 #### Step 1.2: Delete Files 6 and 7 Live in Front of Judges
-In your terminal, run:
+In your terminal, navigate into the `prakash` directory of your cloned repo and run:
 ```bash
-cd /home/shivodaya-/prakash
+cd prakash
 rm -f dispatch_records.csv dispatch_32f.bin semantic_dispatch.bin dispatch_summary.txt
 ```
 *Show judges in File Explorer that the generated files are completely gone.*
 
 #### Step 1.3: Run the Prakash Acquisition Engine
 ```bash
-cd /home/shivodaya-/prakash
 ./run_cmd_demo.sh
 ```
 

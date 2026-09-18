@@ -41,9 +41,14 @@ echo "------------------------------------------------------------------------"
 echo "------------------------------------------------------------------------"
 echo ""
 
-echo "[STEP 3] Verifying freshly generated artifacts in ${BUILD_DIR}:"
+echo "[STEP 3] Synchronizing and verifying freshly generated artifacts:"
 echo "------------------------------------------------------------------------"
+cp -f dispatch_records.csv dispatch_32f.bin semantic_dispatch.bin dispatch_summary.txt "${SCRIPT_DIR}/prakash/" 2>/dev/null || true
+cp -f dispatch_records.csv dispatch_32f.bin semantic_dispatch.bin dispatch_summary.txt "${SCRIPT_DIR}/" 2>/dev/null || true
 ls -lh dispatch_records.csv dispatch_32f.bin semantic_dispatch.bin dispatch_summary.txt
+echo ""
+echo "[✓] Verified in ${SCRIPT_DIR}/prakash/:"
+ls -lh "${SCRIPT_DIR}/prakash/dispatch_records.csv" "${SCRIPT_DIR}/prakash/dispatch_32f.bin" "${SCRIPT_DIR}/prakash/semantic_dispatch.bin" "${SCRIPT_DIR}/prakash/dispatch_summary.txt"
 echo "------------------------------------------------------------------------"
 echo ""
 

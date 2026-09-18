@@ -10,5 +10,5 @@ Dispatch Ledger File       : dispatch_records.csv (12504619 bytes / 11.93 MB)
 Semantic 32f Binary File   : dispatch_32f.bin (11089952 bytes / 10.58 MB)
 Source -> Final 32f Ratio  : 3.66 : 1 (72.71% net bandwidth reduction)
 Dispatch -> Final 32f      : 1.13 : 1 (11.31% smaller than dispatch ledger)
-Total Processing Time      : 10599.03 ms
-Processing Throughput      : 47174.15 rows/sec (3.66 MB/sec)
+Total Processing Time      : 9989.73 ms
+Processing Throughput      : 50051.42 rows/sec (3.88 MB/sec)
